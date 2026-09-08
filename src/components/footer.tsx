@@ -13,11 +13,10 @@ const columnas = [
     ],
   },
   {
-    titulo: "Estudio",
+    titulo: "Agencia",
     links: [
       { href: "/nosotros", label: "Nosotros" },
       { href: "/contacto", label: "Contacto" },
-      { href: "/login", label: "Portal de cliente" },
     ],
   },
   {
@@ -69,8 +68,8 @@ export function Footer() {
 
         <div className="mt-16 flex flex-col gap-3 border-t border-line pt-8 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[0.8125rem] text-ink-faint">
-            © {new Date().getFullYear()} {site.nombre}. Prototipo de
-            demostración.
+            © {new Date().getFullYear()} {site.nombre}. Todos los derechos
+            reservados.
           </p>
           <p className="text-[0.8125rem] text-ink-faint">
             {site.contacto.email} · {site.contacto.whatsappVisible}

@@ -1,28 +1,43 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   Hoshizora Studio — sistema de diseño
+   Hoshizora — sistema de diseño
    Monocromo. Blanco, grises, casi-negro. Un solo acento: el propio negro.
    Los grises son todos fríos (familia zinc). No mezclar con grises cálidos.
    ========================================================================== */
 
 @theme {
-  /* Superficies */
+  /* Superficies. Los grises tienen que LEERSE como gris al lado del blanco:
+     con tonos por encima de #F5 el ojo no los distingue del papel. */
   --color-paper: #ffffff;
-  --color-surface: #fafafa;
-  --color-surface-2: #f4f4f5;
-  --color-surface-3: #ebebed;
+  --color-surface: #f6f6f7;
+  --color-surface-2: #efeff1;
+  --color-surface-3: #e7e7ea;
 
   /* Tinta */
   --color-ink: #0a0a0b;
   --color-ink-soft: #18181b;
   --color-ink-mute: #52525b;
-  --color-ink-faint: #8a8a93;
+  --color-ink-faint: #7a7a84;
 
-  /* Líneas */
-  --color-line: #e4e4e7;
-  --color-line-strong: #d1d1d6;
+  /* Líneas. Tienen que ser más oscuras que --color-surface-3, si no
+     desaparecen justo sobre las secciones grises. */
+  --color-line: #dcdce1;
+  --color-line-strong: #c6c6ce;
   --color-line-dark: #26262b;
+
+  /* Noche: las secciones que son oscuras SIEMPRE, en cualquier tema.
+     No se invierten al cambiar de tema; por eso tienen tokens propios.
+     El negro lleva una pizca de violeta: un cielo nocturno real no es
+     negro puro, y Hoshizora es justamente "cielo estrellado". */
+  --color-noche: #0a0a0f;
+  --color-noche-texto: #ffffff;
+
+  /* Acento. Se usa con avaricia: estado activo, resplandores y el CTA
+     principal. Nunca como campo de color grande ni en bloques de texto. */
+  --color-acento: #7c5cff;
+  --color-acento-claro: #a68bff;
+  --color-acento-oscuro: #5b3fd6;
 
   /* Estados (funcionales, no de marca) */
   --color-ok: #4d7c5f;
@@ -38,6 +53,142 @@
   --text-display--letter-spacing: -0.035em;
 
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* ==========================================================================
+   TEMA OSCURO — se activa con data-sitio="oscuro" en <html>.
+   Se cambia desde `tema` en src/config/site.ts, una sola palabra.
+
+   Solo redefine los tokens: como todo el sitio los usa, la página entera
+   se invierte sola. Las secciones marcadas con los tokens `noche` no se
+   ven afectadas porque ya eran oscuras.
+   ========================================================================== */
+html[data-sitio="oscuro"] {
+  /* Nada de grises neutros: en oscuro se ven apagados y sucios.
+     Todas las superficies llevan violeta, cada vez más claro al elevarse. */
+  --color-paper: #0a0a12;
+  --color-surface: #12121f;
+  --color-surface-2: #191927;
+  --color-surface-3: #212133;
+
+  --color-ink: #ffffff;
+  --color-ink-soft: #eaeaf2;
+  --color-ink-mute: #a6a6b8;
+  --color-ink-faint: #8d8da2;
+
+  --color-line: #272738;
+  --color-line-strong: #3d3d55;
+
+  /* En oscuro los estados necesitan más luz para leerse */
+  --color-ok: #6fae87;
+  --color-warn: #c2a06a;
+  --color-bad: #c98080;
+}
+
+/* El acento también manda en selección y foco cuando está oscuro */
+html[data-sitio="oscuro"] ::selection {
+  background: var(--color-acento);
+  color: #ffffff;
+}
+
+html[data-sitio="oscuro"] :focus-visible {
+  outline-color: var(--color-acento);
+}
+
+/* ==========================================================================
+   PANEL — el área con sesión (/panel).
+   Aprobado el 6/9/2026: casi negro y neutro, sin el violeta del sitio.
+   Vuelve al espíritu original del sistema ("blanco, grises, casi-negro").
+
+   No define tokens nuevos: REDEFINE los mismos que usa el sitio, en un
+   ámbito. Así cualquier componente escrito con `bg-surface-2` o `text-ink`
+   funciona igual en las dos zonas y no hay dos sistemas que mantener.
+
+   El color de marca (acento) queda disponible pero NO se usa en el panel:
+   el estado activo va en blanco, y el color solo aparece en ok/warn/bad.
+   ========================================================================== */
+.panel-scope {
+  --color-paper: #08080a;
+  --color-surface: #0e0e11;
+  --color-surface-2: #131317;
+  --color-surface-3: #1b1b20;
+
+  --color-ink: #ffffff;
+  --color-ink-soft: #e6e6ea;
+  --color-ink-mute: #9a9aa4;
+  --color-ink-faint: #6a6a74;
+
+  --color-line: #242429;
+  --color-line-strong: #33333b;
+
+  /* Más apagados que en el sitio: en un tablero el color es información,
+     no decoración, y compite con los datos si grita. */
+  --color-ok: #4fa07c;
+  --color-warn: #c2a06a;
+  --color-bad: #cf6f6f;
+}
+
+.panel-scope :focus-visible {
+  outline-color: rgba(255, 255, 255, 0.55);
+}
+
+/* Barra de scroll discreta dentro del panel. La del sistema en Windows es
+   ancha y clara, y en una barra lateral oscura se ve como un error. */
+.panel-scope .scroll-fino {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+.panel-scope .scroll-fino::-webkit-scrollbar {
+  width: 6px;
+}
+.panel-scope .scroll-fino::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 999px;
+}
+.panel-scope .scroll-fino::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* --------------------------------------------------------------------------
+   Movimiento del panel. Todo con transform/opacity, como el resto del sitio.
+   Las barras de los medidores crecen desde la izquierda: el dato entra, no
+   aparece de golpe. `--pct` la pone el componente.
+   -------------------------------------------------------------------------- */
+@keyframes medidor-crece {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(var(--pct, 1));
+  }
+}
+
+.medidor-barra {
+  transform-origin: left;
+  transform: scaleX(var(--pct, 1));
+  animation: medidor-crece 0.55s var(--ease-out-quart) both;
+}
+
+/* Entrada suave de una tarjeta o pantalla: sube unos píxeles y aparece.
+   Solo transform/opacity. La usa la pantalla de acceso. */
+@keyframes entrada {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .medidor-barra {
+    animation: none;
+  }
+  .panel-scope [class*="animate-\[entrada"] {
+    animation: none;
+  }
 }
 
 @layer base {
@@ -121,6 +272,32 @@
     opacity: 0.55;
     transform: scale(0.86);
   }
+}
+
+/* Punto de datos recorriendo el flujo ya conectado del analizador.
+   Las coordenadas llegan como variables inline desde el componente. */
+@keyframes pulso-flujo {
+  0% {
+    transform: translate(var(--n0x), var(--n0y));
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  50% {
+    transform: translate(var(--n1x), var(--n1y));
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--n2x), var(--n2y));
+    opacity: 0;
+  }
+}
+
+.pulso-flujo {
+  animation: pulso-flujo 1.5s linear 1.5s infinite;
 }
 
 @keyframes shimmer {

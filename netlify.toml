@@ -1,0 +1,15 @@
+# Configuración de despliegue en Netlify.
+# El repo git ES esta carpeta (web/), así que la app está en la raíz: sin "base".
+# Las VARIABLES DE ENTORNO se cargan en el panel de Netlify (Site settings →
+# Environment variables), NUNCA acá — este archivo se comitea.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Adaptador oficial de Next.js para Netlify (SSR, rutas dinámicas, proxy.ts).
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

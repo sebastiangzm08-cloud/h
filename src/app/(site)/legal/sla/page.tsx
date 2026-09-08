@@ -11,7 +11,7 @@ export default function SlaPage() {
     <LegalPage
       eyebrow="Legal"
       title="Acuerdo de nivel de servicio"
-      actualizado="borrador, sin publicar"
+      actualizado="26 de agosto de 2026"
       secciones={[
         {
           titulo: "Monitoreo",
@@ -22,7 +22,7 @@ export default function SlaPage() {
         {
           titulo: "Tiempos de respuesta",
           parrafos: [
-            "Starter: respuesta por correo dentro de 72 horas hábiles. Growth: respuesta por correo dentro de 24 horas hábiles. Scale: respuesta por WhatsApp dentro del horario laboral (8 horas hábiles).",
+            "Básico: respuesta por correo dentro de 48 horas hábiles. Growth: respuesta por correo dentro de 24 horas hábiles. Scale: respuesta por WhatsApp dentro del horario laboral (8 horas hábiles).",
           ],
         },
         {

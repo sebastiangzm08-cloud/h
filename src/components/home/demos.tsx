@@ -51,7 +51,7 @@ export function Demos() {
             return (
               <Reveal key={d.id} delay={i * 90}>
                 <div className="group cursor-pointer">
-                  <div className="relative aspect-video overflow-hidden rounded-xl bg-ink">
+                  <div className="relative aspect-video overflow-hidden rounded-xl bg-noche">
                     {activa ? (
                       <>
                         <video
@@ -63,18 +63,18 @@ export function Demos() {
                         >
                           <source src={`/videos/${d.id}.mp4`} type="video/mp4" />
                         </video>
-                        <span className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full bg-ink/60 px-2.5 py-1 text-paper/80 backdrop-blur-sm">
+                        <span className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full bg-noche/60 px-2.5 py-1 text-noche-texto/80 backdrop-blur-sm">
                           <SpeakerSimpleSlash size={12} />
                         </span>
                       </>
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-paper/10 backdrop-blur-sm transition-transform duration-200 group-hover:scale-110">
-                          <Play size={20} weight="fill" className="ml-0.5 text-paper" />
+                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-noche-texto/10 backdrop-blur-sm transition-transform duration-200 group-hover:scale-110">
+                          <Play size={20} weight="fill" className="ml-0.5 text-noche-texto" />
                         </div>
                       </div>
                     )}
-                    <span className="absolute bottom-3 right-3 rounded-full bg-ink/60 px-2.5 py-1 font-mono text-[0.6875rem] text-paper/80 backdrop-blur-sm">
+                    <span className="absolute bottom-3 right-3 rounded-full bg-noche/60 px-2.5 py-1 font-mono text-[0.6875rem] text-noche-texto/80 backdrop-blur-sm">
                       {d.duracion}
                     </span>
                   </div>
@@ -90,7 +90,7 @@ export function Demos() {
 
         {algunaFalta && (
           <p className="mt-8 text-[0.8125rem] text-ink-faint">
-            Espacio reservado para las demos reales grabadas del estudio.
+            Espacio reservado para las demos reales grabadas de la agencia.
           </p>
         )}
       </div>

@@ -1,15 +1,32 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { CheckCircle } from "@phosphor-icons/react/dist/ssr";
+import { CheckCircle, WhatsappLogo } from "@phosphor-icons/react/dist/ssr";
 import { Button } from "@/components/ui/button";
+import { waLink } from "@/config/site";
 
-type Errors = Partial<Record<"nombre" | "correo" | "mensaje", string>>;
+type Errors = Partial<Record<"nombre" | "mensaje", string>>;
+
+/** Arma el mensaje de WhatsApp a partir de lo que la persona escribió. */
+function armarMensaje(values: {
+  nombre: string;
+  herramientas: string;
+  mensaje: string;
+}) {
+  const partes = [
+    `Hola, soy ${values.nombre.trim()}.`,
+    values.herramientas.trim() &&
+      `Hoy uso: ${values.herramientas.trim()}.`,
+    `Lo que me está costando tiempo: ${values.mensaje.trim()}`,
+  ];
+  return partes.filter(Boolean).join("\n");
+}
 
 export function ContactForm() {
-  const [values, setValues] = useState({ nombre: "", correo: "", herramientas: "", mensaje: "" });
+  const [values, setValues] = useState({ nombre: "", herramientas: "", mensaje: "" });
   const [errors, setErrors] = useState<Errors>({});
-  const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
+  const [status, setStatus] = useState<"idle" | "sent">("idle");
+  const [link, setLink] = useState("");
 
   const set = (k: keyof typeof values) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -18,7 +35,6 @@ export function ContactForm() {
   const validate = (): boolean => {
     const next: Errors = {};
     if (values.nombre.trim().length < 2) next.nombre = "Falta el nombre.";
-    if (!/^\S+@\S+\.\S+$/.test(values.correo)) next.correo = "Ese correo no es válido.";
     if (values.mensaje.trim().length < 10)
       next.mensaje = "Contanos un poco más, al menos dos líneas.";
     setErrors(next);
@@ -28,9 +44,12 @@ export function ContactForm() {
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-    setStatus("sending");
-    // Prototipo: acá va la llamada real al backend / Resend.
-    setTimeout(() => setStatus("sent"), 900);
+    const href = waLink(armarMensaje(values));
+    setLink(href);
+    setStatus("sent");
+    // Se abre en la misma pestaña que hizo el submit — un gesto directo del
+    // usuario, así que ningún navegador lo bloquea como pop-up.
+    window.open(href, "_blank", "noopener,noreferrer");
   };
 
   if (status === "sent") {
@@ -38,12 +57,15 @@ export function ContactForm() {
       <div className="flex flex-col items-start gap-3 rounded-2xl border border-line bg-surface p-8">
         <CheckCircle size={28} weight="fill" className="text-ink" />
         <p className="text-[1.0625rem] font-medium tracking-tight text-ink">
-          Listo, lo recibimos
+          Te abrimos WhatsApp con tu mensaje listo
         </p>
         <p className="text-[0.9375rem] leading-relaxed text-ink-mute">
-          Te respondemos a {values.correo} dentro de un día hábil. Si es
-          urgente, escribinos directo por WhatsApp.
+          Si no se abrió solo, tocá el botón de abajo.
         </p>
+        <Button href={link} variant="secondary" size="md">
+          <WhatsappLogo size={18} weight="fill" />
+          Abrir WhatsApp
+        </Button>
       </div>
     );
   }
@@ -64,24 +86,6 @@ export function ContactForm() {
         />
         {errors.nombre && (
           <p className="text-[0.8125rem] text-bad">{errors.nombre}</p>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label htmlFor="correo" className="text-[0.8125rem] font-medium text-ink-soft">
-          Correo
-        </label>
-        <input
-          id="correo"
-          type="email"
-          value={values.correo}
-          onChange={set("correo")}
-          placeholder="vos@tuempresa.com"
-          className="h-12 rounded-lg border border-line-strong bg-paper px-4 text-[0.9375rem] text-ink outline-none transition-colors placeholder:text-ink-faint focus:border-ink"
-          aria-invalid={!!errors.correo}
-        />
-        {errors.correo && (
-          <p className="text-[0.8125rem] text-bad">{errors.correo}</p>
         )}
       </div>
 
@@ -116,8 +120,9 @@ export function ContactForm() {
         )}
       </div>
 
-      <Button type="submit" variant="primary" size="lg" disabled={status === "sending"}>
-        {status === "sending" ? "Enviando…" : "Enviar mensaje"}
+      <Button type="submit" variant="primary" size="lg">
+        <WhatsappLogo size={18} weight="fill" />
+        Enviar por WhatsApp
       </Button>
     </form>
   );

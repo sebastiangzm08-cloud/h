@@ -2,6 +2,7 @@
    Contenido del sitio. Textos, procesos, catálogo y planes.
    Los precios son PLACEHOLDER: ajustalos a tu mercado antes de publicar.
    ========================================================================== */
+import { site, colones } from "@/config/site";
 
 /* -------------------------------------------------------------------------
    Herramientas. Alimentan el selector y la barra de la home.
@@ -18,7 +19,8 @@ export type ToolId =
   | "calendario"
   | "erp"
   | "drive"
-  | "banco";
+  | "banco"
+  | "redes";
 
 export const herramientas: { id: ToolId; nombre: string; grupo: string }[] = [
   { id: "whatsapp", nombre: "WhatsApp", grupo: "Comunicación" },
@@ -33,6 +35,7 @@ export const herramientas: { id: ToolId; nombre: string; grupo: string }[] = [
   { id: "factura", nombre: "Factura electrónica", grupo: "Administración" },
   { id: "banco", nombre: "Banco / SINPE", grupo: "Administración" },
   { id: "tareas", nombre: "Notion / Trello / ClickUp", grupo: "Operación" },
+  { id: "redes", nombre: "Redes sociales (Instagram, TikTok, Facebook)", grupo: "Comercial" },
 ];
 
 /* -------------------------------------------------------------------------
@@ -138,6 +141,11 @@ export const procesos: {
    Niveles de complejidad. Así se cotiza cualquier negocio sin conocer
    su industria: el precio lo fija el flujo, no el sector.
    ------------------------------------------------------------------------- */
+/* Plazos: de 2 días a 1 semana para todo lo que tiene precio cerrado
+   (N1 a N3). Lo que de verdad es grande (N4, sin precio "desde") no lleva
+   promesa de tiempo — se define en el diagnóstico, según lo que se hable
+   con cada cliente. Ningún ítem del catálogo puede superar 1 semana; si
+   alguno lo hace, hay que bajarlo o pasarlo a N4. */
 export const niveles = [
   {
     id: "N1",
@@ -153,7 +161,7 @@ export const niveles = [
     definicion:
       "Tres a cinco aplicaciones, condiciones, reintentos y notificaciones.",
     ejemplo: "Lead de anuncios → CRM → WhatsApp → recordatorios",
-    plazo: "1 a 2 semanas",
+    plazo: "4 a 7 días",
     desde: 385000,
   },
   {
@@ -162,7 +170,7 @@ export const niveles = [
     definicion:
       "Lectura de documentos, clasificación, decisiones y agentes de IA.",
     ejemplo: "Foto de factura → datos extraídos → contabilidad",
-    plazo: "2 a 4 semanas",
+    plazo: "5 a 7 días",
     desde: 720000,
   },
   {
@@ -171,47 +179,55 @@ export const niveles = [
     definicion:
       "Varios flujos conectados, panel propio, migración de datos, API.",
     ejemplo: "Operación completa de pedidos de punta a punta",
-    plazo: "4 a 8 semanas",
+    plazo: "Según lo que hablemos",
     desde: null,
   },
 ] as const;
 
 /* -------------------------------------------------------------------------
-   Planes. Setup único + mensualidad.
+   Planes. Solo mensualidad: no se cobra puesta en marcha.
+   El campo  queda en null por si algún día se reactiva.
    ------------------------------------------------------------------------- */
 export const planes = [
   {
     id: "starter",
-    nombre: "Starter",
-    para: "Validar con un proceso",
-    setup: 285000,
-    mensual: 38000,
+    nombre: "Básico",
+    para: "Ideal para arrancar y atender 24/7",
+    setup: null,
+    mensual: 50000,
+    /** Días de prueba gratuita, contados desde que la automatización
+        elegida por el cliente queda entregada y funcionando (no desde
+        la firma). Solo aplica a este plan. `null` = sin prueba. */
+    pruebaGratuitaDias: 7,
     destacado: false,
     limites: [
-      ["Automatizaciones activas", "1 a 2"],
+      ["Automatizaciones incluidas", "1 completa"],
       ["Ejecuciones por mes", "2.000"],
       ["Integraciones", "3"],
       ["Cambios incluidos", "—"],
-      ["Soporte", "Correo, 72 h"],
+      ["Soporte", "Correo, 48 h hábiles"],
       ["Monitoreo", "Básico"],
     ],
     incluye: [
-      "Diagnóstico y mapa de procesos",
-      "Portal con métricas de ahorro",
-      "Documentación y video de uso",
-      "Alertas automáticas si un flujo falla",
+      "Instalación y puesta en marcha sin costo",
+      "1 automatización completa incluida, a elección tuya",
+      "Prueba gratuita de 7 días desde que queda funcionando",
+      "Diagnóstico y mapa de procesos antes de empezar",
+      "Arreglo incluido si una app conectada cambia su interfaz",
+      "Sin permanencia forzada — cancelás cuando querés",
     ],
     cta: "directo",
   },
   {
     id: "growth",
     nombre: "Growth",
-    para: "El negocio ya opera con flujos",
-    setup: 850000,
+    para: "Automatiza ventas y seguimientos",
+    setup: null,
     mensual: 125000,
+    pruebaGratuitaDias: null,
     destacado: true,
     limites: [
-      ["Automatizaciones activas", "Hasta 5"],
+      ["Automatizaciones incluidas", "3 completas"],
       ["Ejecuciones por mes", "20.000"],
       ["Integraciones", "8"],
       ["Cambios incluidos", "2 h por mes"],
@@ -219,37 +235,79 @@ export const planes = [
       ["Monitoreo", "Con alertas"],
     ],
     incluye: [
-      "Todo lo de Starter",
+      "Instalación y puesta en marcha sin costo",
+      "3 automatizaciones completas incluidas",
+      "Todo lo de Básico",
       "Revisión mensual de rendimiento",
       "Prioridad en la cola de cambios",
-      "Ajustes de flujos existentes sin costo",
+      "2 horas de ajustes a flujos existentes cada mes",
+      "Informe mensual de ejecuciones y errores",
+      "Soporte por correo con respuesta en 24 horas",
+      "Monitoreo con alertas en tiempo real",
     ],
     cta: "llamada",
   },
   {
     id: "scale",
     nombre: "Scale",
-    para: "La operación depende de esto",
-    setup: 1950000,
-    mensual: 340000,
+    para: "Diseñado a medida para operaciones grandes",
+    setup: null,
+    /* Ya no se muestra como precio fijo — ver `aCotizar`. Se deja el
+       número como referencia interna de "desde cuánto" arranca la
+       conversación, no como algo que ve el cliente. */
+    mensual: 320000,
+    aCotizar: true,
+    pruebaGratuitaDias: null,
     destacado: false,
     limites: [
-      ["Automatizaciones activas", "Hasta 12"],
-      ["Ejecuciones por mes", "100.000"],
+      ["Automatizaciones", "A medida, según tu operación"],
+      ["Ejecuciones por mes", "Sin límite fijo"],
       ["Integraciones", "Sin límite"],
-      ["Cambios incluidos", "8 h por mes"],
+      ["Cambios incluidos", "Según lo acordado"],
       ["Soporte", "WhatsApp, 8 h hábiles"],
-      ["Monitoreo", "Alertas y guardia"],
+      ["Monitoreo", "Alertas y prioridad"],
     ],
     incluye: [
-      "Todo lo de Growth",
-      "Informe mensual con horas ahorradas",
-      "Ambiente de pruebas separado",
+      "Diagnóstico y diseño a medida para tu operación",
+      "Tantas automatizaciones como tu operación necesite",
+      "Ambiente de pruebas separado antes de publicar cambios",
       "Plan de continuidad documentado",
+      "Soporte prioritario por WhatsApp, 8 horas hábiles",
+      "Sesión trimestral de revisión estratégica",
     ],
     cta: "llamada",
   },
 ] as const;
+
+/* -------------------------------------------------------------------------
+   En qué plan entra cada nivel del catálogo. Se muestra como "Incluido en
+   {plan}" en vez del precio de construcción en la grilla del catálogo
+   (que puede asustar sin contexto) — el precio real sigue apareciendo tal
+   cual al dar clic (checkout o el mensaje de WhatsApp). Como el plan
+   incluye "N automatizaciones a elección", cualquier ítem de ese nivel
+   puede ser la elegida — el texto es honesto, pero ojo: no es una
+   automatización específica ya reservada para cada cliente.
+   ------------------------------------------------------------------------- */
+export const planPorNivel: Record<"N1" | "N2" | "N3" | "N4", string> = {
+  N1: "Básico",
+  N2: "Básico",
+  N3: "Growth",
+  N4: "Scale",
+};
+
+/* -------------------------------------------------------------------------
+   Auditoría: la sección que la mostraba en /planes se sacó el 30/8/2026 —
+   el usuario decidió que en la web y afuera solo se comuniquen los 3
+   precios de los planes. Se deja el dato acá sin usar por si se retoma
+   más adelante en otra forma; no está importado en ningún componente.
+   ------------------------------------------------------------------------- */
+export const auditoria = {
+  nombre: "Auditoría de Automatización",
+  // Bajado de ₡95.000 a ₡50.000 el 27/8/2026 mientras se valida el mercado
+  // local. Revisar más adelante junto con el resto de precios cuando se
+  // apunte a mercado global.
+  precio: 50000,
+};
 
 /* -------------------------------------------------------------------------
    Catálogo. Automatizaciones con precio y plazo cerrados.
@@ -262,91 +320,136 @@ export type Automatizacion = {
   nivel: "N1" | "N2" | "N3" | "N4";
   plazo: string;
   precio: number | null;
+  /** false = el precio se muestra igual, pero el botón pasa a
+      "Contratar por WhatsApp" en vez de ir directo al checkout. Así se
+      puede lanzar con pocas automatizaciones sin ocultar las demás. */
+  disponible: boolean;
+  /** Cuánto exige el servidor una vez corriendo, no cuánto costó construirla.
+      "programada" = corre en horarios fijos o por eventos raros.
+      "moderada"   = reacciona a eventos con cierta frecuencia, o llama IA
+                     puntualmente por ejecución.
+      "continua"   = tiene que estar escuchando todo el tiempo y/o llama IA
+                     por cada interacción. Es lo que decide en qué plan cabe. */
+  carga: "programada" | "moderada" | "continua";
   requiere: ToolId[];
   descripcion: string;
   flujo: string[];
+  /** Detalle de cada paso, alineado por índice con `flujo`. Opcional:
+      si falta, el diagrama se muestra sin explicación paso a paso. */
+  detalles?: string[];
+  /** Solo aplica dentro de Growth. Growth incluye 1 "principal" (el
+      asistente de WhatsApp, en el modo que elijas) + sus 2 "complementos"
+      — no es "elegí 3 de un menú de 5": cada modo del asistente es un
+      build completo aparte, así que apilar más de un modo no sale gratis
+      dentro del mismo plan. Sin valor = no participa de esa regla
+      (Básico no la necesita, Scale ya no tiene menú fijo). */
+  rol?: "principal" | "complemento";
 };
 
 export const catalogo: Automatizacion[] = [
+  /* ---- Principales de Growth: el asistente de WhatsApp, por modo.
+     Cada modo es un build completo aparte (prompt, lógica y casos
+     distintos) aunque los tres hablen por el mismo número — por eso
+     cada uno es su propio ítem de catálogo, no variantes de uno solo. */
   {
-    id: "leads-60s",
-    nombre: "Lead de anuncios al CRM y a WhatsApp en 60 segundos",
-    proceso: "ventas",
-    nivel: "N2",
-    plazo: "5 días",
-    precio: 420000,
-    requiere: ["ads", "crm", "whatsapp"],
+    id: "whatsapp-agenda",
+    disponible: true,
+    nombre: "Asistente de WhatsApp: Agenda",
+    proceso: "atencion",
+    nivel: "N3",
+    plazo: "7 días",
+    precio: 620000,
+    carga: "continua",
+    requiere: ["whatsapp", "calendario"],
+    rol: "principal",
     descripcion:
-      "Cada contacto que deja sus datos en un anuncio entra al CRM etiquetado por campaña y le llega un primer mensaje antes de que se enfríe. Si nadie lo atiende en el plazo que definás, el sistema insiste.",
+      "Responde preguntas de horario y agenda citas nuevas contra tu calendario real, con recordatorio 24 h antes y opción de confirmar o reprogramar en un clic. Lo que no sabe resolver, lo escala a una persona con todo el contexto de la conversación.",
     flujo: [
-      "Formulario del anuncio",
-      "Validación y deduplicado",
-      "Alta en el CRM",
-      "Primer mensaje al cliente",
-      "Recordatorio al vendedor",
-    ],
-  },
-  {
-    id: "presupuestos",
-    nombre: "Seguimiento de cotizaciones sin respuesta",
-    proceso: "ventas",
-    nivel: "N2",
-    plazo: "5 días",
-    precio: 340000,
-    requiere: ["crm", "correo"],
-    descripcion:
-      "Toda cotización enviada entra en una secuencia de seguimiento. A los tres, siete y catorce días sale un mensaje distinto, y se detiene sola cuando el cliente responde.",
-    flujo: [
-      "Cotización enviada",
-      "Espera y verificación de respuesta",
-      "Seguimiento escalonado",
-      "Aviso al vendedor si hay interés",
-    ],
-  },
-  {
-    id: "recordatorio-citas",
-    nombre: "Recordatorios de cita con confirmación",
-    proceso: "ventas",
-    nivel: "N1",
-    plazo: "4 días",
-    precio: 185000,
-    requiere: ["calendario", "whatsapp"],
-    descripcion:
-      "Recordatorio automático 24 horas antes con opción de confirmar o reprogramar. Las ausencias caen de forma inmediata y medible.",
-    flujo: [
-      "Cita en el calendario",
+      "Mensaje entrante o cita agendada",
+      "Interpretación de la consulta",
+      "Agenda o reprogramación contra el calendario real",
       "Recordatorio 24 h antes",
-      "Respuesta del cliente",
       "Calendario actualizado",
     ],
+    detalles: [
+      "Alguien escribe al WhatsApp del negocio pidiendo una cita, o ya la tenía agendada.",
+      "Si pide una cita nueva, la agenda directo contra tu calendario real — nunca dos personas en el mismo espacio.",
+      "24 horas antes, le llega un recordatorio con opción de confirmar o reprogramar.",
+      "Si cancela o reprograma, el calendario queda al día al instante.",
+      "Lo que no sabe resolver, lo escala a una persona con todo el contexto de la conversación.",
+    ],
   },
   {
-    id: "bot-whatsapp",
-    nombre: "Asistente de WhatsApp que responde y agenda",
+    id: "whatsapp-atencion",
+    disponible: true,
+    nombre: "Asistente de WhatsApp: Atención",
     proceso: "atencion",
     nivel: "N3",
     plazo: "7 días",
     precio: 690000,
-    requiere: ["whatsapp", "calendario"],
+    carga: "continua",
+    requiere: ["whatsapp", "tienda"],
+    rol: "principal",
     descripcion:
-      "Responde las preguntas frecuentes con tu propia información, agenda citas contra el calendario real y pasa la conversación a una persona cuando detecta que hace falta.",
+      "Responde las preguntas frecuentes del negocio con tu información real, y si conectás tu tienda, consulta inventario o el estado de un pedido en vivo. Lo que no sabe resolver, lo escala a una persona con todo el contexto de la conversación.",
     flujo: [
       "Mensaje entrante",
       "Interpretación de la consulta",
-      "Respuesta o agenda",
-      "Escalado a una persona",
+      "Consulta de inventario o pedido si hace falta",
+      "Respuesta con datos reales",
+      "Escalado a una persona si hace falta",
+    ],
+    detalles: [
+      "Llega un mensaje al WhatsApp del negocio, a cualquier hora.",
+      "Se interpreta qué está pidiendo la persona: una pregunta frecuente, disponibilidad, o algo que necesita criterio humano.",
+      "Si conectaste tu tienda, consulta el inventario o el estado del pedido en vivo antes de responder.",
+      "Contesta con datos reales y actualizados, nunca inventados.",
+      "Cuando detecta que hace falta una persona, escala la conversación con todo el contexto de lo ya hablado.",
     ],
   },
   {
-    id: "correo-clasificado",
-    nombre: "Clasificación y borradores del correo de entrada",
+    id: "whatsapp-cobro",
+    disponible: true,
+    nombre: "Asistente de WhatsApp: Cobro",
+    proceso: "administracion",
+    nivel: "N3",
+    plazo: "7 días",
+    precio: 690000,
+    carga: "continua",
+    requiere: ["whatsapp", "banco", "factura"],
+    rol: "principal",
+    descripcion:
+      "Recuerda a cada cliente antes del vencimiento por WhatsApp y da seguimiento hasta que entra el pago. Confirma solo, leyendo el comprobante que el cliente manda por el mismo chat, y emite la factura electrónica al confirmarse (opcional). Requiere que tengas tu propia API de WhatsApp Business configurada.",
+    flujo: [
+      "Vencimiento próximo",
+      "Aviso y seguimiento por WhatsApp",
+      "Lectura del comprobante enviado",
+      "Pago confirmado y registrado",
+      "Factura electrónica (opcional)",
+    ],
+    detalles: [
+      "Antes de que venza el cobro, le llega al cliente un recordatorio con el monto y la orden.",
+      "Si no paga, el seguimiento continúa según los días que definas.",
+      "En cuanto el cliente manda el comprobante por WhatsApp (foto o captura), se lee solo y se verifica.",
+      "El pago queda registrado sin que nadie lo transcriba a mano.",
+      "Si activaste la opción, se emite y envía la factura electrónica en el mismo momento.",
+    ],
+  },
+  /* ---- Complementos: livianos, no compiten por el mismo motor
+     conversacional que el asistente de WhatsApp. */
+  {
+    id: "correo-clasificado-ia",
+    disponible: true,
+    nombre: "Clasificación y borradores de correo con IA",
     proceso: "atencion",
     nivel: "N3",
-    plazo: "10 días",
+    plazo: "7 días",
     precio: 780000,
+    carga: "continua",
     requiere: ["correo"],
+    rol: "complemento",
     descripcion:
-      "Cada correo entra etiquetado por tipo y urgencia, con un borrador de respuesta listo para revisar. Vos aprobás; nadie escribe desde cero.",
+      "Cada correo entra clasificado por tipo y urgencia, con un borrador de respuesta listo para revisar, escrito con el contexto real del cliente. Vos aprobás; nadie escribe desde cero.",
     flujo: [
       "Correo entrante",
       "Clasificación por tipo",
@@ -355,100 +458,95 @@ export const catalogo: Automatizacion[] = [
     ],
   },
   {
-    id: "ocr-facturas",
-    nombre: "Facturas y recibos a hoja de cálculo con lectura automática",
+    id: "lectura-facturas",
+    disponible: true,
+    nombre: "Lectura automática de facturas",
     proceso: "administracion",
-    nivel: "N3",
-    plazo: "10 días",
-    precio: 740000,
+    nivel: "N2",
+    plazo: "5 días",
+    precio: 420000,
+    carga: "moderada",
     requiere: ["drive", "sheets"],
+    rol: "complemento",
     descripcion:
-      "Se deja el PDF o la foto en una carpeta y salen los datos estructurados: proveedor, fecha, subtotal, impuesto, total. Lo dudoso queda marcado para revisión en lugar de inventado.",
+      "Se deja el PDF o la foto de la factura en una carpeta y salen los datos estructurados: proveedor, fecha, subtotal, impuesto, total — para pagar a tus proveedores, no para que te paguen a vos (eso lo hace el Asistente de WhatsApp: Cobro). En Básico funciona para un proveedor de formato fijo. En Growth soporta cualquier proveedor, formato o moneda, y valida que los totales cuadren antes de registrar: lo dudoso queda marcado para revisión en lugar de inventado.",
     flujo: [
       "Documento en la carpeta",
       "Lectura de los datos",
-      "Validación de totales",
+      "Validación de totales (Growth)",
       "Registro en la hoja",
-      "Marcado de excepciones",
+      "Marcado de excepciones (Growth)",
+    ],
+    detalles: [
+      "Se deja la factura en la carpeta compartida, o llega por correo. En Básico sirve para un proveedor de formato fijo; en Growth, para cualquier proveedor, formato o moneda.",
+      "Se extraen los datos del documento: proveedor, fecha, subtotal, impuesto y total.",
+      "En Growth se comprueba que los números cuadren entre sí antes de darlos por buenos.",
+      "Los datos ya validados se registran en tu hoja de control o contabilidad.",
+      "En Growth, lo dudoso queda aparte, señalado para que una persona lo revise — nunca se inventa un dato.",
     ],
   },
   {
-    id: "factura-electronica",
-    nombre: "Factura electrónica automática al confirmar el pago",
-    proceso: "administracion",
+    id: "panel-alertas",
+    disponible: true,
+    nombre: "Panel y alertas de métricas",
+    proceso: "datos",
     nivel: "N2",
-    plazo: "5 días",
-    precio: 395000,
-    requiere: ["factura", "banco"],
+    plazo: "6 días",
+    precio: 320000,
+    carga: "moderada",
+    requiere: ["sheets", "drive", "correo"],
+    rol: "complemento",
     descripcion:
-      "Al marcar una orden como pagada se emite el comprobante electrónico, se envía al cliente y queda archivado. Pensado para el esquema de Hacienda en Costa Rica.",
+      "Definís los umbrales que importan y el sistema avisa cuando se cruzan, el mismo día — no en el cierre de mes. En Básico consolida uno o dos archivos en un panel una vez al día y manda el resumen los lunes por correo o WhatsApp. En Growth consolida tantas fuentes como tengas, actualizado en vivo, con alerta en el instante que algo se sale de rango.",
     flujo: [
-      "Pago confirmado",
-      "Emisión del comprobante",
-      "Envío al cliente",
-      "Archivo y registro",
+      "Archivos o dato de origen",
+      "Normalización",
+      "Panel actualizado (diario en Básico, en vivo en Growth)",
+      "Comparación con el umbral",
+      "Aviso",
+    ],
+    detalles: [
+      "Se leen los archivos o sistemas que definás: ventas, hoja de cálculo, o lo que uses hoy.",
+      "Se normalizan solos: mismos formatos, sin duplicados.",
+      "En Básico el panel se actualiza una vez al día; en Growth, en vivo, sin importar cuántas fuentes sumes.",
+      "Cada umbral que definiste se revisa contra el dato real.",
+      "Si algo se sale de rango, el aviso llega el mismo día — en Growth, en el instante.",
     ],
   },
   {
-    id: "recordatorio-cobros",
-    nombre: "Recordatorios de cobro por SINPE",
-    proceso: "administracion",
-    nivel: "N2",
-    plazo: "5 días",
-    precio: 310000,
-    requiere: ["whatsapp", "sheets"],
-    descripcion:
-      "Aviso antes del vencimiento, recordatorio a los tres días y aviso de suspensión a los diez, con el monto y el número de orden. Se detiene solo cuando entra el pago.",
-    flujo: [
-      "Vencimiento próximo",
-      "Aviso con monto y orden",
-      "Verificación del pago",
-      "Escalado por mora",
-    ],
-  },
-  {
-    id: "onboarding-cliente",
-    nombre: "Arranque de cliente nuevo completo",
-    proceso: "operaciones",
-    nivel: "N2",
-    plazo: "7 días",
-    precio: 460000,
-    requiere: ["drive", "correo", "tareas"],
-    descripcion:
-      "Al cerrar una venta se crea la carpeta, se genera el contrato, se envían los accesos y se abre la lista de tareas del equipo. Igual todas las veces.",
-    flujo: [
-      "Venta cerrada",
-      "Carpeta y contrato",
-      "Accesos y bienvenida",
-      "Tareas asignadas",
-    ],
-  },
-  {
-    id: "seguimiento-pedidos",
-    nombre: "Avisos de estado de pedido al cliente",
-    proceso: "operaciones",
+    id: "publicador-contenido",
+    disponible: true,
+    nombre: "Publicador de contenido",
+    proceso: "ventas",
     nivel: "N2",
     plazo: "5 días",
     precio: 380000,
-    requiere: ["tienda", "whatsapp"],
+    carga: "programada",
+    requiere: ["redes"],
+    rol: "complemento",
     descripcion:
-      "El cliente recibe un aviso en cada cambio de estado de su pedido. Las consultas de «en qué va lo mío» bajan de forma notoria.",
+      "Publica en hasta 3 redes conectadas, hasta 10 veces al día, únicamente con imágenes o video que ya subiste a tu base de contenido aprobado — no genera nada nuevo, solo publica lo que vos ya aprobaste. Cada red adicional después de las 3 incluidas suma $10/mes.",
     flujo: [
-      "Cambio de estado",
-      "Mensaje al cliente",
-      "Registro del envío",
+      "Contenido aprobado en la base de datos",
+      "Cola de publicación",
+      "Publicación en cada red conectada",
+      "Registro de publicaciones del día",
     ],
   },
+  /* ---- Scale: sin menú fijo, a cotizar. Se dejan como ejemplo de lo
+     que se construye a medida, no como SKU con precio cerrado. */
   {
     id: "sync-inventario",
+    disponible: true,
     nombre: "Sincronización de tienda, inventario y facturación",
     proceso: "operaciones",
     nivel: "N4",
     plazo: "A cotizar",
     precio: null,
+    carga: "continua",
     requiere: ["tienda", "erp", "factura"],
     descripcion:
-      "Una sola fuente de verdad para el stock. Depende de qué APIs expongan tus sistemas, por eso se cotiza después del diagnóstico.",
+      "Una sola fuente de verdad para el stock, entre tu tienda, tu contabilidad y tu ERP, en tiempo real y en ambas direcciones. Depende de qué APIs expongan tus sistemas, por eso se cotiza después del diagnóstico. Ejemplo de lo que se construye a medida en Scale.",
     flujo: [
       "Movimiento de stock",
       "Actualización en la tienda",
@@ -457,96 +555,105 @@ export const catalogo: Automatizacion[] = [
     ],
   },
   {
-    id: "reporte-semanal",
-    nombre: "Reporte semanal automático a WhatsApp o correo",
-    proceso: "datos",
-    nivel: "N1",
-    plazo: "3 días",
-    precio: 165000,
-    requiere: ["sheets", "whatsapp"],
+    id: "generador-contenido-ia",
+    disponible: true,
+    nombre: "Generador de contenido con IA — Pro",
+    proceso: "ventas",
+    nivel: "N4",
+    plazo: "A cotizar",
+    precio: null,
+    carga: "continua",
+    requiere: ["redes"],
     descripcion:
-      "Todos los lunes a las siete llega el resumen con los números de la semana y la comparación con la anterior. Nadie lo arma a mano.",
+      "Todo lo del Publicador de contenido, pero en vez de solo publicar lo que ya subiste, genera las imágenes, video o el copy con IA entrenada en la voz y la marca de tu negocio. Vos aprobás antes de que salga, o lo dejás en automático. Se cotiza según la marca y el volumen. Ejemplo de lo que se construye a medida en Scale.",
     flujo: [
-      "Lectura de las fuentes",
-      "Cálculo y comparación",
-      "Envío del resumen",
-    ],
-  },
-  {
-    id: "consolidar-excel",
-    nombre: "Varios archivos de Excel en un panel siempre al día",
-    proceso: "datos",
-    nivel: "N2",
-    plazo: "5 días",
-    precio: 350000,
-    requiere: ["sheets", "drive"],
-    descripcion:
-      "Los archivos de cada sucursal, vendedor o mes se consolidan solos en un panel único, con control de duplicados y de formatos que no cuadran.",
-    flujo: [
-      "Archivos de origen",
-      "Normalización",
-      "Consolidado",
-      "Panel actualizado",
-    ],
-  },
-  {
-    id: "alertas-metricas",
-    nombre: "Alertas cuando una métrica se sale de rango",
-    proceso: "datos",
-    nivel: "N1",
-    plazo: "3 días",
-    precio: 155000,
-    requiere: ["sheets", "correo"],
-    descripcion:
-      "Definís los umbrales y el sistema avisa cuando se cruzan. Se enteran el mismo día, no en el cierre de mes.",
-    flujo: ["Lectura del dato", "Comparación con el umbral", "Aviso"],
-  },
-  {
-    id: "alta-empleado",
-    nombre: "Alta de personal con accesos y documentos",
-    proceso: "personas",
-    nivel: "N2",
-    plazo: "7 días",
-    precio: 420000,
-    requiere: ["correo", "drive", "tareas"],
-    descripcion:
-      "Una sola ficha dispara la creación de cuentas, la carpeta de documentos, el envío del material de inducción y las tareas de quien lo recibe.",
-    flujo: [
-      "Ficha de ingreso",
-      "Creación de accesos",
-      "Documentos y firma",
-      "Inducción asignada",
-    ],
-  },
-  {
-    id: "solicitudes-internas",
-    nombre: "Solicitudes de vacaciones y ausencias",
-    proceso: "personas",
-    nivel: "N1",
-    plazo: "4 días",
-    precio: 175000,
-    requiere: ["correo", "calendario"],
-    descripcion:
-      "La solicitud entra por un formulario, va a quien tiene que aprobarla y, si se aprueba, cae en el calendario del equipo. Con registro de todo.",
-    flujo: [
-      "Solicitud",
-      "Aprobación",
-      "Calendario del equipo",
-      "Registro",
+      "Brief o calendario de contenido",
+      "Generación con IA según tu marca",
+      "Revisión (opcional)",
+      "Publicación en tus redes",
+      "Registro de publicaciones",
     ],
   },
 ];
 
 /* -------------------------------------------------------------------------
    Síntomas para la home. El eje que reemplaza al nicho.
+
+   Van en orden cronológico a propósito: la sección los cuenta como el día
+   de trabajo de alguien, no como una lista de features — una historia se
+   habita, una lista se escanea y se olvida.
+
+   `horas` es un ESTIMADO, nunca un resultado medido de un cliente real.
+   Por eso `cuenta` muestra siempre los supuestos: un número que se puede
+   auditar se cree, uno que cae del cielo se descuenta. Cuando haya datos
+   reales de clientes, estos estimados se reemplazan por cifras medidas.
+
+   Los dos que no se traducen en horas llevan `horas: null` a propósito.
+   Inventarles un número es exactamente lo que haría sonar falso a todo
+   el resto: esos se pagan en clientes perdidos, no en tiempo.
    ------------------------------------------------------------------------- */
-export const sintomas = [
-  "Alguien copia los mismos datos de un sistema a otro todos los días.",
-  "El mismo mensaje se contesta cuarenta veces al día.",
-  "Los contactos que entran de noche se atienden dos días después.",
-  "El cierre de mes se hace persiguiendo facturas en tres carpetas.",
-  "Los problemas se descubren cuando el cliente ya reclamó.",
+export const sintomas: {
+  id: "copiar" | "repetir" | "cierre" | "tarde" | "reclamo";
+  momento: string;
+  titulo: string;
+  texto: string;
+  horas: number | null;
+  cuenta: string;
+}[] = [
+  {
+    id: "copiar",
+    momento: "8:00 a.m.",
+    titulo: "Copiar y pegar",
+    texto:
+      "Pasar datos de un sistema a otro de forma manual. Una tarea mecánica que no le suma valor real a tu negocio.",
+    horas: 11,
+    cuenta: "30 min al día × 22 días hábiles",
+  },
+  {
+    id: "repetir",
+    momento: "Todo el día",
+    titulo: "El modo \"disco rayado\"",
+    texto:
+      "Responder las mismas dudas por WhatsApp o correo cuarenta veces al día. Mensajes que ya te sabés de memoria.",
+    horas: 29,
+    cuenta: "40 mensajes × 2 min × 22 días hábiles",
+  },
+  {
+    id: "cierre",
+    momento: "Fin de mes",
+    titulo: "El caos administrativo",
+    texto:
+      "Cerrar el mes rastreando facturas perdidas, cruzando datos a mano y consolidando información en tres lugares distintos.",
+    horas: 8,
+    cuenta: "Un día entero, todos los meses",
+  },
+  {
+    id: "tarde",
+    momento: "11:00 p.m.",
+    titulo: "El lead que se enfría",
+    texto:
+      "Un prospecto escribe de noche y lo atendés hasta la mañana siguiente. Para entonces, la urgencia ya pasó (o ya le compró a la competencia).",
+    horas: null,
+    cuenta: "",
+  },
+  {
+    id: "reclamo",
+    momento: "Cuando ya es tarde",
+    titulo: "Reaccionar vs. prevenir",
+    texto:
+      "Te enterás de que un proceso falló cuando el cliente te escribe a quejarse. Ahí ya no estás dando soporte: estás controlando daños.",
+    horas: null,
+    cuenta: "",
+  },
 ];
+
+/** Suma de los síntomas que sí se cuentan en horas. Se deriva del array
+    para que nadie escriba un total a mano que después no cuadre si se
+    cambia un supuesto. */
+export const horasPerdidasEstimadas = sintomas.reduce(
+  (total, s) => total + (s.horas ?? 0),
+  0
+);
 
 /* -------------------------------------------------------------------------
    Preguntas frecuentes.
@@ -561,8 +668,12 @@ export const faq = [
     a: "Para un software vertical, sí. Para automatizar el flujo de trabajo entre las herramientas que ya usás, la especialización útil es técnica, no sectorial. Un flujo de seguimiento de cotizaciones es el mismo en una constructora y en una imprenta.",
   },
   {
-    q: "¿De quién son las automatizaciones si dejo de pagar?",
-    a: "Tuyas. Te las entregamos exportadas y documentadas. La mensualidad paga el monitoreo, el mantenimiento y los cambios, no el derecho a usarlas.",
+    q: "¿Qué pasa con las automatizaciones si dejo de pagar?",
+    a: "Corren mientras la mensualidad esté al día — eso es lo que paga el monitoreo, el mantenimiento y los cambios, no un derecho de uso aparte. Si cancelás o la mora pasa el aviso de suspensión, el servicio se da de baja junto con las automatizaciones activas de ese plan. Si preferís no depender de nuestros servidores, también podés comprarla de forma independiente por un pago único de aproximadamente 6 meses de esa mensualidad: te la entregamos documentada para que corra en tu propia infraestructura, sin mantenimiento de nuestra parte.",
+  },
+  {
+    q: "¿Cuánto cuesta agregar una automatización a mi plan?",
+    a: `No se cobra construcción aparte, solo sube tu mensualidad — y cuánto sube depende de lo que esa automatización le exige al servidor, no de qué tan compleja fue construirla. Si se activa por horario o eventos puntuales, ${colones(site.pago.costoAgregarPorCarga.programada)}/mes más. Si reacciona a eventos con cierta frecuencia, ${colones(site.pago.costoAgregarPorCarga.moderada)}/mes. Si tiene que estar escuchando todo el tiempo (como un chat) o llama IA en cada interacción, ${colones(site.pago.costoAgregarPorCarga.continua)}/mes. Los sistemas grandes se cotizan aparte.`,
   },
   {
     q: "¿Necesito tener alguien técnico en mi equipo?",
@@ -578,7 +689,7 @@ export const faq = [
   },
   {
     q: "¿Cómo se paga?",
-    a: "Las mensualidades por SINPE Móvil y los proyectos por transferencia bancaria, según el tope de tu banco. Al confirmar el pago se emite la factura electrónica. Si preferís pago anual, son diez meses en lugar de doce.",
+    a: "Las mensualidades por SINPE Móvil y los proyectos por transferencia bancaria. Los datos de la cuenta te los pasamos al confirmar el pedido. Al recibir el pago se emite la factura electrónica. Si preferís pago anual, son diez meses en lugar de doce.",
   },
   {
     q: "¿Los precios incluyen las licencias de las herramientas?",
@@ -586,6 +697,105 @@ export const faq = [
   },
   {
     q: "¿Cuánto tarda?",
-    a: "Entre dos días y ocho semanas, según el nivel del flujo. La tabla de niveles de la página de planes tiene el detalle.",
+    a: "Entre dos días y una semana para cualquier automatización del catálogo. Si tu proyecto es de verdad grande (varios flujos conectados, panel propio, migración de datos), el plazo se define en el diagnóstico según lo que hablemos.",
+  },
+];
+
+/* -------------------------------------------------------------------------
+   Negocios: una página por negocio real, en vez de solo por proceso.
+   Contenido curado en NEGOCIOS-Y-AUTOMATIZACIONES.md (raíz del repo) —
+   este archivo es la versión resumida para la web. Empieza con uno solo
+   (prestamista) a modo de prueba; si el patrón funciona, se completan
+   los demás desde ese mismo documento.
+   ------------------------------------------------------------------------- */
+export type Negocio = {
+  slug: string;
+  nombre: string;
+  nota: string;
+  comoTrabajaHoy: string[];
+  dolor: string;
+  automatizacionCompleta: string[];
+  /** ids del catálogo (`Automatizacion.id`) que resuelven este negocio. */
+  catalogoIds: string[];
+  /** Plan que sale de combinar las de `catalogoIds` juntas — no se deriva
+      solo, porque `planPorNivel` dice en qué plan entra CADA una elegida
+      sola, y acá van varias a la vez. Se decide a mano. */
+  planSugerido: string;
+  queGana: string;
+  ojoCon?: string[];
+};
+
+/* Tono: directo y corto — un renglón por paso, sin subordinadas. La
+   página los muestra en dos columnas enfrentadas (hoy vs. automático), así
+   que una frase larga se ve fuera de lugar al lado de su par corta. */
+export const negocios: Negocio[] = [
+  {
+    slug: "prestamista",
+    nombre: "Prestamista / financiera informal",
+    nota: "Negocio muy común en Costa Rica y casi enteramente manual.",
+    comoTrabajaHoy: [
+      "«¿Me prestás 200 mil?» — llega por WhatsApp",
+      "Negocian monto, plazo e interés por chat",
+      "Entrega en persona o por SINPE",
+      "Todo se anota en un cuaderno",
+      "Cada quincena revisa quién debe pagar",
+      "Escribe uno por uno para recordar",
+      "Marca el pago a mano al recibir el SINPE",
+      "La mora se calcula a mano si alguien se atrasa",
+      "A fin de mes intenta sacar cuentas",
+    ],
+    dolor:
+      "Se le pasan cobros. El cuaderno se pierde. No sabe su capital disponible. Su techo es cuánta gente puede recordar.",
+    automatizacionCompleta: [
+      "Alta del préstamo por WhatsApp: monto, plazo, tasa",
+      "Tabla de amortización generada sola",
+      "Una fila por préstamo, siempre al día",
+      "Recordatorio automático dos días antes de cada cuota",
+      "Registra el pago solo al leer el comprobante",
+      "Mora escalonada: suave, firme, serio",
+      "Panel en vivo: capital, mora, ganancia",
+      "Reporte semanal solo, por WhatsApp",
+    ],
+    catalogoIds: ["whatsapp-cobro", "panel-alertas"],
+    planSugerido: "Growth · ₡125.000/mes",
+    queGana:
+      "Deja de perder cobros, conoce su capital en tiempo real, y atiende varias veces más clientes sin contratar a nadie.",
+    ojoCon: [
+      "La Ley de usura pone un tope a la tasa — el sistema puede avisar si te pasás, y eso es argumento de venta.",
+      "El negocio corre solo; a quién prestarle lo seguís decidiendo vos.",
+    ],
+  },
+  {
+    slug: "dental",
+    nombre: "Clínica dental / consultorio médico",
+    nota: "De las actividades con más mipymes y más saturación del país.",
+    comoTrabajaHoy: [
+      "El paciente pide cita por WhatsApp o llamada",
+      "La asistente revisa la agenda a mano",
+      "Propone horarios, va y viene por chat",
+      "Anota la cita donde puede",
+      "El día antes, si acaso, llama a recordar",
+      "Cobra y factura después de atender",
+      "Tratamientos de varias sesiones se reagendan uno por uno",
+      "La limpieza semestral casi nadie la recuerda",
+    ],
+    dolor:
+      "Ausencias del 15 al 30% sin recordatorio sistemático. La agenda se administra a mano, chat por chat, con el consultorio lleno.",
+    automatizacionCompleta: [
+      "Bot de WhatsApp agenda solo contra el calendario real",
+      "Confirmación al toque, recordatorio a 24h y a 2h",
+      "Si cancela, el cupo se ofrece solo a la lista de espera",
+      "Factura electrónica automática después de atender",
+      "Tratamientos de varias sesiones se agendan solos",
+      "Recall a los 6 meses: «te toca limpieza, ¿te agendo?»",
+      "Panel de ocupación, ausencias e ingreso por tratamiento",
+    ],
+    catalogoIds: ["whatsapp-agenda", "whatsapp-cobro", "panel-alertas"],
+    planSugerido: "Growth · ₡125.000/mes",
+    queGana:
+      "Con 100 citas al mes a ₡40.000, bajar las ausencias del 20% al 5% recupera 15 citas — ₡600.000 al mes, contra ₡125.000 del plan.",
+    ojoCon: [
+      "Los datos de salud son sensibles bajo la Ley 8968 — cuidar dónde se guardan es también un argumento de seriedad.",
+    ],
   },
 ];

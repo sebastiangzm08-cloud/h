@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Target, PlugsConnected, ShieldCheck } from "@phosphor-icons/react/dist/ssr";
 import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
 import { ConstellationMark } from "@/components/constellation";
@@ -7,21 +8,24 @@ import { site } from "@/config/site";
 
 export const metadata: Metadata = {
   title: `Nosotros — ${site.nombre}`,
-  description: "Quién está detrás del estudio y cómo trabajamos.",
+  description: "Quién está detrás de la agencia y cómo trabajamos.",
 };
 
 const principios = [
   {
+    icon: Target,
     t: "El proceso importa más que el sector",
     d: "Cotizar, dar seguimiento, facturar o reportar es prácticamente igual en cualquier negocio. Lo que cambia es la herramienta, y con esa trabajamos.",
   },
   {
+    icon: PlugsConnected,
     t: "Sin cambiar lo que ya funciona",
     d: "Conectamos lo que tenés en lugar de proponerte migrar a un sistema nuevo. Menos fricción, menos riesgo, menos curva de aprendizaje para tu equipo.",
   },
   {
+    icon: ShieldCheck,
     t: "El riesgo lo asumimos nosotros",
-    d: "Presupuesto fijo antes de empezar, garantía sobre las primeras horas ahorradas, y los flujos quedan documentados y exportados a tu nombre.",
+    d: "Presupuesto fijo antes de empezar, garantía sobre las primeras horas ahorradas, y sin permanencia forzada: cancelás el plan cuando querés.",
   },
 ];
 
@@ -30,8 +34,8 @@ export default function NosotrosPage() {
     <>
       <PageHeader
         eyebrow="Nosotros"
-        title="Un estudio, no una fábrica de plantillas"
-        lead="Hoshizora Studio nace para resolver un problema puntual: la mayoría de los negocios pierde horas todas las semanas en tareas que ya podrían hacerse solas, y no tienen a quién pedirle que se las resuelva sin comprar un sistema entero nuevo."
+        title="Una agencia, no una fábrica de plantillas"
+        lead="Hoshizora nace para resolver un problema puntual: la mayoría de los negocios pierde horas todas las semanas en tareas que ya podrían hacerse solas, y no tienen a quién pedirle que se las resuelva sin comprar un sistema entero nuevo."
       />
 
       <section className="border-b border-line bg-paper">
@@ -46,26 +50,32 @@ export default function NosotrosPage() {
                       Sebastián
                     </p>
                     <p className="mt-1 text-[0.875rem] text-ink-mute">
-                      Fundador, Hoshizora Studio
+                      Fundador, Hoshizora
                     </p>
                   </div>
                 </div>
               </Reveal>
             </div>
             <div className="lg:col-span-8">
-              <div className="flex flex-col divide-y divide-line border-t border-line">
-                {principios.map((p, i) => (
-                  <Reveal key={p.t} delay={i * 90} as="div">
-                    <div className="py-8">
-                      <h2 className="text-[1.1875rem] font-medium tracking-tight text-ink">
-                        {p.t}
-                      </h2>
-                      <p className="mt-2.5 max-w-[60ch] text-[0.9375rem] leading-relaxed text-ink-mute">
-                        {p.d}
-                      </p>
-                    </div>
-                  </Reveal>
-                ))}
+              <div className="flex flex-col gap-4">
+                {principios.map((p, i) => {
+                  const Icon = p.icon;
+                  return (
+                    <Reveal key={p.t} delay={i * 90} as="div">
+                      <div className="rounded-2xl border border-line bg-paper p-6">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-line-strong bg-surface text-ink">
+                          <Icon size={19} />
+                        </div>
+                        <h2 className="mt-5 text-[1.1875rem] font-medium tracking-tight text-ink">
+                          {p.t}
+                        </h2>
+                        <p className="mt-2.5 max-w-[60ch] text-[0.9375rem] leading-relaxed text-ink-mute">
+                          {p.d}
+                        </p>
+                      </div>
+                    </Reveal>
+                  );
+                })}
               </div>
             </div>
           </div>

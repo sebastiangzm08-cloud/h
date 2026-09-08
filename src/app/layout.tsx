@@ -34,6 +34,7 @@ export default function RootLayout({
     <html
       lang="es-CR"
       data-scroll-behavior="smooth"
+      data-sitio={site.tema}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body

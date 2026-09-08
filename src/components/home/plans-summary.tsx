@@ -12,14 +12,14 @@ export function PlansSummary() {
           <Reveal>
             <p className="eyebrow mb-5">Planes</p>
             <h2 className="max-w-[24ch] text-[2rem] leading-[1.05] font-semibold tracking-tight text-ink sm:text-[2.5rem]">
-              Puesta en marcha una vez, mantenimiento todos los meses
+              Sin costo de instalación. Pagás mes a mes.
             </h2>
           </Reveal>
           <Link
             href="/planes"
             className="hidden shrink-0 items-center gap-1.5 text-[0.9375rem] text-ink-soft underline underline-offset-4 sm:flex"
           >
-            Ver el catálogo completo
+            Ver todos los planes
             <ArrowUpRight size={16} />
           </Link>
         </div>
@@ -36,7 +36,7 @@ export function PlansSummary() {
           href="/planes"
           className="mt-8 flex items-center gap-1.5 text-[0.9375rem] text-ink-soft underline underline-offset-4 sm:hidden"
         >
-          Ver el catálogo completo
+          Ver todos los planes
           <ArrowUpRight size={16} />
         </Link>
       </div>

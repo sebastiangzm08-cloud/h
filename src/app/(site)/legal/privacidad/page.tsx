@@ -11,7 +11,7 @@ export default function PrivacidadPage() {
     <LegalPage
       eyebrow="Legal"
       title="Política de privacidad"
-      actualizado="borrador, sin publicar"
+      actualizado="26 de agosto de 2026"
       secciones={[
         {
           titulo: "Qué datos recogemos",
@@ -23,7 +23,7 @@ export default function PrivacidadPage() {
         {
           titulo: "Dónde se alojan",
           parrafos: [
-            `Los datos del sitio y del portal se alojan en proveedores de infraestructura en la nube (subencargados: hosting web, base de datos y correo transaccional). El motor de automatización corre en un servidor propio del estudio.`,
+            `Los datos del sitio se alojan en proveedores de infraestructura en la nube (subencargados: hosting web, base de datos y correo transaccional). El motor de automatización corre en un servidor propio de la agencia.`,
           ],
         },
         {
@@ -35,7 +35,7 @@ export default function PrivacidadPage() {
         {
           titulo: "Tus credenciales",
           parrafos: [
-            "Los accesos a tus herramientas se gestionan mediante un gestor de contraseñas compartido, con acceso limitado por carpeta. Nunca se guardan en la base de datos del portal ni se solicitan por WhatsApp o correo.",
+            "Los accesos a tus herramientas se gestionan mediante un gestor de contraseñas compartido, con acceso limitado por carpeta. Nunca se guardan en una base de datos nuestra ni se solicitan por WhatsApp o correo.",
           ],
         },
         {

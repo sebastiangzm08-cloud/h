@@ -1,5 +1,9 @@
 import { PageHeader } from "@/components/page-header";
 
+/* Antes de publicar el sitio en serio, hacé que un profesional revise
+   estas páginas legales junto con la normativa de protección de datos
+   y facturación electrónica aplicable en Costa Rica. Nota para el
+   equipo, no para el visitante — por eso no se renderiza en la página. */
 export function LegalPage({
   eyebrow,
   title,
@@ -19,15 +23,6 @@ export function LegalPage({
           <p className="text-[0.8125rem] text-ink-faint">
             Última actualización: {actualizado}
           </p>
-
-          <div className="mt-4 rounded-xl border border-line bg-surface p-5">
-            <p className="text-[0.875rem] leading-relaxed text-ink-mute">
-              Documento de referencia para el prototipo. Antes de publicar
-              el sitio, hacé que un profesional revise esta sección junto
-              con la normativa de protección de datos y facturación
-              electrónica aplicable en Costa Rica.
-            </p>
-          </div>
 
           <div className="mt-12 flex flex-col gap-10">
             {secciones.map((s) => (

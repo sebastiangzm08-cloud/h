@@ -1,46 +1,87 @@
 /* ==========================================================================
    ÚNICO ARCHIVO QUE TENÉS QUE EDITAR PARA PONER TUS DATOS REALES.
-   Todo lo marcado como PLACEHOLDER es inventado para el prototipo.
+   Datos de contacto y cobro cargados con los reales el 27/8/2026.
+
+   OJO: todo lo que esté acá termina dentro del JavaScript que descarga el
+   navegador. Aunque no se muestre en pantalla, es público. No poner nunca
+   números de cuenta, claves ni nada que no quieras que se lea.
    ========================================================================== */
 
 export const site = {
-  nombre: "Hoshizora Studio",
-  claim: "Automatización de procesos para negocios que ya usan tecnología",
-  url: "https://hoshizora.studio", // PLACEHOLDER
+  nombre: "Hoshizora",
+  /* Sin punto final: el footer se lo agrega solo (footer.tsx). Si se le pone
+     acá, quedan dos puntos seguidos. */
+  claim: "Tu negocio, funcionando solo. Gana tiempo y dinero",
+  url: "https://hoshizora.agency",
 
-  /* Aviso superior de "esto es un borrador". Poné false para quitarlo. */
-  mostrarAvisoBorrador: true,
+  /* TEMA DEL SITIO. Cambiá esta palabra y se invierte la web entera:
+       "mixto"  → fondo claro con secciones oscuras alternadas
+       "oscuro" → todo oscuro
+     No hay que tocar ninguna sección: los colores salen de tokens. */
+  tema: "oscuro" as "mixto" | "oscuro",
+
+  /* Aviso superior de "esto es un borrador". Poné true para volver a mostrarlo. */
+  mostrarAvisoBorrador: false,
 
   /* Evita que Google indexe el sitio mientras está en borrador (precios y
      contenido de ejemplo). Poné false cuando esté listo para lanzar. */
   noIndexar: true,
 
   contacto: {
-    email: "hola@hoshizora.studio", // PLACEHOLDER
+    email: "sebastian@hoshizora.agency",
     // Formato internacional sin signos, para el enlace wa.me
-    whatsapp: "50687124093", // PLACEHOLDER
-    whatsappVisible: "+506 8712 4093", // PLACEHOLDER
+    whatsapp: "50660791641",
+    whatsappVisible: "+506 6079 1641",
     ubicacion: "San José, Costa Rica",
   },
 
   /* Datos de cobro. Ver sección 8 del PLAN-WEB.md */
   pago: {
-    sinpeMovil: "8712 4093", // PLACEHOLDER
-    sinpeNombre: "Sebastián G. — Hoshizora Studio", // PLACEHOLDER
-    iban: "CR00 0000 0000 0000 0000 00", // PLACEHOLDER
-    banco: "Banco Nacional", // PLACEHOLDER
-    // Tope por transacción de SINPE Móvil de TU banco. Verificalo.
-    topeSinpeMovil: 100000,
+    sinpeMovil: "6374 0215",
+    sinpeNombre: "Sebastián Zúñiga Mora",
+
+    /* ⚠️ EL IBAN NO VA ACÁ, A PROPÓSITO.
+       Todo lo que vive en este archivo se empaqueta en el JavaScript que se
+       descarga el navegador: aunque no se pinte en pantalla, cualquiera lo
+       lee viendo el código fuente. No hay forma de tenerlo acá "oculto".
+       Los datos de transferencia se mandan por WhatsApp al confirmar el
+       pedido, que además es la práctica normal y no cuesta nada. */
+
     moneda: "CRC",
-    ivaIncluido: false, // los precios se muestran "+ IVA 13%"
+    // No se cobra IVA por ahora: el prestador del servicio (Sebastián Zúñiga
+    // Mora) aún no está registrado formalmente como contribuyente ante
+    // Tributación, así que no corresponde cargarlo. No es que "ya vaya
+    // incluido" en el precio — legalmente son cosas distintas. Cuando exista
+    // inscripción formal, revisar este flag y el IVA sí empezaría a cobrarse
+    // aparte (ver orden/[id]/page.tsx, que usa este campo para mostrar u
+    // ocultar "+ IVA" junto al monto).
+    ivaIncluido: true,
     iva: 0.13,
+    // Antes existía un aumento del 20% a partir del segundo año — se
+    // eliminó el 30/8/2026 por pedido del usuario. El precio del plan es
+    // el mismo siempre, no hay "precio introductorio" que después suba.
+    // Pago anual: se cobran estos meses en vez de 12 (dos meses gratis).
+    mesesPagoAnual: 10,
+    // Comprar una automatización de forma independiente (sin plan,
+    // corre en infraestructura propia) cuesta esta cantidad de meses
+    // de la mensualidad equivalente, pagados una sola vez.
+    mesesCompraIndependiente: 6,
+    // Agregar una automatización a un plan ya activo no cobra
+    // construcción aparte: solo sube la mensualidad, según cuánto
+    // exige del servidor (campo `carga` en el catálogo), no según
+    // su nivel de complejidad.
+    costoAgregarPorCarga: {
+      programada: 15000,
+      moderada: 30000,
+      continua: 50000,
+    },
   },
 
   /* Días del ciclo de cobro manual (alimenta el flujo de recordatorios) */
   cobro: {
     avisoPrevioDias: 3,
     primerRecordatorioDias: 3,
-    avisoSuspensionDias: 10,
+    avisoSuspensionDias: 2,
   },
 } as const;
 

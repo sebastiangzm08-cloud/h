@@ -4,8 +4,9 @@ import Link from "next/link";
 import { ArrowUpRight, ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import { Reveal } from "@/components/reveal";
 import { Button } from "@/components/ui/button";
-import { procesos, catalogo } from "@/lib/content";
-import { colones, site } from "@/config/site";
+import { CatalogLink } from "@/components/catalog-link";
+import { procesos, catalogo, planPorNivel } from "@/lib/content";
+import { site } from "@/config/site";
 
 export function generateStaticParams() {
   return procesos.map((p) => ({ slug: p.slug }));
@@ -83,16 +84,13 @@ export default async function ProcesoPage({
           {items.length > 0 ? (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {items.map((a) => (
-                <Link
+                <CatalogLink
                   key={a.id}
-                  href={`/orden/catalogo-${a.id}`}
+                  automatizacion={a}
                   className="group flex flex-col justify-between rounded-2xl border border-line bg-paper p-6 transition-colors hover:border-ink-mute"
                 >
                   <div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-[0.6875rem] text-ink-faint">
-                        {a.nivel}
-                      </span>
+                    <div className="flex items-center justify-end">
                       <ArrowUpRight
                         size={16}
                         className="text-ink-faint opacity-0 transition-opacity group-hover:opacity-100"
@@ -103,12 +101,14 @@ export default async function ProcesoPage({
                     </p>
                   </div>
                   <div className="mt-6 flex items-center justify-between border-t border-line pt-4 text-[0.8125rem]">
-                    <span className="text-ink-faint">{a.plazo}</span>
-                    <span className="font-medium tnum text-ink">
-                      {a.precio ? colones(a.precio) : "A cotizar"}
+                    <span className="text-ink-faint">
+                      {a.disponible ? a.plazo : "Contratar"}
+                    </span>
+                    <span className="font-medium text-ink">
+                      Incluido en {planPorNivel[a.nivel]}
                     </span>
                   </div>
-                </Link>
+                </CatalogLink>
               ))}
             </div>
           ) : (

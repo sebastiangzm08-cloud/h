@@ -1,90 +1,104 @@
 import type { Metadata } from "next";
-import { CalendarBlank, Clock, WhatsappLogo } from "@phosphor-icons/react/dist/ssr";
+import { WhatsappLogo } from "@phosphor-icons/react/dist/ssr";
 import { Reveal } from "@/components/reveal";
-import { Button } from "@/components/ui/button";
+import { DiagnosticoForm } from "@/components/diagnostico-form";
+import { DiagnosticoPlanContext } from "@/components/diagnostico-plan-context";
+import { planes } from "@/lib/content";
 import { site, waLink } from "@/config/site";
 
 export const metadata: Metadata = {
   title: `Diagnóstico gratuito — ${site.nombre}`,
   description:
-    "Treinta minutos para revisar tus herramientas y procesos y detectar los tres con más retorno.",
+    "Media hora para encontrar los tres procesos que más plata te están costando y saber por dónde empezar.",
 };
 
-const agenda = [
-  { t: "0 a 10 min", d: "Herramientas que ya usás y cómo se conectan hoy entre sí" },
-  { t: "10 a 22 min", d: "Los procesos con más fricción de tu operación diaria" },
-  { t: "22 a 30 min", d: "Los tres candidatos con más retorno y los próximos pasos" },
+/* Lo que la persona SE LLEVA, no un cronómetro de la llamada. La versión
+   anterior listaba "0 a 10 min / 10 a 22 min / 22 a 30 min" y se leía como
+   guion de televenta: prometía minutos en vez de resultados. */
+const teLlevas = [
+  {
+    t: "Qué te está costando más",
+    d: "Dónde se te va el tiempo y la plata, con números y no con corazonadas.",
+  },
+  {
+    t: "Qué conviene automatizar y qué no",
+    d: "Hay cosas que no valen la pena todavía, y te lo vamos a decir.",
+  },
+  {
+    t: "Por dónde empezar",
+    d: "El orden que más rinde — aunque después no lo hagas con nosotros.",
+  },
 ];
 
-export default function DiagnosticoPage() {
+export default async function DiagnosticoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ plan?: string; periodo?: string }>;
+}) {
+  const params = await searchParams;
+  const plan = planes.find((p) => p.id === params.plan);
+  const periodoInicial = params.periodo === "anual" ? "anual" : "mensual";
+
   return (
     <section className="bg-paper">
       <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28">
-        <div className="grid grid-cols-1 gap-16 lg:grid-cols-12">
-          <div className="lg:col-span-5">
+        <div className="grid grid-cols-1 gap-14 lg:grid-cols-12 lg:gap-16">
+          <div className="lg:col-span-6">
+            {plan && (
+              <Reveal>
+                <DiagnosticoPlanContext plan={plan} periodoInicial={periodoInicial} />
+              </Reveal>
+            )}
             <Reveal>
               <p className="eyebrow mb-5">Diagnóstico gratuito</p>
               <h1 className="text-[2.5rem] leading-[1.02] font-semibold tracking-[-0.03em] text-ink sm:text-[3rem]">
-                Treinta minutos para saber qué automatizar primero
+                Contanos cómo trabajás y te decimos qué automatizar primero
               </h1>
               <p className="mt-6 text-[1.0625rem] leading-relaxed text-ink-mute">
-                Sin costo, sin presión de contratar. Salís con los tres
-                procesos de más retorno de tu negocio identificados y un
-                orden de magnitud del ahorro posible.
+                Sin costo y sin compromiso. En media hora salimos con los tres
+                procesos que más plata te están costando y cuánto podrías
+                recuperar con cada uno.
               </p>
             </Reveal>
 
             <Reveal delay={80}>
               <div className="mt-10 flex flex-col divide-y divide-line border-t border-line">
-                {agenda.map((a) => (
-                  <div key={a.t} className="flex items-start gap-5 py-5">
-                    <Clock size={16} className="mt-1 shrink-0 text-ink-faint" />
-                    <div>
-                      <p className="eyebrow">{a.t}</p>
-                      <p className="mt-1 text-[0.9375rem] text-ink-soft">
-                        {a.d}
-                      </p>
-                    </div>
+                {teLlevas.map((a) => (
+                  <div key={a.t} className="py-5">
+                    <p className="text-[0.9375rem] font-medium tracking-tight text-ink">
+                      {a.t}
+                    </p>
+                    <p className="mt-1.5 text-[0.9375rem] leading-relaxed text-ink-mute">
+                      {a.d}
+                    </p>
                   </div>
                 ))}
               </div>
             </Reveal>
 
             <Reveal delay={140}>
-              <div className="mt-10 rounded-2xl border border-line bg-surface p-6">
-                <p className="text-[0.875rem] leading-relaxed text-ink-mute">
-                  Preferís coordinar directo, sin calendario de por medio.
-                </p>
-                <Button
+              <p className="mt-8 text-[0.875rem] leading-relaxed text-ink-mute">
+                ¿Preferís escribir directo, sin llenar nada?{" "}
+                <a
                   href={waLink(
-                    "Hola, quiero agendar un diagnóstico gratuito."
+                    plan
+                      ? `Hola, quiero el diagnóstico gratuito para el plan ${plan.nombre}.`
+                      : "Hola, quiero el diagnóstico gratuito."
                   )}
-                  variant="secondary"
-                  size="md"
-                  className="mt-4"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 font-medium text-ink underline underline-offset-4 transition-colors hover:text-acento"
                 >
-                  <WhatsappLogo size={17} weight="fill" />
-                  Escribir por WhatsApp
-                </Button>
-              </div>
+                  <WhatsappLogo size={15} weight="fill" />
+                  Abrir WhatsApp
+                </a>
+              </p>
             </Reveal>
           </div>
 
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-6">
             <Reveal delay={60}>
-              <div className="flex min-h-[520px] flex-col items-center justify-center rounded-2xl border border-line bg-surface p-10 text-center">
-                <CalendarBlank size={32} className="text-ink-faint" />
-                <p className="mt-5 text-[1.0625rem] font-medium tracking-tight text-ink">
-                  Calendario de reservas
-                </p>
-                <p className="mt-2 max-w-[38ch] text-[0.875rem] leading-relaxed text-ink-mute">
-                  Este espacio queda reservado para el widget de Cal.com,
-                  embebido directamente al conectar la cuenta del estudio.
-                </p>
-                <p className="mt-6 font-mono text-[0.75rem] text-ink-faint">
-                  cal.com/{site.nombre.toLowerCase().replace(/\s+/g, "-")}
-                </p>
-              </div>
+              <DiagnosticoForm plan={plan?.nombre} />
             </Reveal>
           </div>
         </div>

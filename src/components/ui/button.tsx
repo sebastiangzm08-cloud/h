@@ -2,7 +2,13 @@ import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-type Variant = "primary" | "secondary" | "ghost";
+type Variant =
+  | "primary"
+  | "secondary"
+  | "ghost"
+  /* Para usar sobre fondos oscuros */
+  | "inverse"
+  | "secondaryDark";
 type Size = "md" | "lg";
 
 const base =
@@ -14,6 +20,12 @@ const variants: Record<Variant, string> = {
   secondary:
     "bg-transparent text-ink border border-line-strong hover:border-ink hover:bg-surface-2",
   ghost: "bg-transparent text-ink-mute hover:text-ink",
+  /* Van sobre secciones `noche`, que no se invierten con el tema.
+     El CTA principal lleva el acento: es el único botón morado del sitio. */
+  inverse:
+    "bg-gradient-to-b from-acento-claro to-acento text-noche-texto shadow-[0_6px_24px_-8px_var(--color-acento)] hover:from-acento hover:to-acento-oscuro",
+  secondaryDark:
+    "bg-transparent text-noche-texto border border-noche-texto/25 hover:border-noche-texto/50 hover:bg-noche-texto/10",
 };
 
 const sizes: Record<Size, string> = {
