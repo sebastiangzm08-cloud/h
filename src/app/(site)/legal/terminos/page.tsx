@@ -16,7 +16,7 @@ export default function TerminosPage() {
         {
           titulo: "Quién presta el servicio",
           parrafos: [
-            `El servicio es prestado por Sebastián Zúñiga Mora, persona física, con domicilio en ${site.contacto.ubicacion}. Para cualquier consulta, notificación o ejercicio de derechos, el canal es el correo ${site.contacto.email} o el WhatsApp ${site.contacto.whatsappVisible}. En estos términos se le llama indistintamente "la agencia" o "Hoshizora".`,
+            `El servicio es prestado por Sebastián Zúñiga Mora, persona física domiciliada en Costa Rica. Para cualquier consulta, notificación o ejercicio de derechos, el canal es el correo ${site.contacto.email} o el WhatsApp ${site.contacto.whatsappVisible}. En estos términos se le llama indistintamente "la agencia" o "Hoshizora".`,
           ],
         },
         {

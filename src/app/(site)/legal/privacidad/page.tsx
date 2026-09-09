@@ -16,7 +16,7 @@ export default function PrivacidadPage() {
         {
           titulo: "Responsable del tratamiento",
           parrafos: [
-            `El responsable del tratamiento de los datos personales es Sebastián Zúñiga Mora, persona física, con domicilio en ${site.contacto.ubicacion}. Podés contactarlo para cualquier tema de privacidad al correo ${site.contacto.email}.`,
+            `El responsable del tratamiento de los datos personales es Sebastián Zúñiga Mora, persona física domiciliada en Costa Rica. Podés contactarlo para cualquier tema de privacidad al correo ${site.contacto.email}.`,
           ],
         },
         {
