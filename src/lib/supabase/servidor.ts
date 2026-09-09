@@ -1,11 +1,11 @@
 /* ==========================================================================
    Cliente de Supabase para el SERVIDOR (páginas, layouts y route handlers).
 
-   La sesión viaja en cookies. Este cliente sólo las LEE. La renovación del
-   token la hace el cliente del navegador (`navegador.ts`), que sí puede
-   escribir cookies de forma confiable. Por eso `autoRefreshToken` está en
-   false y el `setAll` con try/catch vacío no es un descuido: si Next no
-   deja escribir la cookie desde un Server Component, no pasa nada.
+   La sesión viaja en cookies. `createServerClient` ya trae `autoRefreshToken`
+   en false, así que este cliente básicamente sólo LEE la sesión; el que la
+   renueva de verdad es el cliente del navegador (`navegador.ts`), que puede
+   escribir cookies. El `setAll` con try/catch vacío no es un descuido: si
+   Next no deja escribir desde un Server Component, no pasa nada.
    ========================================================================== */
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
@@ -15,11 +15,9 @@ export async function supabaseServidor() {
   const almacen = await cookies();
 
   return createServerClient(SUPABASE_URL(), SUPABASE_ANON(), {
-    // El servidor NUNCA renueva la sesión: eso lo hace el navegador (que sí
-    // puede escribir cookies bien). Renovar acá rota el refresh token y, si
-    // la cookie nueva no llega al navegador, lo deja afuera. `getUser()`
-    // sigue validando el token actual, sólo que sin rotarlo.
-    auth: { autoRefreshToken: false, persistSession: false },
+    // NO tocar `auth` acá: `persistSession: false` hace que el cliente NO
+    // lea la sesión del adaptador de cookies y `getUser()` tira "Auth
+    // session missing!". El adaptador de abajo es toda la persistencia.
     cookies: {
       getAll: () => almacen.getAll(),
       setAll(aEscribir) {
