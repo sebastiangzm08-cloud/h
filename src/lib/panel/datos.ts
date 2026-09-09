@@ -204,37 +204,61 @@ function autPorSlug(slug: string | null | undefined): Automatizacion | undefined
 /* `cache()` dedupe: el layout del panel, el layout de admin y varias
    pantallas piden el perfil en el mismo render. Sin esto se llama a
    `getUser()` (una petición de red a Supabase) 3-4 veces por página. */
+const SIN_SESION: Perfil = {
+  id: "sin-sesion",
+  rol: "cliente",
+  nombre: "Invitado",
+  clienteId: null,
+};
+
 export const getPerfil = cache(async function getPerfil(): Promise<Perfil> {
   const supabase = await supabaseServidor();
-  const { data: sesion } = await supabase.auth.getUser();
-  const usuario = sesion?.user;
-  const uid = usuario?.id;
 
-  if (!uid) {
-    return { id: "sin-sesion", rol: "cliente", nombre: "Invitado", clienteId: null };
-  }
+  /* En Netlify, `getUser()` y la consulta de perfil fallan de vez en cuando
+     por un blip de red o el cold start de la función. Sin reintento, un
+     admin puede aparecer como "cliente" un instante y rebotar al cambiar de
+     vista. Dos intentos con una pausa corta lo cubren. */
+  for (let intento = 0; intento < 2; intento++) {
+    const { data: sesion, error: eUser } = await supabase.auth.getUser();
+    const usuario = sesion?.user;
 
-  const { data, error } = await supabase
-    .from("perfiles")
-    .select("id, rol, nombre, cliente_id")
-    .eq("id", uid)
-    .single();
+    if (!usuario?.id) {
+      if (eUser && intento === 0) {
+        await new Promise((r) => setTimeout(r, 250));
+        continue;
+      }
+      return SIN_SESION;
+    }
 
-  if (error || !data) {
+    const { data, error } = await supabase
+      .from("perfiles")
+      .select("id, rol, nombre, cliente_id")
+      .eq("id", usuario.id)
+      .maybeSingle();
+
+    if (error && intento === 0) {
+      await new Promise((r) => setTimeout(r, 250));
+      continue;
+    }
+
+    if (!data) {
+      return {
+        id: usuario.id,
+        rol: "cliente",
+        nombre: usuario.email ?? "Cliente",
+        clienteId: null,
+      };
+    }
+
     return {
-      id: uid,
-      rol: "cliente",
-      nombre: usuario?.email ?? "Cliente",
-      clienteId: null,
+      id: data.id,
+      rol: data.rol === "admin" ? "admin" : "cliente",
+      nombre: data.nombre ?? "Cliente",
+      clienteId: data.cliente_id,
     };
   }
 
-  return {
-    id: data.id,
-    rol: data.rol === "admin" ? "admin" : "cliente",
-    nombre: data.nombre ?? "Cliente",
-    clienteId: data.cliente_id,
-  };
+  return SIN_SESION;
 });
 
 /**
