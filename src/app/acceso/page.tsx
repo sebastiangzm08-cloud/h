@@ -30,8 +30,8 @@ export default async function AccesoPage({
 
   // Si ya entró, no tiene nada que hacer acá.
   const supabase = await supabaseServidor();
-  const { data } = await supabase.auth.getClaims();
-  if (data?.claims?.sub) redirect(volver || "/panel");
+  const { data } = await supabase.auth.getUser();
+  if (data?.user) redirect(volver || "/panel");
 
   return (
     <main className="panel-scope relative grid min-h-dvh place-items-center overflow-hidden bg-paper px-5 py-16 text-ink-soft">

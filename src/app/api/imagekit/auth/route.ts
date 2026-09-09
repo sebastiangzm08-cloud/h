@@ -11,8 +11,8 @@ import { firmarSubida, imagekitConfigurado } from "@/lib/imagekit";
 
 export async function GET() {
   const supabase = await supabaseServidor();
-  const { data } = await supabase.auth.getClaims();
-  if (!data?.claims?.sub) {
+  const { data } = await supabase.auth.getUser();
+  if (!data?.user) {
     return NextResponse.json({ error: "Sin sesión." }, { status: 401 });
   }
 

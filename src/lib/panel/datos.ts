@@ -202,8 +202,9 @@ function autPorSlug(slug: string | null | undefined): Automatizacion | undefined
  */
 export async function getPerfil(): Promise<Perfil> {
   const supabase = await supabaseServidor();
-  const { data: claims } = await supabase.auth.getClaims();
-  const uid = claims?.claims?.sub;
+  const { data: sesion } = await supabase.auth.getUser();
+  const usuario = sesion?.user;
+  const uid = usuario?.id;
 
   if (!uid) {
     return { id: "sin-sesion", rol: "cliente", nombre: "Invitado", clienteId: null };
@@ -219,7 +220,7 @@ export async function getPerfil(): Promise<Perfil> {
     return {
       id: uid,
       rol: "cliente",
-      nombre: (claims?.claims?.email as string) ?? "Cliente",
+      nombre: usuario?.email ?? "Cliente",
       clienteId: null,
     };
   }
@@ -313,8 +314,8 @@ export async function getPerfilNegocio(): Promise<PerfilNegocio> {
 /** El correo de la sesión (de la cuenta de acceso, no de la ficha del negocio). */
 export async function getCorreoSesion(): Promise<string> {
   const supabase = await supabaseServidor();
-  const { data } = await supabase.auth.getClaims();
-  return (data?.claims?.email as string) ?? "";
+  const { data } = await supabase.auth.getUser();
+  return data?.user?.email ?? "";
 }
 
 /* -------------------------------------------------------------------------

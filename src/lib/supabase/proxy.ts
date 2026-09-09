@@ -33,9 +33,11 @@ export async function pasarSesion(req: NextRequest) {
     },
   });
 
-  // Valida el JWT y, si hace falta, lo renueva antes de responder.
-  const { data } = await supabase.auth.getClaims();
-  const haySesion = Boolean(data?.claims?.sub);
+  // Valida la sesión contra el servidor de Supabase y, si hace falta, la
+  // renueva antes de responder. `getUser()` es el patrón oficial para
+  // middleware — más robusto en el edge/serverless que `getClaims()`.
+  const { data } = await supabase.auth.getUser();
+  const haySesion = Boolean(data?.user);
 
   const { pathname } = req.nextUrl;
   const esPanel = pathname.startsWith("/panel");
