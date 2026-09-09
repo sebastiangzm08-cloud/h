@@ -25,7 +25,13 @@ export async function proxy(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   // Sin llaves no hay nada que refrescar; dejamos pasar en vez de romper.
-  if (!url || !anon) return respuesta;
+  if (!url || !anon) {
+    console.error(
+      `[proxy] SIN LLAVES (url=${!!url} anon=${!!anon}) — no puedo refrescar`
+    );
+    return respuesta;
+  }
+  let escribio = 0;
 
   const supabase = createServerClient(url, anon, {
     cookies: {
@@ -40,6 +46,7 @@ export async function proxy(request: NextRequest) {
         for (const { name, value, options } of aEscribir) {
           respuesta.cookies.set(name, value, options);
         }
+        escribio = aEscribir.length;
       },
     },
   });
@@ -47,7 +54,16 @@ export async function proxy(request: NextRequest) {
   // Esta llamada es la que renueva el token si hace falta. No se le quita el
   // `await` ni se cambia por `getSession()`: `getUser()` valida contra
   // Supabase y dispara el refresco.
-  await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getUser();
+
+  console.error(
+    `[proxy] ${request.method} ${request.nextUrl.pathname} · cookies entrada: ${request.cookies
+      .getAll()
+      .map((c) => c.name)
+      .join("|") || "NINGUNA"} · user: ${data?.user?.id ?? "no"} · error: ${
+      error?.message ?? "no"
+    } · cookies escritas: ${escribio}`
+  );
 
   return respuesta;
 }
