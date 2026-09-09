@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI, Type } from "@google/genai";
-import { catalogo, procesos, planes } from "@/lib/content";
+import { automatizaciones, planes } from "@/lib/content";
 
 export const runtime = "nodejs";
 
@@ -65,7 +65,7 @@ const responseSchema = {
       type: Type.ARRAY,
       items: { type: Type.STRING },
       description:
-        "Como máximo 2 ids EXACTOS del campo id de la lista de catálogo (nunca inventados). Las 1 o 2 más relevantes, no una lista larga.",
+        "Como máximo 2 ids EXACTOS del campo id de la lista de automatizaciones (nunca inventados). Las 1 o 2 más relevantes, no una lista larga.",
     },
     planId: {
       type: Type.STRING,
@@ -83,23 +83,19 @@ const responseSchema = {
 };
 
 function construirContexto() {
-  const listaProcesos = procesos
-    .map((p) => `- ${p.nombre}: ${p.resumen}`)
-    .join("\n");
-
-  const listaCatalogo = catalogo
-    .map((a) => `- id: ${a.id} — ${a.nombre} (proceso: ${a.proceso}, nivel ${a.nivel})`)
+  const listaCatalogo = automatizaciones
+    .map((a) => `- id: ${a.slug} — ${a.nombre} (plan ${a.plan}). ${a.gancho} ${a.descripcion}`)
     .join("\n");
 
   const listaPlanes = planes
-    .map((p) => `- id: ${p.id} — ${p.nombre}: ${p.para}. Incluye ${p.limites[0][1]} automatizaciones a elección.`)
+    .map((p) => `- id: ${p.id} — ${p.nombre}: ${p.para}. ${p.incluye[0]}.`)
     .join("\n");
 
-  return { listaProcesos, listaCatalogo, listaPlanes };
+  return { listaCatalogo, listaPlanes };
 }
 
 function construirPrompt(descripcion: string) {
-  const { listaProcesos, listaCatalogo, listaPlanes } = construirContexto();
+  const { listaCatalogo, listaPlanes } = construirContexto();
 
   return `Sos el asistente de automatización de Hoshizora, una agencia de Costa Rica que automatiza procesos de negocio conectando las herramientas que el cliente ya usa (WhatsApp, Excel, un CRM, etc.), sin migrarlo a sistemas nuevos. Trabajás con cualquier tipo de negocio, no solo con un sector. Muchos de quienes leen esto no saben nada de automatización — no des por sentado que conocen jerga técnica.
 
@@ -108,16 +104,13 @@ Un visitante de la web describió así su negocio y sus herramientas:
 ${descripcion}
 """
 
-Los seis procesos que la agencia automatiza son:
-${listaProcesos}
-
-El catálogo real de automatizaciones (elegí como máximo 2, las más relevantes):
+Hoy la agencia tiene TRES automatizaciones disponibles, una por plan (elegí como máximo 2, las más relevantes; si ninguna calza, decilo y sugerí el diagnóstico):
 ${listaCatalogo}
 
 Los planes mensuales reales (elegí el que mejor le quede):
 ${listaPlanes}
 
-Reglas: no inventes ids que no estén en las listas de arriba. No menciones precios de construcción puntual — el negocio del cliente es la mensualidad del plan, no la compra de una automatización suelta. No prometas resultados exagerados ni uses superlativos vacíos. Sé específico, no genérico, y priorizá que alguien sin conocimiento técnico entienda todo de un vistazo.`;
+Reglas: no inventes ids que no estén en las listas de arriba. No menciones precios de construcción puntual — el negocio del cliente es la mensualidad del plan. No prometas resultados exagerados ni uses superlativos vacíos. Sé específico, no genérico, y priorizá que alguien sin conocimiento técnico entienda todo de un vistazo.`;
 }
 
 export async function POST(req: NextRequest) {
@@ -189,9 +182,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Nunca confiar en que el modelo devolvió solo ids reales: se filtra
-    // contra el catálogo y los planes de verdad antes de mandarlo al frontend.
-    const idsValidos = new Set(catalogo.map((a) => a.id));
-    const automatizaciones = (datos.automatizacionIds ?? [])
+    // contra las automatizaciones y los planes de verdad antes de mandarlo.
+    const idsValidos = new Set(automatizaciones.map((a) => a.slug));
+    const idsElegidos = (datos.automatizacionIds ?? [])
       .filter((id) => idsValidos.has(id))
       .slice(0, 2);
 
@@ -199,7 +192,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       entendido: datos.entendido ?? "",
-      automatizacionIds: automatizaciones,
+      automatizacionIds: idsElegidos,
       // "starter" como respaldo honesto: es el plan de entrada, nunca el
       // que menos le conviene a alguien que recién está probando.
       planId: planValido ? datos.planId : "starter",

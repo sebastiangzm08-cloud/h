@@ -209,10 +209,10 @@ export const planes = [
       ["Monitoreo", "Básico"],
     ],
     incluye: [
+      "Incluye el Publicador de contenido, completo y andando",
       "Instalación y puesta en marcha sin costo",
-      "1 automatización completa incluida, a elección tuya",
       "Prueba gratuita de 7 días desde que queda funcionando",
-      "Diagnóstico y mapa de procesos antes de empezar",
+      "Diagnóstico y mapa de tu operación antes de empezar",
       "Arreglo incluido si una app conectada cambia su interfaz",
       "Sin permanencia forzada — cancelás cuando querés",
     ],
@@ -227,7 +227,7 @@ export const planes = [
     pruebaGratuitaDias: null,
     destacado: true,
     limites: [
-      ["Automatizaciones incluidas", "3 completas"],
+      ["Automatización incluida", "1 completa"],
       ["Ejecuciones por mes", "20.000"],
       ["Integraciones", "8"],
       ["Cambios incluidos", "2 h por mes"],
@@ -235,9 +235,8 @@ export const planes = [
       ["Monitoreo", "Con alertas"],
     ],
     incluye: [
+      "Incluye el Bot de WhatsApp, completo y andando",
       "Instalación y puesta en marcha sin costo",
-      "3 automatizaciones completas incluidas",
-      "Todo lo de Básico",
       "Revisión mensual de rendimiento",
       "Prioridad en la cola de cambios",
       "2 horas de ajustes a flujos existentes cada mes",
@@ -260,7 +259,7 @@ export const planes = [
     pruebaGratuitaDias: null,
     destacado: false,
     limites: [
-      ["Automatizaciones", "A medida, según tu operación"],
+      ["Automatización incluida", "Prospección, a medida"],
       ["Ejecuciones por mes", "Sin límite fijo"],
       ["Integraciones", "Sin límite"],
       ["Cambios incluidos", "Según lo acordado"],
@@ -268,8 +267,8 @@ export const planes = [
       ["Monitoreo", "Alertas y prioridad"],
     ],
     incluye: [
-      "Diagnóstico y diseño a medida para tu operación",
-      "Tantas automatizaciones como tu operación necesite",
+      "Incluye Prospección e inteligencia de mercado, a la medida de tu operación",
+      "Diagnóstico y diseño a medida",
       "Ambiente de pruebas separado antes de publicar cambios",
       "Plan de continuidad documentado",
       "Soporte prioritario por WhatsApp, 8 horas hábiles",
@@ -278,6 +277,74 @@ export const planes = [
     cta: "llamada",
   },
 ] as const;
+
+/* -------------------------------------------------------------------------
+   LAS AUTOMATIZACIONES QUE SE VENDEN HOY. Una por plan. Esta es la fuente
+   de verdad del sitio público (home, /qué-automatizamos, modal de planes).
+   Más adelante se agregan; por ahora son estas tres.
+   ------------------------------------------------------------------------- */
+export type AutomatizacionPublica = {
+  slug: string;
+  nombre: string;
+  /** Nombre del plan que la incluye. */
+  plan: "Básico" | "Growth" | "Scale";
+  /** Precio mensual, o null = "A cotizar". */
+  precio: number | null;
+  /** Una línea que la resume. */
+  gancho: string;
+  /** 2–3 frases de qué hace. */
+  descripcion: string;
+  /** 3–4 puntos concretos. */
+  puntos: string[];
+};
+
+export const automatizaciones: AutomatizacionPublica[] = [
+  {
+    slug: "publicador-de-contenido",
+    nombre: "Publicador de contenido",
+    plan: "Básico",
+    precio: 50000,
+    gancho: "Tus redes publican solas, con tu voz.",
+    descripcion:
+      "Subís tus fotos o videos, los aprobás una vez, y el sistema publica en tus redes por vos. La IA escribe un texto distinto para cada red, con el tono de tu negocio.",
+    puntos: [
+      "Publica en hasta 3 redes conectadas (Instagram, Facebook, TikTok)",
+      "Solo sale lo que vos subiste y aprobaste — nada inventado",
+      "Un texto propio por red, no el mismo copiado",
+      "Vos elegís el día o lo dejás salir en el próximo turno",
+    ],
+  },
+  {
+    slug: "bot-de-whatsapp",
+    nombre: "Bot de WhatsApp",
+    plan: "Growth",
+    precio: 125000,
+    gancho: "Un solo agente que atiende, vende y agenda.",
+    descripcion:
+      "Contesta por WhatsApp con tu información real a cualquier hora, agenda citas, y da seguimiento a los pedidos y cobros. Escala a una persona cuando hace falta.",
+    puntos: [
+      "Responde consultas con tu catálogo, precios y políticas reales",
+      "Agenda citas y confirma sin que muevas un dedo",
+      "Da seguimiento a cotizaciones y recordatorios de pago",
+      "Pasa la conversación a una persona cuando el caso lo pide",
+    ],
+  },
+  {
+    slug: "prospeccion",
+    nombre: "Prospección e inteligencia de mercado",
+    plan: "Scale",
+    precio: null,
+    gancho: "Encuentra clientes y estudia a tu competencia por vos.",
+    descripcion:
+      "Rastrea tu zona y tu rubro: arma listas de clientes potenciales, analiza qué publican y ofrecen tus competidores directos, y te entrega informes accionables.",
+    puntos: [
+      "Listas de prospectos de tu zona, con datos de contacto",
+      "Qué publica la competencia, cada cuánto y qué les funciona",
+      "Informes periódicos, no un volcado de datos crudos",
+      "Se arma a la medida de tu operación",
+    ],
+  },
+];
 
 /* -------------------------------------------------------------------------
    En qué plan entra cada nivel del catálogo. Se muestra como "Incluido en

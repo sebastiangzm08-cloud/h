@@ -113,7 +113,7 @@ export function PlanCard({
             : "text-ink-mute hover:text-ink"
         )}
       >
-        Ver qué automatizaciones podés elegir
+        Ver la automatización que incluye
       </button>
 
       <div

@@ -2,15 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowUpRight, X } from "@phosphor-icons/react/dist/ssr";
-import { catalogo, planPorNivel } from "@/lib/content";
-import { CatalogLink } from "@/components/catalog-link";
+import Link from "next/link";
+import { ArrowUpRight, X, Check } from "@phosphor-icons/react/dist/ssr";
+import { automatizaciones } from "@/lib/content";
 
 /**
- * Modal que muestra únicamente las automatizaciones incluidas en un plan.
- * Reemplaza al catálogo general que antes vivía siempre visible en
- * /planes — ahora el catálogo solo se ve filtrado por plan, disparado
- * desde el link "Ver qué automatizaciones podés elegir" de cada tarjeta.
+ * Modal que muestra LA automatización que incluye un plan. Hoy cada plan
+ * trae una sola (ver `automatizaciones` en content.ts). Se dispara desde
+ * el link "Ver la automatización que incluye" de cada tarjeta de plan.
  */
 export function PlanCatalogModal({
   planNombre,
@@ -19,10 +18,8 @@ export function PlanCatalogModal({
   planNombre: string;
   onClose: () => void;
 }) {
-  const items = catalogo.filter((c) => planPorNivel[c.nivel] === planNombre);
+  const item = automatizaciones.find((a) => a.plan === planNombre);
 
-  /* Se monta después del primer render: document.body no existe en SSR,
-     y createPortal necesita un nodo real del DOM. */
   const [montado, setMontado] = useState(false);
   useEffect(() => setMontado(true), []);
 
@@ -39,27 +36,23 @@ export function PlanCatalogModal({
 
   if (!montado) return null;
 
-  /* Portal a document.body: si el modal quedara anidado dentro de la
-     tarjeta del plan, el `transform` que le aplica Framer Motion (el
-     <Reveal> que la envuelve) convertiría este `fixed inset-0` en
-     relativo a la tarjeta en vez de a toda la ventana. */
   return createPortal(
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`Automatizaciones incluidas en ${planNombre}`}
+      aria-label={`Automatización incluida en ${planNombre}`}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
     >
       <div
         className="absolute inset-0 bg-ink/60 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-line bg-paper">
+      <div className="relative flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-line bg-paper">
         <div className="flex items-start justify-between gap-4 border-b border-line p-6 sm:p-7">
           <div>
             <p className="eyebrow mb-1.5">Incluido en {planNombre}</p>
             <h3 className="text-[1.375rem] font-semibold tracking-tight text-ink">
-              Elegí tu automatización
+              {item ? item.nombre : "Se diseña a medida"}
             </h3>
           </div>
           <button
@@ -72,38 +65,39 @@ export function PlanCatalogModal({
         </div>
 
         <div className="overflow-y-auto p-6 sm:p-7">
-          {items.length === 0 ? (
-            <p className="text-[0.9375rem] text-ink-mute">
-              Este plan se diseña a medida — no tiene un catálogo fijo.
+          {!item ? (
+            <p className="text-[0.9375rem] leading-relaxed text-ink-mute">
+              Este plan no tiene un catálogo fijo: se arma según lo que tu
+              operación necesite. Lo definimos en el diagnóstico.
             </p>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {items.map((a) => (
-                <CatalogLink
-                  key={a.id}
-                  automatizacion={a}
-                  className="group flex flex-col justify-between rounded-xl border border-line bg-surface p-5 transition-colors hover:border-ink-mute"
-                >
-                  <div>
-                    <div className="flex items-center justify-end">
-                      <ArrowUpRight
-                        size={14}
-                        className="text-ink-faint opacity-0 transition-opacity group-hover:opacity-100"
-                      />
-                    </div>
-                    <p className="-mt-4 text-[0.9375rem] font-medium leading-snug tracking-tight text-ink">
-                      {a.nombre}
-                    </p>
-                    <p className="mt-2 text-[0.8125rem] leading-relaxed text-ink-mute line-clamp-3">
-                      {a.descripcion}
-                    </p>
-                  </div>
-                  <div className="mt-4 border-t border-line pt-3 text-[0.75rem] text-ink-faint">
-                    {a.disponible ? a.plazo : "Contratar"}
-                  </div>
-                </CatalogLink>
-              ))}
-            </div>
+            <>
+              <p className="text-[0.9375rem] leading-relaxed text-ink-mute">
+                {item.descripcion}
+              </p>
+              <ul className="mt-5 flex flex-col gap-2.5">
+                {item.puntos.map((p) => (
+                  <li
+                    key={p}
+                    className="flex items-start gap-2.5 text-[0.875rem] leading-snug text-ink-soft"
+                  >
+                    <Check
+                      size={15}
+                      weight="bold"
+                      className="mt-0.5 shrink-0 text-ink-faint"
+                    />
+                    {p}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/que-automatizamos"
+                className="mt-6 inline-flex items-center gap-1.5 text-[0.875rem] font-medium text-ink-soft underline underline-offset-4 hover:text-ink"
+              >
+                Ver todas las automatizaciones
+                <ArrowUpRight size={15} />
+              </Link>
+            </>
           )}
         </div>
       </div>

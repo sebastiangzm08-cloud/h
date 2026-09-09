@@ -1,6 +1,5 @@
 import { Hero } from "@/components/home/hero";
 import { ToolsMarquee } from "@/components/home/tools-marquee";
-import { ProcessesExplorer } from "@/components/home/processes-explorer";
 import { BentoSolutions } from "@/components/home/bento-solutions";
 import { PlansSummary } from "@/components/home/plans-summary";
 import { FaqSection } from "@/components/home/faq-section";
@@ -13,7 +12,6 @@ export default function Home() {
       <ToolsMarquee />
       <BentoSolutions />
       <PlansSummary />
-      <ProcessesExplorer />
       <FaqSection />
       <FinalCta />
     </>

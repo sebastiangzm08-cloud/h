@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Sparkle, WarningCircle, ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
 import { Button } from "@/components/ui/button";
-import { catalogo, planes, planPorNivel } from "@/lib/content";
+import { automatizaciones as CATALOGO, planes } from "@/lib/content";
 import { colones } from "@/config/site";
 
 type Estado = "idle" | "cargando" | "listo" | "error";
@@ -60,7 +60,7 @@ export function AIAdvisor() {
     : undefined;
   const automatizaciones = sugerencia
     ? sugerencia.automatizacionIds
-        .map((id) => catalogo.find((a) => a.id === id))
+        .map((id) => CATALOGO.find((a) => a.slug === id))
         .filter((a) => a !== undefined)
     : [];
 
@@ -132,8 +132,8 @@ export function AIAdvisor() {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {automatizaciones.map((a) => (
                     <Link
-                      key={a.id}
-                      href={`/procesos/${a.proceso}`}
+                      key={a.slug}
+                      href="/que-automatizamos"
                       className="group flex flex-col justify-between rounded-2xl border border-line bg-paper p-5 transition-colors hover:border-ink-mute"
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -146,7 +146,7 @@ export function AIAdvisor() {
                         />
                       </div>
                       <p className="mt-3 text-[0.8125rem] text-ink-faint">
-                        Incluida en el plan {planPorNivel[a.nivel]}
+                        Incluida en el plan {a.plan}
                       </p>
                     </Link>
                   ))}
