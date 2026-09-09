@@ -24,7 +24,6 @@ import { ConstellationMark } from "@/components/constellation";
 import { Icono, type NombreIcono } from "@/components/panel/iconos";
 import { BuscadorPanel, type Destino } from "@/components/panel/buscador-panel";
 import { Eyebrow } from "@/components/panel/ui";
-import type { Rol } from "@/lib/panel/tipos";
 import { cn } from "@/lib/utils";
 
 type Item = {
@@ -123,14 +122,12 @@ function estaActivo(href: string, pathname: string) {
 const RESORTE = { type: "spring", stiffness: 420, damping: 38, mass: 0.6 } as const;
 
 export function PanelShell({
-  rol,
   nombre,
   subtitulo,
   aviso,
   contadores = {},
   children,
 }: {
-  rol: Rol;
   nombre: string;
   subtitulo: string;
   /** Banda de aviso fija bajo el encabezado (ej. "completá tu perfil"). */
@@ -315,7 +312,6 @@ export function PanelShell({
           <BuscadorPanel destinos={destinos} />
 
           <div className="ml-auto flex items-center gap-2">
-            {rol === "admin" ? <SelectorVista enAdmin={enAdmin} /> : null}
             {(() => {
               const destinoCampana = enAdmin
                 ? "/panel/admin/mensajes"
@@ -371,40 +367,6 @@ export function PanelShell({
           {children}
         </motion.main>
       </div>
-    </div>
-  );
-}
-
-/** Solo para el dueño. Cambia el panel entero, no una sección. */
-function SelectorVista({ enAdmin }: { enAdmin: boolean }) {
-  return (
-    <div
-      className="flex rounded-full border border-line bg-surface-2 p-[3px]"
-      title="Solo tu cuenta ve este selector"
-    >
-      {[
-        { href: "/panel", label: "Cliente", activo: !enAdmin },
-        { href: "/panel/admin", label: "Admin", activo: enAdmin },
-      ].map((v) => (
-        <Link
-          key={v.href}
-          href={v.href}
-          aria-current={v.activo ? "true" : undefined}
-          className={cn(
-            "relative rounded-full px-3 py-[5px] font-mono text-[11px] tracking-[0.06em] whitespace-nowrap uppercase transition-colors duration-150",
-            v.activo ? "text-ink" : "text-ink-faint hover:text-ink-soft"
-          )}
-        >
-          {v.activo ? (
-            <motion.span
-              layoutId="selector-vista"
-              transition={RESORTE}
-              className="absolute inset-0 rounded-full bg-white/6 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.11)]"
-            />
-          ) : null}
-          <span className="relative z-10">{v.label}</span>
-        </Link>
-      ))}
     </div>
   );
 }

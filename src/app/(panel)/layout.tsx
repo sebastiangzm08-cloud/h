@@ -78,7 +78,6 @@ export default async function PanelLayout({
 
   return (
     <PanelShell
-      rol={perfil.rol}
       nombre={perfil.rol === "admin" ? perfil.nombre : cliente.nombreNegocio}
       subtitulo={perfil.rol === "admin" ? "Administración" : `Plan ${cliente.plan}`}
       aviso={aviso}
