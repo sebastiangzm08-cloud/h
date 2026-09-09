@@ -11,6 +11,7 @@
    una cuenta de acceso es lo único que RLS no permite hacer al admin.
    ========================================================================== */
 import { revalidatePath } from "next/cache";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   supabaseAdmin,
@@ -36,6 +37,23 @@ export type ResultadoAccion =
  *      service_role.
  */
 async function exigirAdmin(form?: FormData): Promise<ResultadoAccion | null> {
+  // DIAGNÓSTICO temporal: qué cookies/cabeceras llegan realmente a la acción.
+  try {
+    const ck = await cookies();
+    const hd = await headers();
+    const raw = hd.get("cookie") ?? "";
+    console.error(
+      `[diag] cookies en la acción: [${ck
+        .getAll()
+        .map((c) => c.name)
+        .join(", ")}] · header cookie ${raw.length} chars · tiene sb-*: ${/sb-[^=]+-auth-token/.test(
+        raw
+      )}`
+    );
+  } catch (e) {
+    console.error("[diag] no pude leer cookies/headers:", (e as Error).message);
+  }
+
   // 1. Camino normal: perfil del cliente autenticado (respeta RLS).
   const perfil = await getPerfil();
   if (perfil.rol === "admin") return null;
