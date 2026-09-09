@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Target, PlugsConnected, ShieldCheck } from "@phosphor-icons/react/dist/ssr";
+import { Target, PlugsConnected, Handshake } from "@phosphor-icons/react/dist/ssr";
 import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
 import { ConstellationMark } from "@/components/constellation";
@@ -23,9 +23,9 @@ const principios = [
     d: "Conectamos lo que tenés en lugar de proponerte migrar a un sistema nuevo. Menos fricción, menos riesgo, menos curva de aprendizaje para tu equipo.",
   },
   {
-    icon: ShieldCheck,
-    t: "El riesgo lo asumimos nosotros",
-    d: "Presupuesto fijo antes de empezar, garantía sobre las primeras horas ahorradas, y sin permanencia forzada: cancelás el plan cuando querés.",
+    icon: Handshake,
+    t: "Trato directo, sin intermediarios",
+    d: "Hablás con quien arma tu automatización, no con un vendedor. Los ajustes salen rápido porque no hay capas de por medio, y todo queda por escrito antes de empezar: precio cerrado, sin costo de instalación y sin permanencia forzada.",
   },
 ];
 
@@ -47,13 +47,20 @@ export default function NosotrosPage() {
                   <ConstellationMark className="h-8 w-8 text-ink-mute" />
                   <div>
                     <p className="text-[1.125rem] font-medium tracking-tight text-ink">
-                      Sebastián
+                      Sebastián Zúñiga
                     </p>
                     <p className="mt-1 text-[0.875rem] text-ink-mute">
                       Fundador, Hoshizora
                     </p>
                   </div>
                 </div>
+                <p className="mt-5 text-[0.9375rem] leading-relaxed text-ink-mute">
+                  Armo automatizaciones para negocios de Costa Rica que ya usan
+                  sus herramientas y no quieren cambiarlas — solo dejar de perder
+                  horas en lo repetitivo. Hoshizora es eso: pocas
+                  automatizaciones, bien hechas, y alguien que responde cuando
+                  algo falla.
+                </p>
               </Reveal>
             </div>
             <div className="lg:col-span-8">

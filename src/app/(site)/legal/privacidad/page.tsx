@@ -39,6 +39,12 @@ export default function PrivacidadPage() {
           ],
         },
         {
+          titulo: "Cookies",
+          parrafos: [
+            "Este sitio solo usa cookies estrictamente necesarias: la que mantiene tu sesión iniciada dentro del panel de cliente. No usamos cookies de publicidad, de redes sociales ni de análisis de terceros, así que no hace falta un aviso de consentimiento. Si en el futuro sumamos herramientas de medición, se pedirá tu consentimiento antes de activarlas.",
+          ],
+        },
+        {
           titulo: "Tus derechos",
           parrafos: [
             "Podés solicitar acceso, corrección o eliminación de tus datos personales escribiendo a nuestro correo de contacto. Respondemos dentro de los plazos que marca la normativa de protección de datos de Costa Rica.",
