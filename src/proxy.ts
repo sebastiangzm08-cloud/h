@@ -37,16 +37,37 @@ export async function proxy(request: NextRequest) {
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll(aEscribir) {
+        /* CANDADO: el proxy sólo REFRESCA, nunca BORRA.
+
+           `@supabase/ssr` pide borrar una cookie mandándola con el valor
+           vacío y `maxAge: 0`. Si el proxy obedeciera eso, un fallo pasajero
+           de `getUser()` (un blip de red al servidor de auth, una carrera
+           justo después del login) dejaría al usuario sin sesión de forma
+           permanente — y como el panel se sigue viendo por la caché del
+           router, el síntoma es "No autorizado." sin explicación.
+
+           Cerrar sesión de verdad se hace en `/panel/salir`, que sí borra. */
+        const soloRefrescos = aEscribir.filter(
+          ({ value, options }) => value !== "" && options?.maxAge !== 0
+        );
+        const borradosIgnorados = aEscribir.length - soloRefrescos.length;
+        if (borradosIgnorados > 0) {
+          console.error(
+            `[proxy] IGNORÉ ${borradosIgnorados} borrado(s) de cookie en ${request.nextUrl.pathname}`
+          );
+        }
+        if (soloRefrescos.length === 0) return;
+
         // 1. Que el resto de la request ya vea la cookie nueva.
-        for (const { name, value } of aEscribir) {
+        for (const { name, value } of soloRefrescos) {
           request.cookies.set(name, value);
         }
         // 2. Y que el navegador se la guarde.
         respuesta = NextResponse.next({ request });
-        for (const { name, value, options } of aEscribir) {
+        for (const { name, value, options } of soloRefrescos) {
           respuesta.cookies.set(name, value, options);
         }
-        escribio = aEscribir.length;
+        escribio = soloRefrescos.length;
       },
     },
   });
