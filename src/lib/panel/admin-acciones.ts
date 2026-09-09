@@ -20,11 +20,30 @@ export type ResultadoAccion =
   | { ok: false; error: string };
 
 async function exigirAdmin(): Promise<ResultadoAccion | null> {
+  // 1. Camino normal: perfil del cliente autenticado (respeta RLS).
   const perfil = await getPerfil();
-  if (perfil.rol !== "admin") {
-    return { ok: false, error: "No autorizado." };
+  if (perfil.rol === "admin") return null;
+
+  // 2. Respaldo: en un Server Action de Netlify la consulta a `perfiles`
+  //    con el cliente autenticado a veces falla (blip / cookie chunked) y
+  //    devuelve "cliente" por error. Si hay una sesión válida (tenemos uid),
+  //    leemos el rol con service_role, que se salta RLS. Es seguro: ya
+  //    confirmamos que hay un usuario logueado, sólo consultamos su rol.
+  if (perfil.id !== "sin-sesion") {
+    const { data } = await supabaseAdmin()
+      .from("perfiles")
+      .select("rol")
+      .eq("id", perfil.id)
+      .maybeSingle();
+    if (data?.rol === "admin") return null;
+    console.error(
+      `[exigirAdmin] uid ${perfil.id} no es admin ni por service_role (rol=${data?.rol ?? "?"})`
+    );
+  } else {
+    console.error("[exigirAdmin] getPerfil devolvió sin-sesion en la acción");
   }
-  return null;
+
+  return { ok: false, error: "No autorizado." };
 }
 
 /* -------------------------------------------------------------------------
