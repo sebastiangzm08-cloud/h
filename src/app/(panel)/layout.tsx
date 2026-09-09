@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { PanelShell } from "@/components/panel/shell";
 import { Icono } from "@/components/panel/iconos";
 import { getCliente, getContadoresCliente, getPerfil } from "@/lib/panel/datos";
@@ -19,6 +20,10 @@ export default async function PanelLayout({
   /* Los datos de identidad se piden una sola vez acá y bajan por props.
      Ninguna pantalla vuelve a preguntar quién es el usuario. */
   const [perfil, cliente] = await Promise.all([getPerfil(), getCliente()]);
+
+  /* Portón real de la sesión: acá (Node) `getPerfil()` valida el token
+     contra Supabase sin rotarlo. El proxy sólo hace un chequeo local. */
+  if (perfil.id === "sin-sesion") redirect("/acceso");
 
   /* Contadores reales para las pastillas de la barra y la campana. Se piden
      según el rol; van por href para que el shell no tenga que saber nada. */

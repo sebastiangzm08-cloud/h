@@ -17,6 +17,11 @@ export async function supabaseServidor() {
   const almacen = await cookies();
 
   return createServerClient(SUPABASE_URL(), SUPABASE_ANON(), {
+    // El servidor NUNCA renueva la sesión: eso lo hace el navegador (que sí
+    // puede escribir cookies bien). Renovar acá rota el refresh token y, si
+    // la cookie nueva no llega al navegador, lo deja afuera. `getUser()`
+    // sigue validando el token actual, sólo que sin rotarlo.
+    auth: { autoRefreshToken: false, persistSession: false },
     cookies: {
       getAll: () => almacen.getAll(),
       setAll(aEscribir) {
