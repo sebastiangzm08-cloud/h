@@ -1,13 +1,11 @@
 /* ==========================================================================
    Cliente de Supabase para el SERVIDOR (páginas, layouts y route handlers).
 
-   La sesión viaja en cookies. Este cliente las lee de la petición y, cuando
-   Supabase renueva el token, las vuelve a escribir.
-
-   Ojo con `setAll`: desde un Server Component no se pueden escribir cookies
-   y Next tira. No es un problema porque `src/proxy.ts` corre antes de cada
-   petición y ahí sí se renuevan. Por eso el try/catch está vacío a
-   propósito y no es un descuido.
+   La sesión viaja en cookies. Este cliente sólo las LEE. La renovación del
+   token la hace el cliente del navegador (`navegador.ts`), que sí puede
+   escribir cookies de forma confiable. Por eso `autoRefreshToken` está en
+   false y el `setAll` con try/catch vacío no es un descuido: si Next no
+   deja escribir la cookie desde un Server Component, no pasa nada.
    ========================================================================== */
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";

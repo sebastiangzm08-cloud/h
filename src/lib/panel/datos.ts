@@ -15,6 +15,7 @@
    asignaciones tengan a qué apuntar; el nombre, la descripción y el plan
    salen de acá, emparejados por slug.
    ========================================================================== */
+import { cache } from "react";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import type {
   Actividad,
@@ -197,10 +198,13 @@ function autPorSlug(slug: string | null | undefined): Automatizacion | undefined
 /**
  * Quién está mirando. Sale del perfil del usuario de la sesión.
  *
- * El `proxy.ts` ya garantiza que a una ruta del panel no se llega sin
- * sesión, así que acá casi siempre hay `sub`.
+ * `(panel)/layout.tsx` redirige a /acceso si esto devuelve "sin-sesion",
+ * así que dentro de una pantalla del panel siempre hay usuario.
  */
-export async function getPerfil(): Promise<Perfil> {
+/* `cache()` dedupe: el layout del panel, el layout de admin y varias
+   pantallas piden el perfil en el mismo render. Sin esto se llama a
+   `getUser()` (una petición de red a Supabase) 3-4 veces por página. */
+export const getPerfil = cache(async function getPerfil(): Promise<Perfil> {
   const supabase = await supabaseServidor();
   const { data: sesion } = await supabase.auth.getUser();
   const usuario = sesion?.user;
@@ -231,7 +235,7 @@ export async function getPerfil(): Promise<Perfil> {
     nombre: data.nombre ?? "Cliente",
     clienteId: data.cliente_id,
   };
-}
+});
 
 /**
  * La ficha del negocio del cliente de la sesión. Un admin no cuelga de
