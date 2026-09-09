@@ -7,6 +7,7 @@
 import { useActionState } from "react";
 import { responderConsulta } from "@/lib/panel/soporte-acciones";
 import { responderConsultaAdmin } from "@/lib/panel/admin-acciones";
+import { CampoToken } from "@/components/panel/campo-token";
 import { cn } from "@/lib/utils";
 
 type Resultado = { ok: true; mensaje: string } | { ok: false; error: string };
@@ -40,6 +41,7 @@ export function ResponderConsulta({
       }}
       className="flex flex-col gap-2.5"
     >
+      {variante === "admin" ? <CampoToken /> : null}
       <input type="hidden" name="mensajeId" value={mensajeId} />
       <textarea
         id={`resp-${mensajeId}`}

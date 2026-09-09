@@ -34,6 +34,23 @@ export async function supabaseServidor() {
 }
 
 /**
+ * Cliente autenticado con un TOKEN explícito, no con la cookie.
+ *
+ * Lo usa `exigirAdmin` cuando la cookie de sesión no llegó al Server Action
+ * (en Netlify, el POST de un Server Action manda cabeceras extra de Next que,
+ * sumadas a la cookie de ~6 KB, se recortan). El formulario manda el token en
+ * el cuerpo y acá se revalida: `getUser()` con este cliente pega contra
+ * Supabase y confirma que el token es de verdad y no venció.
+ */
+export function supabaseConToken(token: string) {
+  return createServerClient(SUPABASE_URL(), SUPABASE_ANON(), {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+    cookies: { getAll: () => [], setAll: () => {} },
+  });
+}
+
+/**
  * Cliente ADMINISTRADOR. Se salta TODAS las reglas RLS.
  *
  * Se usa únicamente para lo que el propio usuario no puede hacer: dar de

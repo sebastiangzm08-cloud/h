@@ -9,6 +9,7 @@
    ========================================================================== */
 import { useActionState, useState } from "react";
 import { crearCuentaCliente, type ResultadoAccion } from "@/lib/panel/admin-acciones";
+import { CampoToken } from "@/components/panel/campo-token";
 import { cn } from "@/lib/utils";
 
 const campo =
@@ -62,6 +63,7 @@ export function FormAlta() {
 
   return (
     <form action={accion} className="flex flex-col gap-6">
+      <CampoToken />
       <fieldset className="grid gap-4 sm:grid-cols-2" disabled={pendiente}>
         <Campo label="Nombre del negocio" name="nombreNegocio" requerido placeholder="Farmasi · Johana" />
         <Campo label="Rubro" name="rubro" placeholder="Suplementos y cuidado personal" />

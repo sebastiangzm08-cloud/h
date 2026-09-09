@@ -13,6 +13,7 @@ import {
   asignarAutomatizacion,
   type ResultadoAccion,
 } from "@/lib/panel/admin-acciones";
+import { CampoToken } from "@/components/panel/campo-token";
 import { cn } from "@/lib/utils";
 
 type OpcionCliente = { id: string; nombre: string };
@@ -66,6 +67,7 @@ export function FormAsignar({
 
   return (
     <form action={accion} className="flex flex-col gap-5">
+      <CampoToken />
       <fieldset className="flex flex-col gap-4" disabled={pendiente}>
         <label className="flex flex-col gap-1.5">
           <span className="text-[11.5px] font-medium text-ink-mute">Cliente</span>

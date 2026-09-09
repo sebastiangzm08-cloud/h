@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { cerrarConsulta, type ResultadoAccion } from "@/lib/panel/admin-acciones";
+import { CampoToken } from "@/components/panel/campo-token";
 
 export function BotonCerrarConsulta({ mensajeId }: { mensajeId: string }) {
   const [estado, ejecutar, pendiente] = useActionState<
@@ -11,6 +12,7 @@ export function BotonCerrarConsulta({ mensajeId }: { mensajeId: string }) {
 
   return (
     <form action={ejecutar}>
+      <CampoToken />
       <input type="hidden" name="mensajeId" value={mensajeId} />
       <button
         type="submit"

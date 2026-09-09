@@ -17,6 +17,7 @@ import {
   suspenderCliente,
   type ResultadoAccion,
 } from "@/lib/panel/admin-acciones";
+import { CampoToken } from "@/components/panel/campo-token";
 import { cn } from "@/lib/utils";
 
 const campo =
@@ -53,6 +54,7 @@ export function BotonServicio({
 
   return (
     <form action={ejecutar}>
+      <CampoToken />
       <input type="hidden" name="clienteId" value={clienteId} />
       <button
         type="submit"
@@ -89,6 +91,7 @@ export function BotonPago({
 
   return (
     <form action={ejecutar} className="inline">
+      <CampoToken />
       <input type="hidden" name="clienteId" value={clienteId} />
       <input type="hidden" name="cobroId" value={cobroId} />
       <button
@@ -140,6 +143,7 @@ export function PrecioAsignacion({
       }}
       className="flex items-center gap-1.5"
     >
+      <CampoToken />
       <input type="hidden" name="clienteId" value={clienteId} />
       <input type="hidden" name="asignacionId" value={asignacionId} />
       <input
@@ -185,6 +189,7 @@ export function AgregarCobro({
 
   return (
     <form action={ejecutar} className="flex flex-wrap items-end gap-2.5">
+      <CampoToken />
       <input type="hidden" name="clienteId" value={clienteId} />
       <label className="flex flex-col gap-1">
         <span className="text-[10.5px] font-medium text-ink-mute uppercase">
@@ -269,6 +274,7 @@ export function EditarDatosCliente({
       }}
       className="mt-3 flex flex-col gap-3 rounded-xl border border-line bg-surface-2 p-3.5"
     >
+      <CampoToken />
       <input type="hidden" name="clienteId" value={clienteId} />
       <div className="grid gap-3 sm:grid-cols-2">
         <label className={lbl}>
@@ -376,6 +382,7 @@ export function AccesoCliente({
       </div>
 
       <form action={aClave} className="flex flex-wrap items-end gap-2.5">
+        <CampoToken />
         <input type="hidden" name="clienteId" value={clienteId} />
         <label className={lbl}>
           Nueva contraseña
@@ -395,6 +402,7 @@ export function AccesoCliente({
       </form>
 
       <form action={aCorreo} className="flex flex-wrap items-end gap-2.5 border-t border-line pt-3.5">
+        <CampoToken />
         <input type="hidden" name="clienteId" value={clienteId} />
         <label className={lbl}>
           Correo de acceso
@@ -454,6 +462,7 @@ export function EliminarCliente({
       action={ejecutar}
       className="flex flex-col gap-3 rounded-xl border border-bad/30 bg-bad/5 p-3.5"
     >
+      <CampoToken />
       <input type="hidden" name="clienteId" value={clienteId} />
       <p className="text-[12.5px] text-bad">
         Se borra para siempre: la ficha, las automatizaciones, las piezas en

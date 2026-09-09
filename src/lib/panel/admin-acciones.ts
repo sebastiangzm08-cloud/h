@@ -12,23 +12,62 @@
    ========================================================================== */
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { supabaseAdmin, supabaseServidor } from "@/lib/supabase/servidor";
+import {
+  supabaseAdmin,
+  supabaseConToken,
+  supabaseServidor,
+} from "@/lib/supabase/servidor";
 import { getAutomatizacion, getPerfil } from "./datos";
 
 export type ResultadoAccion =
   | { ok: true; mensaje: string }
   | { ok: false; error: string };
 
-async function exigirAdmin(): Promise<ResultadoAccion | null> {
+/**
+ * Portón de las acciones del admin. Devuelve `null` si quien llama es admin,
+ * o un `ResultadoAccion` de error si no.
+ *
+ * Tiene tres caminos porque en Netlify la sesión no siempre llega igual:
+ *   1. Cookie de sesión — funciona en páginas y layouts (GET, cabecera chica).
+ *   2. Token en el cuerpo del POST — el `<CampoToken>` del formulario lo manda
+ *      porque la cookie (~6 KB) se recorta en el POST de un Server Action.
+ *      Se revalida contra Supabase con `getUser(token)`.
+ *   3. Cookie sí llegó pero la consulta de perfil falló — se relee el rol con
+ *      service_role.
+ */
+async function exigirAdmin(form?: FormData): Promise<ResultadoAccion | null> {
   // 1. Camino normal: perfil del cliente autenticado (respeta RLS).
   const perfil = await getPerfil();
   if (perfil.rol === "admin") return null;
 
-  // 2. Respaldo: en un Server Action de Netlify la consulta a `perfiles`
-  //    con el cliente autenticado a veces falla (blip / cookie chunked) y
-  //    devuelve "cliente" por error. Si hay una sesión válida (tenemos uid),
-  //    leemos el rol con service_role, que se salta RLS. Es seguro: ya
-  //    confirmamos que hay un usuario logueado, sólo consultamos su rol.
+  // 2. Token en el cuerpo del POST. Es el token del propio usuario; lo
+  //    revalidamos contra Supabase (getUser pega contra el servidor de auth),
+  //    así que un token falso o vencido no pasa.
+  const token = form?.get("_token");
+  if (typeof token === "string" && token.length > 20) {
+    try {
+      const { data: u } = await supabaseConToken(token).auth.getUser(token);
+      const uid = u.user?.id;
+      if (uid) {
+        const { data } = await supabaseAdmin()
+          .from("perfiles")
+          .select("rol")
+          .eq("id", uid)
+          .maybeSingle();
+        if (data?.rol === "admin") return null;
+        console.error(
+          `[exigirAdmin] token ok uid=${uid} rol=${data?.rol ?? "?"} — no es admin`
+        );
+      } else {
+        console.error("[exigirAdmin] el _token del form no validó contra Supabase");
+      }
+    } catch (e) {
+      console.error("[exigirAdmin] error validando _token:", (e as Error).message);
+    }
+  }
+
+  // 3. Última red: la cookie llegó (tenemos uid) pero la consulta de perfil
+  //    del camino 1 falló. Releer el rol con service_role.
   if (perfil.id !== "sin-sesion") {
     const { data } = await supabaseAdmin()
       .from("perfiles")
@@ -39,10 +78,13 @@ async function exigirAdmin(): Promise<ResultadoAccion | null> {
     console.error(
       `[exigirAdmin] uid ${perfil.id} no es admin ni por service_role (rol=${data?.rol ?? "?"})`
     );
-  } else {
-    console.error("[exigirAdmin] getPerfil devolvió sin-sesion en la acción");
   }
 
+  console.error(
+    `[exigirAdmin] sin autorización — perfil.id=${perfil.id}, _token=${
+      typeof token === "string" && token ? "presente" : "ausente"
+    }`
+  );
   return { ok: false, error: "No autorizado." };
 }
 
@@ -61,7 +103,7 @@ export async function crearCuentaCliente(
   _prev: ResultadoAccion | null,
   form: FormData
 ): Promise<ResultadoAccion> {
-  const noAutor = await exigirAdmin();
+  const noAutor = await exigirAdmin(form);
   if (noAutor) return noAutor;
 
   const nombreNegocio = String(form.get("nombreNegocio") ?? "").trim();
@@ -207,7 +249,7 @@ export async function asignarAutomatizacion(
   _prev: ResultadoAccion | null,
   form: FormData
 ): Promise<ResultadoAccion> {
-  const noAutor = await exigirAdmin();
+  const noAutor = await exigirAdmin(form);
   if (noAutor) return noAutor;
 
   const clienteId = String(form.get("clienteId") ?? "");
@@ -272,9 +314,10 @@ export async function asignarAutomatizacion(
 async function fijarEstadoCliente(
   clienteId: string,
   estadoCliente: "activo" | "pausado",
-  estadoAsig: "activa" | "pausada"
+  estadoAsig: "activa" | "pausada",
+  form?: FormData
 ): Promise<ResultadoAccion> {
-  const noAutor = await exigirAdmin();
+  const noAutor = await exigirAdmin(form);
   if (noAutor) return noAutor;
   if (!clienteId) return { ok: false, error: "Falta el cliente." };
 
@@ -309,14 +352,24 @@ export async function suspenderCliente(
   _prev: ResultadoAccion | null,
   form: FormData
 ): Promise<ResultadoAccion> {
-  return fijarEstadoCliente(String(form.get("clienteId") ?? ""), "pausado", "pausada");
+  return fijarEstadoCliente(
+    String(form.get("clienteId") ?? ""),
+    "pausado",
+    "pausada",
+    form
+  );
 }
 
 export async function reactivarCliente(
   _prev: ResultadoAccion | null,
   form: FormData
 ): Promise<ResultadoAccion> {
-  return fijarEstadoCliente(String(form.get("clienteId") ?? ""), "activo", "activa");
+  return fijarEstadoCliente(
+    String(form.get("clienteId") ?? ""),
+    "activo",
+    "activa",
+    form
+  );
 }
 
 /* -------------------------------------------------------------------------
@@ -329,7 +382,7 @@ export async function marcarCobroPagado(
   _prev: ResultadoAccion | null,
   form: FormData
 ): Promise<ResultadoAccion> {
-  const noAutor = await exigirAdmin();
+  const noAutor = await exigirAdmin(form);
   if (noAutor) return noAutor;
 
   const cobroId = String(form.get("cobroId") ?? "");
@@ -360,7 +413,7 @@ export async function marcarCobroPagado(
       .eq("id", clienteId)
       .maybeSingle();
     if (cli && (cli.estado === "pausado" || cli.estado === "moroso")) {
-      await fijarEstadoCliente(clienteId, "activo", "activa");
+      await fijarEstadoCliente(clienteId, "activo", "activa", form);
       mensaje = "Pago registrado y servicio reactivado.";
     }
   }
@@ -383,7 +436,7 @@ export async function cambiarPrecioAsignacion(
   _prev: ResultadoAccion | null,
   form: FormData
 ): Promise<ResultadoAccion> {
-  const noAutor = await exigirAdmin();
+  const noAutor = await exigirAdmin(form);
   if (noAutor) return noAutor;
 
   const asignacionId = String(form.get("asignacionId") ?? "");
@@ -417,7 +470,7 @@ export async function crearCobro(
   _prev: ResultadoAccion | null,
   form: FormData
 ): Promise<ResultadoAccion> {
-  const noAutor = await exigirAdmin();
+  const noAutor = await exigirAdmin(form);
   if (noAutor) return noAutor;
 
   const clienteId = String(form.get("clienteId") ?? "");
@@ -457,7 +510,7 @@ export async function generarCobrosDelMes(
   _prev: ResultadoAccion | null,
   form: FormData
 ): Promise<ResultadoAccion> {
-  const noAutor = await exigirAdmin();
+  const noAutor = await exigirAdmin(form);
   if (noAutor) return noAutor;
 
   const periodo = String(form.get("periodo") ?? "").trim().slice(0, 40);
@@ -538,7 +591,7 @@ export async function responderConsultaAdmin(
   _prev: ResultadoAccion | null,
   form: FormData
 ): Promise<ResultadoAccion> {
-  const noAutor = await exigirAdmin();
+  const noAutor = await exigirAdmin(form);
   if (noAutor) return noAutor;
 
   const mensajeId = String(form.get("mensajeId") ?? "");
@@ -565,7 +618,7 @@ export async function cerrarConsulta(
   _prev: ResultadoAccion | null,
   form: FormData
 ): Promise<ResultadoAccion> {
-  const noAutor = await exigirAdmin();
+  const noAutor = await exigirAdmin(form);
   if (noAutor) return noAutor;
 
   const mensajeId = String(form.get("mensajeId") ?? "");
@@ -609,7 +662,7 @@ export async function resetearClaveCliente(
   _prev: ResultadoAccion | null,
   form: FormData
 ): Promise<ResultadoAccion> {
-  const noAutor = await exigirAdmin();
+  const noAutor = await exigirAdmin(form);
   if (noAutor) return noAutor;
 
   const clienteId = String(form.get("clienteId") ?? "");
@@ -637,7 +690,7 @@ export async function cambiarCorreoAcceso(
   _prev: ResultadoAccion | null,
   form: FormData
 ): Promise<ResultadoAccion> {
-  const noAutor = await exigirAdmin();
+  const noAutor = await exigirAdmin(form);
   if (noAutor) return noAutor;
 
   const clienteId = String(form.get("clienteId") ?? "");
@@ -680,7 +733,7 @@ export async function editarCliente(
   _prev: ResultadoAccion | null,
   form: FormData
 ): Promise<ResultadoAccion> {
-  const noAutor = await exigirAdmin();
+  const noAutor = await exigirAdmin(form);
   if (noAutor) return noAutor;
 
   const id = String(form.get("clienteId") ?? "");
@@ -723,7 +776,7 @@ export async function eliminarCliente(
   _prev: ResultadoAccion | null,
   form: FormData
 ): Promise<ResultadoAccion> {
-  const noAutor = await exigirAdmin();
+  const noAutor = await exigirAdmin(form);
   if (noAutor) return noAutor;
 
   const id = String(form.get("clienteId") ?? "");

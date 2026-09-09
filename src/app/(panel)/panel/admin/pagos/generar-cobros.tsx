@@ -9,6 +9,7 @@ import {
   generarCobrosDelMes,
   type ResultadoAccion,
 } from "@/lib/panel/admin-acciones";
+import { CampoToken } from "@/components/panel/campo-token";
 import { cn } from "@/lib/utils";
 
 export function GenerarCobros({ periodoActual }: { periodoActual: string }) {
@@ -22,6 +23,7 @@ export function GenerarCobros({ periodoActual }: { periodoActual: string }) {
       action={ejecutar}
       className="flex flex-wrap items-end gap-2.5 rounded-2xl border border-line bg-surface-2 p-4"
     >
+      <CampoToken />
       <label className="flex flex-col gap-1">
         <span className="text-[10.5px] font-medium tracking-wide text-ink-mute uppercase">
           Periodo a generar
