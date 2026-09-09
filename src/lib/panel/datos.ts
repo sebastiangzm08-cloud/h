@@ -227,6 +227,7 @@ export const getPerfil = cache(async function getPerfil(): Promise<Perfil> {
         await new Promise((r) => setTimeout(r, 250));
         continue;
       }
+      if (eUser) console.error("[getPerfil] getUser falló:", eUser.message);
       return SIN_SESION;
     }
 
@@ -242,6 +243,14 @@ export const getPerfil = cache(async function getPerfil(): Promise<Perfil> {
     }
 
     if (!data) {
+      if (error) {
+        console.error(
+          `[getPerfil] consulta perfiles falló para ${usuario.id}:`,
+          error.message
+        );
+      } else {
+        console.error(`[getPerfil] sin fila en perfiles para ${usuario.id}`);
+      }
       return {
         id: usuario.id,
         rol: "cliente",
