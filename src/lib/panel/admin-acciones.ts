@@ -11,7 +11,6 @@
    una cuenta de acceso es lo único que RLS no permite hacer al admin.
    ========================================================================== */
 import { revalidatePath } from "next/cache";
-import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   supabaseAdmin,
@@ -28,32 +27,15 @@ export type ResultadoAccion =
  * Portón de las acciones del admin. Devuelve `null` si quien llama es admin,
  * o un `ResultadoAccion` de error si no.
  *
- * Tiene tres caminos porque en Netlify la sesión no siempre llega igual:
- *   1. Cookie de sesión — funciona en páginas y layouts (GET, cabecera chica).
+ * El camino normal es la cookie de sesión, que se mantiene viva gracias al
+ * refresco de `src/proxy.ts`. Los otros dos son red de seguridad:
+ *   1. Cookie de sesión (lo habitual).
  *   2. Token en el cuerpo del POST — el `<CampoToken>` del formulario lo manda
- *      porque la cookie (~6 KB) se recorta en el POST de un Server Action.
- *      Se revalida contra Supabase con `getUser(token)`.
- *   3. Cookie sí llegó pero la consulta de perfil falló — se relee el rol con
+ *      y acá se revalida contra Supabase con `getUser(token)`.
+ *   3. Cookie válida pero la consulta a `perfiles` falló — se relee el rol con
  *      service_role.
  */
 async function exigirAdmin(form?: FormData): Promise<ResultadoAccion | null> {
-  // DIAGNÓSTICO temporal: qué cookies/cabeceras llegan realmente a la acción.
-  try {
-    const ck = await cookies();
-    const hd = await headers();
-    const raw = hd.get("cookie") ?? "";
-    console.error(
-      `[diag] cookies en la acción: [${ck
-        .getAll()
-        .map((c) => c.name)
-        .join(", ")}] · header cookie ${raw.length} chars · tiene sb-*: ${/sb-[^=]+-auth-token/.test(
-        raw
-      )}`
-    );
-  } catch (e) {
-    console.error("[diag] no pude leer cookies/headers:", (e as Error).message);
-  }
-
   // 1. Camino normal: perfil del cliente autenticado (respeta RLS).
   const perfil = await getPerfil();
   if (perfil.rol === "admin") return null;
