@@ -11,7 +11,7 @@ export default function SlaPage() {
     <LegalPage
       eyebrow="Legal"
       title="Acuerdo de nivel de servicio"
-      actualizado="26 de agosto de 2026"
+      actualizado="8 de septiembre de 2026"
       secciones={[
         {
           titulo: "Monitoreo",

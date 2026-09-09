@@ -2,7 +2,6 @@
    Contenido del sitio. Textos, procesos, catálogo y planes.
    Los precios son PLACEHOLDER: ajustalos a tu mercado antes de publicar.
    ========================================================================== */
-import { site, colones } from "@/config/site";
 
 /* -------------------------------------------------------------------------
    Herramientas. Alimentan el selector y la barra de la home.
@@ -736,11 +735,11 @@ export const faq = [
   },
   {
     q: "¿Qué pasa con las automatizaciones si dejo de pagar?",
-    a: "Corren mientras la mensualidad esté al día — eso es lo que paga el monitoreo, el mantenimiento y los cambios, no un derecho de uso aparte. Si cancelás o la mora pasa el aviso de suspensión, el servicio se da de baja junto con las automatizaciones activas de ese plan. Si preferís no depender de nuestros servidores, también podés comprarla de forma independiente por un pago único de aproximadamente 6 meses de esa mensualidad: te la entregamos documentada para que corra en tu propia infraestructura, sin mantenimiento de nuestra parte.",
+    a: "Corren mientras la mensualidad esté al día — eso es lo que paga el monitoreo, el mantenimiento y los cambios, no un derecho de uso aparte. Si cancelás el plan o la mora pasa el aviso de suspensión, el servicio se da de baja junto con las automatizaciones activas de ese plan. No hay permanencia forzada: cancelás cuando querés.",
   },
   {
-    q: "¿Cuánto cuesta agregar una automatización a mi plan?",
-    a: `No se cobra construcción aparte, solo sube tu mensualidad — y cuánto sube depende de lo que esa automatización le exige al servidor, no de qué tan compleja fue construirla. Si se activa por horario o eventos puntuales, ${colones(site.pago.costoAgregarPorCarga.programada)}/mes más. Si reacciona a eventos con cierta frecuencia, ${colones(site.pago.costoAgregarPorCarga.moderada)}/mes. Si tiene que estar escuchando todo el tiempo (como un chat) o llama IA en cada interacción, ${colones(site.pago.costoAgregarPorCarga.continua)}/mes. Los sistemas grandes se cotizan aparte.`,
+    q: "¿Puedo tener más de una automatización?",
+    a: "Cada plan incluye una, completa y andando. Si necesitás otra, subís al plan que la trae. Más adelante vamos a habilitar sumar automatizaciones dentro de un mismo plan.",
   },
   {
     q: "¿Necesito tener alguien técnico en mi equipo?",
@@ -756,7 +755,7 @@ export const faq = [
   },
   {
     q: "¿Cómo se paga?",
-    a: "Las mensualidades por SINPE Móvil y los proyectos por transferencia bancaria. Los datos de la cuenta te los pasamos al confirmar el pedido. Al recibir el pago se emite la factura electrónica. Si preferís pago anual, son diez meses en lugar de doce.",
+    a: "Las mensualidades por SINPE Móvil o transferencia bancaria, según el monto. Los datos de la cuenta te los pasamos al confirmar el pedido. Al recibir el pago se emite la factura electrónica. Si preferís pago anual, son diez meses en lugar de doce.",
   },
   {
     q: "¿Los precios incluyen las licencias de las herramientas?",

@@ -1,18 +1,22 @@
 import type { Metadata } from "next";
-import { ToolSelector } from "@/components/home/tool-selector";
+import { PageHeader } from "@/components/page-header";
 import { AIAdvisor } from "@/components/ai-advisor";
 import { site } from "@/config/site";
 
 export const metadata: Metadata = {
   title: `Qué puedo automatizar — ${site.nombre}`,
   description:
-    "Marcá las herramientas que ya usás y mirá qué automatizaciones son posibles con esa combinación.",
+    "Contanos en una frase cómo funciona tu negocio y te decimos cuál de las automatizaciones te sirve y en qué plan entra.",
 };
 
 export default function MisHerramientasPage() {
   return (
     <>
-      <ToolSelector />
+      <PageHeader
+        eyebrow="Qué puedo automatizar"
+        title="Contanos tu negocio y te decimos por dónde empezar"
+        lead="Una frase sobre cómo trabajás hoy y qué herramientas usás. Te devolvemos cuál de nuestras automatizaciones encaja y en qué plan entra — o si conviene un diagnóstico."
+      />
       <AIAdvisor />
     </>
   );

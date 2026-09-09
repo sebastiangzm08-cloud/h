@@ -62,10 +62,6 @@ export const site = {
     // el mismo siempre, no hay "precio introductorio" que después suba.
     // Pago anual: se cobran estos meses en vez de 12 (dos meses gratis).
     mesesPagoAnual: 10,
-    // Comprar una automatización de forma independiente (sin plan,
-    // corre en infraestructura propia) cuesta esta cantidad de meses
-    // de la mensualidad equivalente, pagados una sola vez.
-    mesesCompraIndependiente: 6,
     // Agregar una automatización a un plan ya activo no cobra
     // construcción aparte: solo sube la mensualidad, según cuánto
     // exige del servidor (campo `carga` en el catálogo), no según

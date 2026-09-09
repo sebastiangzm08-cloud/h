@@ -11,8 +11,14 @@ export default function PrivacidadPage() {
     <LegalPage
       eyebrow="Legal"
       title="Política de privacidad"
-      actualizado="26 de agosto de 2026"
+      actualizado="8 de septiembre de 2026"
       secciones={[
+        {
+          titulo: "Responsable del tratamiento",
+          parrafos: [
+            `El responsable del tratamiento de los datos personales es Sebastián Zúñiga Mora, persona física, con domicilio en ${site.contacto.ubicacion}. Podés contactarlo para cualquier tema de privacidad al correo ${site.contacto.email}.`,
+          ],
+        },
         {
           titulo: "Qué datos recogemos",
           parrafos: [
@@ -47,7 +53,7 @@ export default function PrivacidadPage() {
         {
           titulo: "Tus derechos",
           parrafos: [
-            "Podés solicitar acceso, corrección o eliminación de tus datos personales escribiendo a nuestro correo de contacto. Respondemos dentro de los plazos que marca la normativa de protección de datos de Costa Rica.",
+            "Podés solicitar acceso, corrección o eliminación de tus datos personales escribiendo a nuestro correo de contacto. Respondemos dentro de los plazos que marca la Ley 8968 de Protección de la Persona frente al tratamiento de sus datos personales de Costa Rica. Si considerás que tu solicitud no se resolvió como corresponde, podés acudir a la Agencia de Protección de Datos de los Habitantes (PRODHAB).",
           ],
         },
       ]}
