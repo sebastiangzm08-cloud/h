@@ -220,6 +220,14 @@ export function PanelShell({
                   <Link
                     key={item.href}
                     href={item.href}
+                    // `false`: estos enlaces apuntan a datos que cambian
+                    // seguido (clientes, pagos, mensajes). Con el prefetch
+                    // por defecto, Next precarga la página en cuanto entra
+                    // en pantalla y esa versión se puede quedar pegada en
+                    // caché — se vio "0 clientes" en la lista con el dato
+                    // real ya en 1. Sin prefetch, cada clic trae la página
+                    // de una.
+                    prefetch={false}
                     onClick={() => setAbierto(false)}
                     aria-current={activo ? "page" : undefined}
                     className={cn(
