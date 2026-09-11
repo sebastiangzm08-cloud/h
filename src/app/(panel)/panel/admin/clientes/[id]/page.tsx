@@ -9,7 +9,7 @@ import type { Metadata } from "next";
 import { Caja, CajaHead, Eyebrow, PageHead, Pill, colones } from "@/components/panel/ui";
 import { Icono } from "@/components/panel/iconos";
 import { getFichaCliente } from "@/lib/panel/admin";
-import { waLink } from "@/config/site";
+import { waLinkCliente } from "@/lib/utils";
 import {
   AccesoCliente,
   EliminarCliente,
@@ -115,7 +115,7 @@ export default async function FichaClientePage({ params }: Props) {
           <div className="mt-3 flex flex-wrap items-center gap-3">
             {f.whatsapp ? (
               <a
-                href={waLink(`Hola ${f.personaContacto || ""}, te escribo de Hoshizora.`)}
+                href={waLinkCliente(f.whatsapp, `Hola ${f.personaContacto || ""}, te escribo de Hoshizora.`)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex h-9 items-center rounded-full border border-line-strong px-4 text-[12px] text-ink transition-colors hover:bg-surface-2"
@@ -132,11 +132,13 @@ export default async function FichaClientePage({ params }: Props) {
           <p className="mb-3 text-[13px] text-ink-faint">
             {suspendido
               ? "Reactivá para que vuelva a publicar."
-              : cobroPendiente
-                ? `Tiene ${colones(cobroPendiente.monto)} de ${cobroPendiente.periodo} sin pagar.`
-                : "Al día. Todo corriendo."}
+              : f.estado === "prueba"
+                ? "En prueba: no entra en la facturación automática hasta que lo actives."
+                : cobroPendiente
+                  ? `Tiene ${colones(cobroPendiente.monto)} de ${cobroPendiente.periodo} sin pagar.`
+                  : "Al día. Todo corriendo."}
           </p>
-          <BotonServicio clienteId={f.id} suspendido={suspendido} />
+          <BotonServicio clienteId={f.id} estadoCliente={f.estado} />
         </Caja>
       </section>
 

@@ -10,8 +10,7 @@ import Link from "next/link";
 import { Caja, Eyebrow, Pill, colones } from "@/components/panel/ui";
 import { Icono } from "@/components/panel/iconos";
 import type { ClienteAdmin } from "@/lib/panel/admin";
-import { waLink } from "@/config/site";
-import { cn } from "@/lib/utils";
+import { cn, waLinkCliente } from "@/lib/utils";
 
 const ESTADO: Record<
   ClienteAdmin["estado"],
@@ -194,7 +193,8 @@ export function ListaClientes({ clientes }: { clientes: ClienteAdmin[] }) {
               <div className="flex gap-2">
                 {c.whatsapp ? (
                   <a
-                    href={waLink(
+                    href={waLinkCliente(
+                      c.whatsapp,
                       `Hola ${c.personaContacto || ""}, te escribo de Hoshizora.`
                     )}
                     target="_blank"

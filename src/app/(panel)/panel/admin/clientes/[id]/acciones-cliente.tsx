@@ -36,14 +36,25 @@ function Mensaje({ estado }: { estado: ResultadoAccion | null }) {
 
 export function BotonServicio({
   clienteId,
-  suspendido,
+  estadoCliente,
 }: {
   clienteId: string;
-  suspendido: boolean;
+  estadoCliente: "activo" | "prueba" | "pausado" | "moroso";
 }) {
+  const suspendido = estadoCliente === "pausado" || estadoCliente === "moroso";
+  const enPrueba = estadoCliente === "prueba";
+  // "Activar" (prueba -> activo) y "Reactivar" (pausado/moroso -> activo) son
+  // la MISMA acción del servidor (reactivarCliente ya deja `estado: "activo"`
+  // sin importar de dónde venía) — sólo cambia el texto del botón.
   const [estado, ejecutar, pendiente] = useAccionAdmin(
-    suspendido ? "reactivarCliente" : "suspenderCliente"
+    suspendido || enPrueba ? "reactivarCliente" : "suspenderCliente"
   );
+
+  const texto = enPrueba
+    ? "Activar cliente"
+    : suspendido
+      ? "Reactivar servicio"
+      : "Suspender servicio";
 
   return (
     <form action={ejecutar}>
@@ -54,16 +65,12 @@ export function BotonServicio({
         disabled={pendiente}
         className={cn(
           "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12.5px] font-medium transition-colors disabled:opacity-50",
-          suspendido
+          suspendido || enPrueba
             ? "bg-ink text-paper hover:bg-ink-soft"
             : "border border-bad/40 text-bad hover:bg-bad/10"
         )}
       >
-        {pendiente
-          ? "…"
-          : suspendido
-            ? "Reactivar servicio"
-            : "Suspender servicio"}
+        {pendiente ? "…" : texto}
       </button>
       <Mensaje estado={estado} />
     </form>
