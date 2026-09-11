@@ -11,7 +11,6 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabaseNavegador } from "@/lib/supabase/navegador";
 import { CampoClave } from "./campo-clave";
 import { cn } from "@/lib/utils";
 
@@ -27,19 +26,29 @@ export function FormAcceso({ volver }: { volver?: string }) {
     setError(null);
     setCargando(true);
 
-    const { error } = await supabaseNavegador().auth.signInWithPassword({
-      email: correo.trim(),
-      password: clave,
-    });
+    // El login lo hace el SERVIDOR (`/api/acceso`): así la cookie de sesión
+    // llega por `Set-Cookie` y el navegador la conserva. Escrita desde acá
+    // con `document.cookie` se perdía en cuanto cambiabas de página.
+    const res = await fetch("/api/acceso", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ correo: correo.trim(), clave }),
+    }).catch(() => null);
 
-    if (error) {
+    const datos = res ? await res.json().catch(() => null) : null;
+    const fallo = res?.ok && datos?.ok
+      ? null
+      : { code: String(datos?.code ?? ""), message: String(datos?.mensaje ?? "") };
+
+    if (fallo) {
       setCargando(false);
       // El mensaje crudo de Supabase es en inglés y técnico. Lo traducimos
       // a algo que una persona entienda, sin decir cuál de los dos campos
       // falló (dárselo servido a quien prueba contraseñas es peor).
       // `error.code` es el campo estable; el texto es el respaldo.
-      const code = error.code ?? "";
-      const m = error.message.toLowerCase();
+      const code = fallo.code;
+      const m = fallo.message.toLowerCase();
       if (code === "invalid_credentials" || m.includes("invalid login credentials")) {
         setError("El correo o la contraseña no coinciden.");
       } else if (code === "email_not_confirmed" || m.includes("not confirmed")) {
