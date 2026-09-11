@@ -6,7 +6,6 @@
    no todos contratan redes — la mayoría no.
    ========================================================================== */
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { GraficaUso } from "@/components/panel/grafica";
 import {
   TarjetaContratada,
@@ -43,9 +42,8 @@ const GRAVEDAD = {
 } as const;
 
 export default async function InicioPanel() {
-  /* El admin no usa la vista de cliente: cae directo en su panel. */
-  if ((await getPerfil()).rol === "admin") redirect("/panel/admin");
-
+  /* El admin no llega hasta acá: el layout de `(panel)` ya lo redirige
+     a `/panel/admin` antes de que esta página renderice. */
   const [
     perfil,
     cliente,

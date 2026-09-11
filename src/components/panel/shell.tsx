@@ -191,6 +191,7 @@ export function PanelShell({
         <div className="flex flex-none items-center gap-2.5 px-6 pt-5 pb-3">
           <Link
             href={enAdmin ? "/panel/admin" : "/panel"}
+            prefetch={false}
             onClick={() => setAbierto(false)}
             aria-label="Ir al inicio"
             className="flex items-center gap-2.5 rounded-md transition-opacity hover:opacity-80"
@@ -289,12 +290,18 @@ export function PanelShell({
               </div>
             </div>
           </div>
-          <Link
-            href="/panel/salir"
-            className="px-1 text-left text-[11.5px] text-ink-faint transition-colors hover:text-ink-soft"
-          >
-            Cerrar sesión
-          </Link>
+          {/* `<form method="post">`, no un `<Link>`: cerrar sesión cambia
+              estado, y un GET normal se puede disparar solo con que Next
+              precargue el enlace (está siempre a la vista en la barra). Un
+              formulario sólo se envía con un clic real. */}
+          <form action="/panel/salir" method="post">
+            <button
+              type="submit"
+              className="px-1 text-left text-[11.5px] text-ink-faint transition-colors hover:text-ink-soft"
+            >
+              Cerrar sesión
+            </button>
+          </form>
         </div>
       </aside>
 
@@ -328,6 +335,7 @@ export function PanelShell({
               return (
                 <Link
                   href={destinoCampana}
+                  prefetch={false}
                   aria-label={
                     pendientesCampana > 0
                       ? `${enAdmin ? "Mensajes" : "Pendientes"} (${pendientesCampana} sin ver)`
@@ -348,6 +356,7 @@ export function PanelShell({
             })()}
             <Link
               href="/panel/ajustes"
+              prefetch={false}
               className="grid h-[34px] w-[34px] place-items-center rounded-[9px] border border-line text-ink-mute transition-colors hover:border-line-strong hover:text-ink-soft active:scale-95"
               aria-label="Tu cuenta"
             >

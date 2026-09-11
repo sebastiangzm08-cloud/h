@@ -29,6 +29,7 @@ export async function proxy(request: NextRequest) {
     console.error(
       `[proxy] SIN LLAVES (url=${!!url} anon=${!!anon}) — no puedo refrescar`
     );
+    respuesta.headers.set("x-pathname", request.nextUrl.pathname);
     return respuesta;
   }
   let escribio = 0;
@@ -86,6 +87,7 @@ export async function proxy(request: NextRequest) {
     } · cookies escritas: ${escribio}`
   );
 
+  respuesta.headers.set("x-pathname", request.nextUrl.pathname);
   return respuesta;
 }
 

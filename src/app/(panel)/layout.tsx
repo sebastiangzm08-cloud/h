@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { PanelShell } from "@/components/panel/shell";
 import { Icono } from "@/components/panel/iconos";
@@ -24,6 +25,17 @@ export default async function PanelLayout({
   /* Portón real de la sesión: acá (Node) `getPerfil()` valida el token
      contra Supabase sin rotarlo. El proxy sólo hace un chequeo local. */
   if (perfil.id === "sin-sesion") redirect("/acceso");
+
+  /* El admin no tiene "su negocio": si cae en una página de cliente (un
+     enlace viejo, una pestaña vieja, un `volver` de después de un login)
+     lo manda de vuelta a su panel en vez de mostrarle todo en cero, que
+     parece un cliente fantasma o una cuenta rota. `x-pathname` lo pone
+     `proxy.ts` — un layout de servidor no tiene la URL actual de otra
+     forma. */
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  if (perfil.rol === "admin" && !pathname.startsWith("/panel/admin")) {
+    redirect("/panel/admin");
+  }
 
   /* Contadores reales para las pastillas de la barra y la campana. Se piden
      según el rol; van por href para que el shell no tenga que saber nada. */

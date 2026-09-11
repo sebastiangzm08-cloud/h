@@ -1,7 +1,9 @@
 /* ==========================================================================
-   Cerrar sesión. Es un enlace normal en la barra (`/panel/salir`), así que
-   entra por GET: borra la sesión de Supabase (y con ella las cookies) y
-   manda a la puerta.
+   Cerrar sesión. Es un `<form method="post">` en la barra (`shell.tsx`), NO
+   un `<Link>`: cerrar sesión cambia estado, y un `GET` con ese efecto se
+   puede disparar SOLO — Next precarga los enlaces que están a la vista, y
+   este botón está siempre visible en la barra. Con `POST` nada lo dispara
+   sin un clic real.
 
    OJO con la redirección: NO usar `NextResponse.redirect(new URL(..., req.url))`.
    Detrás de un proxy (Traefik en el VPS), `req.url` trae el host INTERNO
@@ -15,12 +17,12 @@
 import { NextResponse } from "next/server";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 
-export async function GET() {
+export async function POST() {
   const supabase = await supabaseServidor();
   await supabase.auth.signOut();
 
   return new NextResponse(null, {
-    status: 307,
+    status: 303,
     headers: { Location: "/acceso" },
   });
 }
