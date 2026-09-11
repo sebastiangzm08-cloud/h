@@ -54,3 +54,7 @@ export async function GET(req: Request) {
   }
   return res;
 }
+
+// Copia exacta de GET, pero por POST — para aislar si el método específicamente
+// pierde la cookie en el camino (Traefik / EasyPanel) antes de llegar a Next.
+export const POST = GET;
