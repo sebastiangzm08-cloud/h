@@ -7,8 +7,8 @@
    la ficha del negocio y el perfil — las tres de una, y deshace si algo
    falla. La contraseña se genera acá con un botón, o la escribís vos.
    ========================================================================== */
-import { useActionState, useState } from "react";
-import { crearCuentaCliente, type ResultadoAccion } from "@/lib/panel/admin-acciones";
+import { useState } from "react";
+import { useAccionAdmin } from "@/components/panel/usar-accion-admin";
 import { CampoToken } from "@/components/panel/campo-token";
 import { cn } from "@/lib/utils";
 
@@ -55,10 +55,7 @@ function Campo({
 }
 
 export function FormAlta() {
-  const [estado, accion, pendiente] = useActionState<ResultadoAccion | null, FormData>(
-    crearCuentaCliente,
-    null
-  );
+  const [estado, accion, pendiente] = useAccionAdmin("crearCuentaCliente");
   const [clave, setClave] = useState("");
 
   return (

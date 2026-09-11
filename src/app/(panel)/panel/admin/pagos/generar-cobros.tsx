@@ -4,19 +4,12 @@
    Genera los cobros de un mes de una pasada. El periodo arranca en el mes
    corriente; se puede cambiar a mano (ej. adelantar el de octubre).
    ========================================================================== */
-import { useActionState } from "react";
-import {
-  generarCobrosDelMes,
-  type ResultadoAccion,
-} from "@/lib/panel/admin-acciones";
+import { useAccionAdmin } from "@/components/panel/usar-accion-admin";
 import { CampoToken } from "@/components/panel/campo-token";
 import { cn } from "@/lib/utils";
 
 export function GenerarCobros({ periodoActual }: { periodoActual: string }) {
-  const [estado, ejecutar, pendiente] = useActionState<
-    ResultadoAccion | null,
-    FormData
-  >(generarCobrosDelMes, null);
+  const [estado, ejecutar, pendiente] = useAccionAdmin("generarCobrosDelMes");
 
   return (
     <form

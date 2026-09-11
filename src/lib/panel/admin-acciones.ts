@@ -1,18 +1,23 @@
-"use server";
-
 /* ==========================================================================
    Acciones del panel admin — las que ESCRIBEN.
 
-   Un Server Action es un endpoint POST público: aunque el botón solo se vea
-   en el panel admin, cualquiera puede llamarlo. Por eso cada una vuelve a
-   comprobar que quien la llama es admin, con el cliente que respeta RLS.
+   NO SON Server Actions — son funciones normales que llama la ruta
+   `/api/admin/[nombre]/route.ts` por POST. Antes eran `"use server"`, pero
+   los Server Actions perdían la cookie de sesión en el POST detrás del
+   proxy (se confirmó en dos plataformas distintas: Netlify y este VPS, con
+   evidencia real — bolsa de cookies contra el servidor en vivo, y una
+   réplica completa de la librería de Supabase del navegador). Un Route
+   Handler normal, en cambio, se probó de punta a punta y sí conserva la
+   cookie. De ahí el cambio de arquitectura completo.
+
+   Siguen siendo un endpoint POST público (cualquiera con la URL puede
+   llamarlas), así que cada una vuelve a comprobar que quien la llama es
+   admin con `exigirAdmin()`.
 
    `crearCuentaCliente` usa `supabaseAdmin()` (service_role) porque crear
    una cuenta de acceso es lo único que RLS no permite hacer al admin.
    ========================================================================== */
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import {
   supabaseAdmin,
   supabaseConToken,
@@ -37,19 +42,6 @@ export type ResultadoAccion =
  *      service_role.
  */
 async function exigirAdmin(form?: FormData): Promise<ResultadoAccion | null> {
-  // DIAGNÓSTICO temporal: qué cookies llegan realmente a la acción.
-  try {
-    const ck = await cookies();
-    console.error(
-      `[diag] cookies en la acción: [${ck
-        .getAll()
-        .map((c) => c.name)
-        .join(", ")}]`
-    );
-  } catch (e) {
-    console.error("[diag] no pude leer cookies:", (e as Error).message);
-  }
-
   // 1. Camino normal: perfil del cliente autenticado (respeta RLS).
   const perfil = await getPerfil();
   if (perfil.rol === "admin") return null;
@@ -830,5 +822,8 @@ export async function eliminarCliente(
 
   revalidatePath("/panel/admin/clientes");
   revalidatePath("/panel/admin");
-  redirect("/panel/admin/clientes");
+  // Antes hacía `redirect()` (mecanismo propio de Server Actions). Ahora es
+  // una ruta normal: devuelve el resultado y el navegador hace la vuelta a
+  // la lista — ver EliminarCliente en acciones-cliente.tsx.
+  return { ok: true, mensaje: `${cli.nombre_negocio} eliminado.` };
 }

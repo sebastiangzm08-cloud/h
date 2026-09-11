@@ -8,11 +8,8 @@
    se prellena con el del catálogo, pero se puede ajustar — y para las que
    se cotizan (Prospección) arranca vacío.
    ========================================================================== */
-import { useActionState, useMemo, useState } from "react";
-import {
-  asignarAutomatizacion,
-  type ResultadoAccion,
-} from "@/lib/panel/admin-acciones";
+import { useMemo, useState } from "react";
+import { useAccionAdmin } from "@/components/panel/usar-accion-admin";
 import { CampoToken } from "@/components/panel/campo-token";
 import { cn } from "@/lib/utils";
 
@@ -37,10 +34,7 @@ export function FormAsignar({
   automatizaciones: OpcionAut[];
   clienteInicial?: string;
 }) {
-  const [estado, accion, pendiente] = useActionState<
-    ResultadoAccion | null,
-    FormData
-  >(asignarAutomatizacion, null);
+  const [estado, accion, pendiente] = useAccionAdmin("asignarAutomatizacion");
 
   const [slug, setSlug] = useState(automatizaciones[0]?.slug ?? "");
   const autSel = useMemo(

@@ -2,11 +2,17 @@
 
 /* ==========================================================================
    Caja de respuesta de una consulta. Sirve para el cliente y para el admin:
-   el `variante` decide qué Server Action se llama.
+   el `variante` decide cuál de las dos se usa.
+
+   El cliente sigue por Server Action (`soporte-acciones.ts` no se tocó en
+   esta migración). El admin va por `/api/admin/responderConsultaAdmin` —
+   ver el porqué del cambio en el comentario grande de `admin-acciones.ts`.
+   Las reglas de hooks no permiten llamar uno u otro según una condición, así
+   que se llaman los DOS siempre y se elige el resultado según `variante`.
    ========================================================================== */
 import { useActionState } from "react";
 import { responderConsulta } from "@/lib/panel/soporte-acciones";
-import { responderConsultaAdmin } from "@/lib/panel/admin-acciones";
+import { useAccionAdmin } from "@/components/panel/usar-accion-admin";
 import { CampoToken } from "@/components/panel/campo-token";
 import { cn } from "@/lib/utils";
 
@@ -19,15 +25,18 @@ export function ResponderConsulta({
   mensajeId: string;
   variante: "cliente" | "admin";
 }) {
-  const accion =
-    variante === "admin" ? responderConsultaAdmin : responderConsulta;
-  const [estado, ejecutar, pendiente] = useActionState<Resultado | null, FormData>(
-    accion as (
-      p: Resultado | null,
-      f: FormData
-    ) => Promise<Resultado>,
-    null
+  const [estadoCliente, ejecutarCliente, pendienteCliente] = useActionState<
+    Resultado | null,
+    FormData
+  >(responderConsulta, null);
+  const [estadoAdmin, ejecutarAdmin, pendienteAdmin] = useAccionAdmin(
+    "responderConsultaAdmin"
   );
+
+  const esAdmin = variante === "admin";
+  const estado: Resultado | null = esAdmin ? estadoAdmin : estadoCliente;
+  const ejecutar = esAdmin ? ejecutarAdmin : ejecutarCliente;
+  const pendiente = esAdmin ? pendienteAdmin : pendienteCliente;
 
   return (
     <form

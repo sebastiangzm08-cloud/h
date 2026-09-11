@@ -1,22 +1,17 @@
 "use client";
 
 /* ==========================================================================
-   Botones del admin sobre un cliente: suspender / reactivar el servicio y
-   marcar un cobro como pagado.
+   Botones del admin sobre un cliente: suspender / reactivar el servicio,
+   marcar un cobro como pagado, editar datos, acceso y eliminar.
+
+   Todas pasan por `useAccionAdmin(nombre)` — un POST normal a
+   `/api/admin/<nombre>`, no un Server Action. Ver el porqué en el
+   comentario grande de `admin-acciones.ts`.
    ========================================================================== */
-import { useActionState, useState } from "react";
-import {
-  cambiarCorreoAcceso,
-  cambiarPrecioAsignacion,
-  crearCobro,
-  editarCliente,
-  eliminarCliente,
-  marcarCobroPagado,
-  reactivarCliente,
-  resetearClaveCliente,
-  suspenderCliente,
-  type ResultadoAccion,
-} from "@/lib/panel/admin-acciones";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import type { ResultadoAccion } from "@/lib/panel/admin-acciones";
+import { useAccionAdmin } from "@/components/panel/usar-accion-admin";
 import { CampoToken } from "@/components/panel/campo-token";
 import { cn } from "@/lib/utils";
 
@@ -46,11 +41,9 @@ export function BotonServicio({
   clienteId: string;
   suspendido: boolean;
 }) {
-  const accion = suspendido ? reactivarCliente : suspenderCliente;
-  const [estado, ejecutar, pendiente] = useActionState<
-    ResultadoAccion | null,
-    FormData
-  >(accion, null);
+  const [estado, ejecutar, pendiente] = useAccionAdmin(
+    suspendido ? "reactivarCliente" : "suspenderCliente"
+  );
 
   return (
     <form action={ejecutar}>
@@ -84,10 +77,7 @@ export function BotonPago({
   clienteId: string;
   cobroId: string;
 }) {
-  const [estado, ejecutar, pendiente] = useActionState<
-    ResultadoAccion | null,
-    FormData
-  >(marcarCobroPagado, null);
+  const [estado, ejecutar, pendiente] = useAccionAdmin("marcarCobroPagado");
 
   return (
     <form action={ejecutar} className="inline">
@@ -116,10 +106,7 @@ export function PrecioAsignacion({
   asignacionId: string;
   precio: number;
 }) {
-  const [estado, ejecutar, pendiente] = useActionState<
-    ResultadoAccion | null,
-    FormData
-  >(cambiarPrecioAsignacion, null);
+  const [estado, ejecutar, pendiente] = useAccionAdmin("cambiarPrecioAsignacion");
   const [editando, setEditando] = useState(false);
 
   if (!editando) {
@@ -182,10 +169,7 @@ export function AgregarCobro({
   clienteId: string;
   montoSugerido: number;
 }) {
-  const [estado, ejecutar, pendiente] = useActionState<
-    ResultadoAccion | null,
-    FormData
-  >(crearCobro, null);
+  const [estado, ejecutar, pendiente] = useAccionAdmin("crearCobro");
 
   return (
     <form action={ejecutar} className="flex flex-wrap items-end gap-2.5">
@@ -243,10 +227,7 @@ export function EditarDatosCliente({
     plan: string;
   };
 }) {
-  const [estado, ejecutar, pendiente] = useActionState<
-    ResultadoAccion | null,
-    FormData
-  >(editarCliente, null);
+  const [estado, ejecutar, pendiente] = useAccionAdmin("editarCliente");
   const [abierto, setAbierto] = useState(false);
 
   if (!abierto) {
@@ -337,14 +318,8 @@ export function AccesoCliente({
   correoActual: string;
 }) {
   const [abierto, setAbierto] = useState(false);
-  const [rClave, aClave, pClave] = useActionState<ResultadoAccion | null, FormData>(
-    resetearClaveCliente,
-    null
-  );
-  const [rCorreo, aCorreo, pCorreo] = useActionState<
-    ResultadoAccion | null,
-    FormData
-  >(cambiarCorreoAcceso, null);
+  const [rClave, aClave, pClave] = useAccionAdmin("resetearClaveCliente");
+  const [rCorreo, aCorreo, pCorreo] = useAccionAdmin("cambiarCorreoAcceso");
 
   if (!abierto) {
     return (
@@ -428,7 +403,11 @@ export function AccesoCliente({
 }
 
 /** Zona de peligro: eliminar el cliente para siempre. Pide escribir el
-    nombre del negocio antes de habilitar el botón. */
+    nombre del negocio antes de habilitar el botón.
+
+    Antes esto terminaba con un `redirect()` del lado del servidor (propio
+    de los Server Actions). Ahora la acción sólo devuelve el resultado, y
+    acá se hace la vuelta a la lista cuando `estado.ok` se pone en `true`. */
 export function EliminarCliente({
   clienteId,
   nombreNegocio,
@@ -436,12 +415,17 @@ export function EliminarCliente({
   clienteId: string;
   nombreNegocio: string;
 }) {
-  const [estado, ejecutar, pendiente] = useActionState<
-    ResultadoAccion | null,
-    FormData
-  >(eliminarCliente, null);
+  const router = useRouter();
+  const [estado, ejecutar, pendiente] = useAccionAdmin("eliminarCliente");
   const [abierto, setAbierto] = useState(false);
   const [texto, setTexto] = useState("");
+
+  useEffect(() => {
+    if (estado?.ok) {
+      router.push("/panel/admin/clientes");
+      router.refresh();
+    }
+  }, [estado, router]);
 
   if (!abierto) {
     return (

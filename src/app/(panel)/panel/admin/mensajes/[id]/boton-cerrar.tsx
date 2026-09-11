@@ -1,14 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
-import { cerrarConsulta, type ResultadoAccion } from "@/lib/panel/admin-acciones";
+import { useAccionAdmin } from "@/components/panel/usar-accion-admin";
 import { CampoToken } from "@/components/panel/campo-token";
 
 export function BotonCerrarConsulta({ mensajeId }: { mensajeId: string }) {
-  const [estado, ejecutar, pendiente] = useActionState<
-    ResultadoAccion | null,
-    FormData
-  >(cerrarConsulta, null);
+  const [estado, ejecutar, pendiente] = useAccionAdmin("cerrarConsulta");
 
   return (
     <form action={ejecutar}>
