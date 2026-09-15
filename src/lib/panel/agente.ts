@@ -1028,6 +1028,87 @@ export async function getResumenAgente(): Promise<ResumenAgente> {
 }
 
 /* -------------------------------------------------------------------------
+   Embudo de la semana — "el agente se cuida solo" (pedido de Sebastián,
+   2026-09-15): contactó → preguntó precio → agendó, últimos 7 días, y qué
+   servicios se preguntan pero no tienen descripción (un dato real, sacado
+   de wa_conocimiento — no una sugerencia inventada).
+
+   A propósito NO hay nada que se ajuste solo en silencio: la sugerencia
+   señala el servicio y linkea directo a "Qué sabe" para que una persona
+   decida si de verdad hace falta más detalle y lo escriba — mismo
+   principio de "comprobar antes de hablar" que el resto del proyecto.
+   Detectar "preguntó precio" es un regex sobre el texto del contacto, no
+   algo que el modelo etiquete — determinístico y gratis, mismo espíritu
+   que `pideHumano`/`esDespedida` en el workflow de n8n.
+   ------------------------------------------------------------------------- */
+export type EmbudoSemana = {
+  contacto: number;
+  preguntoPrecio: number;
+  agendo: number;
+  serviciosSinDetalle: { clave: string; monto: number | null }[];
+};
+
+const EJEMPLO_EMBUDO: EmbudoSemana = {
+  contacto: 24,
+  preguntoPrecio: 15,
+  agendo: 7,
+  serviciosSinDetalle: [
+    { clave: "Limpieza dental", monto: 25000 },
+    { clave: "Resina (por pieza)", monto: 30000 },
+  ],
+};
+
+const REGEX_PREGUNTA_PRECIO = /precio|cuesta|cu[aá]nto|vale|₡|colones|cobran|tarifa/i;
+
+export async function getEmbudoSemana(): Promise<EmbudoSemana> {
+  if (await enModoEjemplo()) return EJEMPLO_EMBUDO;
+
+  const id = await clienteId();
+  if (!id) return { contacto: 0, preguntoPrecio: 0, agendo: 0, serviciosSinDetalle: [] };
+
+  const sb = await supabaseServidor();
+  const desde = new Date(Date.now() - 7 * 86_400_000).toISOString();
+
+  const [mensajes, citas, conocimiento] = await Promise.all([
+    sb
+      .from("wa_mensajes")
+      .select("conversacion_id, texto, transcripcion")
+      .eq("cliente_id", id)
+      .eq("autor", "contacto")
+      .gte("creado_en", desde)
+      .limit(2000),
+    sb.from("wa_citas").select("contacto_id").eq("cliente_id", id).gte("creada_en", desde).limit(500),
+    sb
+      .from("wa_conocimiento")
+      .select("clave, valor, monto")
+      .eq("cliente_id", id)
+      .eq("tipo", "servicio")
+      .eq("activo", true),
+  ]);
+
+  type FilaMensaje = { conversacion_id: string; texto: string | null; transcripcion: string | null };
+  const filas = (mensajes.data ?? []) as FilaMensaje[];
+  const conversacionesConContacto = new Set(filas.map((f) => f.conversacion_id));
+  const conversacionesConPrecio = new Set(
+    filas
+      .filter((f) => REGEX_PREGUNTA_PRECIO.test(f.texto || f.transcripcion || ""))
+      .map((f) => f.conversacion_id)
+  );
+
+  type FilaServicio = { clave: string; valor: string | null; monto: number | null };
+  const serviciosSinDetalle = ((conocimiento.data ?? []) as FilaServicio[])
+    .filter((s) => !s.valor || !s.valor.trim())
+    .map((s) => ({ clave: s.clave, monto: s.monto }));
+
+  return {
+    contacto: conversacionesConContacto.size,
+    preguntoPrecio: conversacionesConPrecio.size,
+    agendo: new Set(((citas.data ?? []) as { contacto_id: string }[]).map((c) => c.contacto_id)).size,
+    serviciosSinDetalle,
+  };
+}
+
+/* -------------------------------------------------------------------------
    Formato — vive acá para que todas las pantallas escriban la hora igual.
    ------------------------------------------------------------------------- */
 

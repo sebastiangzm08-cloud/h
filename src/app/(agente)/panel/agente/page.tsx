@@ -7,6 +7,7 @@ import {
   getCitas,
   getConversaciones,
   getCorrecciones,
+  getEmbudoSemana,
   getResumenAgente,
   fechaCorta,
   relativa,
@@ -26,13 +27,14 @@ function primerNombre(nombre: string) {
 }
 
 export default async function ResumenAgentePage() {
-  const [resumen, conversaciones, citas, correcciones, cliente, ejemplo] = await Promise.all([
+  const [resumen, conversaciones, citas, correcciones, cliente, ejemplo, embudo] = await Promise.all([
     getResumenAgente(),
     getConversaciones(),
     getCitas(),
     getCorrecciones(),
     getCliente(),
     enModoEjemplo(),
+    getEmbudoSemana(),
   ]);
 
   const esperando = conversaciones.filter((c) => c.estado === "espera");
@@ -124,6 +126,50 @@ export default async function ResumenAgentePage() {
           </div>
         </Bloque>
 
+        <Bloque
+          titulo="Tu agente se cuida solo"
+          sub="Embudo de los últimos 7 días — se actualiza solo, no hay que revisar nada"
+        >
+          <div className="flex flex-col gap-3 px-4 pt-4 pb-1">
+            <BarraEmbudo etiqueta="Contactó" cantidad={embudo.contacto} total={embudo.contacto} />
+            <BarraEmbudo etiqueta="Preguntó precio" cantidad={embudo.preguntoPrecio} total={embudo.contacto} />
+            <BarraEmbudo etiqueta="Agendó" cantidad={embudo.agendo} total={embudo.contacto} />
+          </div>
+
+          {embudo.serviciosSinDetalle.length > 0 && embudo.preguntoPrecio > embudo.agendo ? (
+            <div className="mx-4 mt-3.5 mb-4 rounded-xl border border-warn/25 bg-warn/[0.06] px-4 py-3.5">
+              <p className="text-[13px] leading-relaxed text-ink-soft">
+                <span className="font-medium text-ink">El agente ya lo detectó:</span>{" "}
+                {embudo.preguntoPrecio - embudo.agendo} persona
+                {embudo.preguntoPrecio - embudo.agendo === 1
+                  ? " preguntó el precio y no agendó."
+                  : "s preguntaron el precio y no agendaron."}{" "}
+                {embudo.serviciosSinDetalle.length === 1
+                  ? "Este servicio no tiene"
+                  : `Estos ${embudo.serviciosSinDetalle.length} servicios no tienen`}{" "}
+                descripción — agregarle un detalle suele convencer más antes de agendar.
+              </p>
+              <div className="mt-2.5 flex flex-wrap gap-2">
+                {embudo.serviciosSinDetalle.map((s) => (
+                  <Link
+                    key={s.clave}
+                    href="/panel/agente/que-sabe"
+                    className="rounded-full border border-warn/40 bg-surface px-3 py-1 text-[12px] text-ink-soft transition-colors hover:bg-warn/10"
+                  >
+                    {s.clave} →
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : embudo.contacto === 0 ? (
+            <div className="px-4 pb-4">
+              <Vacio>Todavía no hay conversaciones esta semana para armar el embudo.</Vacio>
+            </div>
+          ) : (
+            <div className="px-4 pb-4" />
+          )}
+        </Bloque>
+
         <div className="grid gap-4 lg:grid-cols-2">
           <Bloque
             titulo="Lo que no supo responder"
@@ -198,6 +244,32 @@ export default async function ResumenAgentePage() {
         </div>
       </Cuerpo>
     </>
+  );
+}
+
+function BarraEmbudo({
+  etiqueta,
+  cantidad,
+  total,
+}: {
+  etiqueta: string;
+  cantidad: number;
+  total: number;
+}) {
+  const pct = total > 0 ? Math.max(cantidad > 0 ? 4 : 0, Math.round((cantidad / total) * 100)) : 0;
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-[118px] flex-none text-[12.5px] text-ink-mute">{etiqueta}</span>
+      <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-surface-3">
+        <div
+          className="h-full rounded-full bg-ink-soft transition-[width] duration-500"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="w-7 flex-none text-right font-mono text-[13px] tabular-nums text-ink">
+        {cantidad}
+      </span>
+    </div>
   );
 }
 
