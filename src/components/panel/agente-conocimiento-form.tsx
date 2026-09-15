@@ -7,6 +7,7 @@
    agente lo usa en la siguiente conversación, sin tocar n8n.
    ========================================================================== */
 import { useState } from "react";
+import { CampoMonto } from "@/components/panel/campo-monto";
 import { CampoToken } from "@/components/panel/campo-token";
 import { useAccionAgente } from "@/components/panel/usar-accion-agente";
 import { cn } from "@/lib/utils";
@@ -63,7 +64,7 @@ export function FormaAgregarConocimiento({ tipo }: { tipo: "servicio" | "dato" |
 
       {tipo === "servicio" ? (
         <div className="grid grid-cols-2 gap-2.5">
-          <input autoComplete="off" type="number" name="monto" min={0} step={500} placeholder="Precio en ₡ (vacío = a consultar)" className={campo} />
+          <CampoMonto name="monto" placeholder="Precio en ₡ (vacío = a consultar)" className={campo} />
           <input autoComplete="off" type="number" name="duracionMin" min={0} placeholder="Duración en minutos" className={campo} />
         </div>
       ) : null}

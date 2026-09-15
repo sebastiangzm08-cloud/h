@@ -10,6 +10,7 @@
    ========================================================================== */
 import { useMemo, useState } from "react";
 import { useAccionAdmin } from "@/components/panel/usar-accion-admin";
+import { CampoMonto } from "@/components/panel/campo-monto";
 import { CampoToken } from "@/components/panel/campo-token";
 import { cn } from "@/lib/utils";
 
@@ -41,15 +42,6 @@ export function FormAsignar({
     () => automatizaciones.find((a) => a.slug === slug),
     [automatizaciones, slug]
   );
-  const [precio, setPrecio] = useState<string>(
-    automatizaciones[0]?.precio != null ? String(automatizaciones[0].precio) : ""
-  );
-
-  function cambiarAut(nuevo: string) {
-    setSlug(nuevo);
-    const a = automatizaciones.find((x) => x.slug === nuevo);
-    setPrecio(a?.precio != null ? String(a.precio) : "");
-  }
 
   if (clientes.length === 0) {
     return (
@@ -83,7 +75,7 @@ export function FormAsignar({
           <select
             name="slug"
             value={slug}
-            onChange={(e) => cambiarAut(e.target.value)}
+            onChange={(e) => setSlug(e.target.value)}
             className={cn(campo, "appearance-none")}
           >
             {automatizaciones.map((a) => (
@@ -101,14 +93,11 @@ export function FormAsignar({
               <span className="text-warn">· esta se cotiza</span>
             ) : null}
           </span>
-          <input
+          <CampoMonto
+            key={slug}
             name="precio"
-            type="number"
-            min={0}
-            step={1000}
-            value={precio}
-            onChange={(e) => setPrecio(e.target.value)}
-            placeholder="Ej. 45000"
+            defaultValue={autSel?.precio ?? undefined}
+            placeholder="Ej. 45.000"
             className={campo}
           />
         </label>

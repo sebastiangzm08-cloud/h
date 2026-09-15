@@ -16,7 +16,61 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icono, type NombreIcono } from "@/components/panel/iconos";
 import { TemaSelector } from "@/components/panel/tema-selector";
+import { LinkReiniciarTour, TourGuiado, type PasoTour } from "@/components/panel/tour";
 import { cn } from "@/lib/utils";
+
+const PASOS_TOUR: PasoTour[] = [
+  {
+    selector: '[data-tour="resumen"]',
+    titulo: "Resumen",
+    texto: "De un vistazo: cuántas conversaciones entraron hoy, cuántas citas agendó solo, y quién necesita que le contestés vos.",
+  },
+  {
+    selector: '[data-tour="conversaciones"]',
+    titulo: "Conversaciones",
+    texto: "Todo lo que tu agente habla con tus clientes por WhatsApp. Si algo necesita una persona, aparece primero acá.",
+  },
+  {
+    selector: '[data-tour="correo"]',
+    titulo: "Correo",
+    texto: "Si conectás tu correo, el mismo agente contesta ahí también — mismo tono, mismos datos.",
+  },
+  {
+    selector: '[data-tour="contactos"]',
+    titulo: "Contactos",
+    texto: "Cada persona que te escribió, con su historial y sus citas — para agendar a mano un walk-in o una llamada también.",
+  },
+  {
+    selector: '[data-tour="citas"]',
+    titulo: "Citas",
+    texto: "La agenda que tu agente arma solo, comprobando cupo real antes de confirmar.",
+  },
+  {
+    selector: '[data-tour="como-responde"]',
+    titulo: "Cómo responde",
+    texto: "La personalidad de tu agente: de vos o de usted, qué tan formal, y cuándo tiene que frenar y llamarte a vos.",
+  },
+  {
+    selector: '[data-tour="que-sabe"]',
+    titulo: "Qué sabe",
+    texto: "Precios, servicios y datos de tu negocio. Si algo no está acá, tu agente nunca lo inventa — pregunta.",
+  },
+  {
+    selector: '[data-tour="correcciones"]',
+    titulo: "Correcciones",
+    texto: "Cuando el agente no supo algo, queda anotado acá. Se lo enseñás una vez y no lo vuelve a preguntar.",
+  },
+  {
+    selector: '[data-tour="conexion"]',
+    titulo: "Conexión",
+    texto: "El estado real de tu número de WhatsApp — acá te enterás primero si el token venció, antes que un cliente.",
+  },
+  {
+    selector: '[data-tour="uso"]',
+    titulo: "Uso y límites",
+    texto: "Cuánto llevás consumido este mes de tu plan. Listo — eso es todo el recorrido.",
+  },
+];
 
 type Item = {
   href: string;
@@ -26,6 +80,8 @@ type Item = {
   cuenta?: number;
   /** Ámbar en vez de gris: esto le toca a una persona. */
   alerta?: boolean;
+  /** Con qué lo encuentra el recorrido guiado (ver `tour.tsx`). */
+  tour: string;
 };
 
 type Grupo = { titulo: string; items: Item[] };
@@ -52,7 +108,7 @@ export function AgenteBarra({
   const grupos: Grupo[] = [
     {
       titulo: "Inicio",
-      items: [{ href: "/panel/agente", texto: "Resumen", icono: "inicio" }],
+      items: [{ href: "/panel/agente", texto: "Resumen", icono: "inicio", tour: "resumen" }],
     },
     {
       titulo: "Operación",
@@ -63,6 +119,7 @@ export function AgenteBarra({
           icono: "mensajes",
           cuenta: esperando,
           alerta: true,
+          tour: "conversaciones",
         },
         {
           href: "/panel/agente/correo",
@@ -70,30 +127,38 @@ export function AgenteBarra({
           icono: "correo",
           cuenta: esperandoCorreo,
           alerta: true,
+          tour: "correo",
         },
-        { href: "/panel/agente/contactos", texto: "Contactos", icono: "clientes", cuenta: contactos },
-        { href: "/panel/agente/citas", texto: "Citas", icono: "calendario", cuenta: citas },
+        {
+          href: "/panel/agente/contactos",
+          texto: "Contactos",
+          icono: "clientes",
+          cuenta: contactos,
+          tour: "contactos",
+        },
+        { href: "/panel/agente/citas", texto: "Citas", icono: "calendario", cuenta: citas, tour: "citas" },
       ],
     },
     {
       titulo: "El agente",
       items: [
-        { href: "/panel/agente/como-responde", texto: "Cómo responde", icono: "ajustes" },
-        { href: "/panel/agente/que-sabe", texto: "Qué sabe", icono: "documento" },
+        { href: "/panel/agente/como-responde", texto: "Cómo responde", icono: "ajustes", tour: "como-responde" },
+        { href: "/panel/agente/que-sabe", texto: "Qué sabe", icono: "documento", tour: "que-sabe" },
         {
           href: "/panel/agente/correcciones",
           texto: "Correcciones",
           icono: "pendientes",
           cuenta: correcciones,
           alerta: true,
+          tour: "correcciones",
         },
       ],
     },
     {
       titulo: "Ajustes",
       items: [
-        { href: "/panel/agente/conexion", texto: "Conexión", icono: "conexiones" },
-        { href: "/panel/agente/uso", texto: "Uso y límites", icono: "actividad" },
+        { href: "/panel/agente/conexion", texto: "Conexión", icono: "conexiones", tour: "conexion" },
+        { href: "/panel/agente/uso", texto: "Uso y límites", icono: "actividad", tour: "uso" },
       ],
     },
   ];
@@ -153,6 +218,7 @@ export function AgenteBarra({
                 <Link
                   key={it.href}
                   href={it.href}
+                  data-tour={it.tour}
                   aria-current={actual ? "page" : undefined}
                   className={cn(
                     "flex items-center gap-2.5 rounded-[7px] px-2 py-[7px] text-[13px] transition-colors max-md:whitespace-nowrap",
@@ -181,6 +247,12 @@ export function AgenteBarra({
           </div>
         ))}
       </nav>
+
+      <div className="flex-none border-t border-line px-3.5 py-2.5 max-md:hidden">
+        <LinkReiniciarTour id="agente-whatsapp" />
+      </div>
+
+      <TourGuiado id="agente-whatsapp" pasos={PASOS_TOUR} />
     </aside>
   );
 }

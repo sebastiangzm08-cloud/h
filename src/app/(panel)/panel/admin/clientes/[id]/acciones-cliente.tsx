@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ResultadoAccion } from "@/lib/panel/admin-acciones";
 import { useAccionAdmin } from "@/components/panel/usar-accion-admin";
+import { CampoMonto } from "@/components/panel/campo-monto";
 import { CampoToken } from "@/components/panel/campo-token";
 import { DIAS_HORARIO, type ConfigAgenda } from "@/lib/panel/agente-config";
 import { cn } from "@/lib/utils";
@@ -141,15 +142,7 @@ export function PrecioAsignacion({
       <CampoToken />
       <input type="hidden" name="clienteId" value={clienteId} />
       <input type="hidden" name="asignacionId" value={asignacionId} />
-      <input
-        name="precio"
-        type="number"
-        min={0}
-        step={1000}
-        defaultValue={precio}
-        autoFocus
-        className={campo}
-      />
+      <CampoMonto name="precio" defaultValue={precio} autoFocus className={campo} />
       <button
         type="submit"
         disabled={pendiente}
@@ -198,13 +191,10 @@ export function AgregarCobro({
         <span className="text-[10.5px] font-medium text-ink-mute uppercase">
           Monto (₡)
         </span>
-        <input
+        <CampoMonto
           name="monto"
-          type="number"
-          min={0}
-          step={1000}
           defaultValue={montoSugerido || undefined}
-          placeholder="30000"
+          placeholder="30.000"
           required
           className={campo}
         />

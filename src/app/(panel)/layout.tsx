@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { PanelShell } from "@/components/panel/shell";
 import { Icono } from "@/components/panel/iconos";
 import { SonidoEscalamiento } from "@/components/panel/sonido-escalamiento";
-import { getCliente, getContadoresCliente, getPerfil } from "@/lib/panel/datos";
+import { getAsignacion, getCliente, getContadoresCliente, getPerfil } from "@/lib/panel/datos";
 import { getContadoresAdmin } from "@/lib/panel/admin";
 
 /* El panel NUNCA se indexa: es área con sesión. */
@@ -22,6 +22,11 @@ export default async function PanelLayout({
   /* Los datos de identidad se piden una sola vez acá y bajan por props.
      Ninguna pantalla vuelve a preguntar quién es el usuario. */
   const [perfil, cliente] = await Promise.all([getPerfil(), getCliente()]);
+  /* "Tu negocio" (el formulario de posts) y su aviso de onboarding solo le
+     competen a quien tiene Redes sociales — ver el porqué en
+     `panel/perfil/page.tsx`. */
+  const redes = perfil.rol === "cliente" ? await getAsignacion("redes-sociales") : null;
+  const tieneRedes = Boolean(redes);
 
   /* Portón real de la sesión: acá (Node) `getPerfil()` valida el token
      contra Supabase sin rotarlo. El proxy sólo hace un chequeo local. */
@@ -74,7 +79,7 @@ export default async function PanelLayout({
         Ver facturación
       </Link>
     </div>
-  ) : perfil.rol === "cliente" && !cliente.onboardingCompleto ? (
+  ) : perfil.rol === "cliente" && tieneRedes && !cliente.onboardingCompleto ? (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12.5px]">
       <span className="inline-flex items-center gap-2 text-ink-soft">
         <Icono nombre="negocio" className="h-3.5 w-3.5 text-ink-mute" />
@@ -95,6 +100,7 @@ export default async function PanelLayout({
       subtitulo={perfil.rol === "admin" ? "Administración" : `Plan ${cliente.plan}`}
       aviso={aviso}
       contadores={contadores}
+      tieneRedes={tieneRedes}
     >
       {perfil.rol === "cliente" ? <SonidoEscalamiento clienteId={cliente.id} /> : null}
       {children}

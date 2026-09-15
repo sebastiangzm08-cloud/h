@@ -127,6 +127,7 @@ export function PanelShell({
   subtitulo,
   aviso,
   contadores = {},
+  tieneRedes = true,
   children,
 }: {
   nombre: string;
@@ -135,6 +136,10 @@ export function PanelShell({
   aviso?: ReactNode;
   /** Números reales por href para las pastillas de la barra y la campana. */
   contadores?: Record<string, number>;
+  /** "Tu negocio" solo le sirve a Redes sociales (arma el prompt de los
+      posts) — sin esa automatización, el link no aplica y se esconde.
+      `true` por defecto para el admin, que no pasa este prop. */
+  tieneRedes?: boolean;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -142,7 +147,12 @@ export function PanelShell({
   const [scrolleado, setScrolleado] = useState(false);
 
   const enAdmin = pathname.startsWith("/panel/admin");
-  const grupos = enAdmin ? NAV_ADMIN : NAV_CLIENTE;
+  const grupos = (enAdmin ? NAV_ADMIN : NAV_CLIENTE)
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((it) => tieneRedes || it.href !== "/panel/perfil"),
+    }))
+    .filter((g) => g.items.length > 0);
 
   /* Destinos para la búsqueda: los ítems del menú de este rol. */
   const destinos: Destino[] = grupos.flatMap((g) =>

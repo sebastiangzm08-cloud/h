@@ -155,15 +155,26 @@ export function FormularioNegocio({
           titulo="Textos que te representan — lo más importante"
           ayuda="Pegá 3 a 5 publicaciones reales, tal cual las escribís vos (o de marcas que admirás). La IA copia el arranque, el ritmo y las muletillas, no el contenido. Sin esto, los textos salen planos."
         >
+          {/* El ejemplo va en un bloque VISIBLE, no en el placeholder: un
+              placeholder de 4 líneas se lee gris y apagado, como si el
+              campo estuviera roto, y desaparece apenas alguien empieza a
+              escribir — acá queda a la vista todo el tiempo, como
+              referencia real. */}
+          <div className="mb-2 rounded-lg border border-line bg-surface-2/60 px-3 py-2.5">
+            <p className="text-[10.5px] font-medium tracking-wide text-ink-faint uppercase">Ejemplo</p>
+            <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft italic">
+              &ldquo;Amiga, se me acabó el colágeno y recién me di cuenta 🙈 Este mes lo repongo con 20%
+              en la segunda. ¿Te sumás al pedido?&rdquo;
+            </p>
+            <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-soft italic">
+              &ldquo;Llegaron las cremas nuevas y ya volaron la mitad. Escribime y te aparto la tuya.&rdquo;
+            </p>
+          </div>
           <textarea autoComplete="off"
             name="ejemplosTexto"
             rows={compacto ? 4 : 7}
             defaultValue={inicial.ejemplosTexto}
-            placeholder={
-              "Pegá 3-5 textos completos, uno debajo del otro. Ejemplo:\n\n" +
-              "“Amiga, se me acabó el colágeno y recién me di cuenta 🙈 Este mes lo repongo con 20% en la segunda. ¿Te sumás al pedido?”\n\n" +
-              "“Llegaron las cremas nuevas y ya volaron la mitad. Escribime y te aparto la tuya.”"
-            }
+            placeholder="Pegá 3 a 5 textos completos, uno debajo del otro."
             className={cn(campo, "resize-none")}
           />
         </Pregunta>

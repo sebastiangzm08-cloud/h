@@ -880,17 +880,20 @@ export async function getPrimerosPasos(): Promise<{
     return cat?.slug === "redes-sociales";
   });
 
-  const pasos: PasoOnboarding[] = [
-    {
+  /* "Completá el perfil de tu negocio" arma el prompt de POSTS — le sirve
+     únicamente a Redes sociales (ver `panel/perfil/page.tsx`). Antes se le
+     mostraba a cualquier cliente, aunque solo tuviera el Agente de
+     WhatsApp y ese paso no aplicara para nada. */
+  const pasos: PasoOnboarding[] = [];
+
+  if (tieneRedes) {
+    pasos.push({
       clave: "perfil",
       titulo: "Completá el perfil de tu negocio",
       detalle: "Qué vendés, a quién y con qué tono. La IA lo usa para escribir.",
       href: "/panel/perfil",
       hecho: Boolean(cli.data?.onboarding_completo),
-    },
-  ];
-
-  if (tieneRedes) {
+    });
     pasos.push({
       clave: "buffer",
       titulo: "Conectá tu cuenta de Buffer",

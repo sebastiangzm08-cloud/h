@@ -24,6 +24,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAccionAdmin } from "@/components/panel/usar-accion-admin";
+import { CampoMonto } from "@/components/panel/campo-monto";
 import { CampoToken } from "@/components/panel/campo-token";
 import { DIAS_HORARIO, CONFIG_AGENDA_POR_DEFECTO } from "@/lib/panel/agente-config";
 import { cn } from "@/lib/utils";
@@ -195,9 +196,10 @@ export function AltaGuiada() {
               <span className="text-[11.5px] font-medium text-ink-mute">
                 Precio mensual <span className="text-ink-faint">(₡, opcional)</span>
               </span>
-              <input
-                name="precioAsignacion" type="number" min={0} step={1000}
-                placeholder="Deja vacío = precio de lista" className={campo}
+              <CampoMonto
+                name="precioAsignacion"
+                placeholder="Deja vacío = precio de lista"
+                className={campo}
               />
             </label>
             <label className="flex flex-col gap-1.5 sm:col-span-2">

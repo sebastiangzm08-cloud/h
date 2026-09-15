@@ -6,13 +6,40 @@
    ========================================================================== */
 import { Caja, CajaHead, PageHead } from "@/components/panel/ui";
 import { FormularioNegocio } from "@/components/panel/formulario-negocio";
-import { getCliente, getPerfilNegocio } from "@/lib/panel/datos";
+import { getAsignacion, getCliente, getPerfilNegocio } from "@/lib/panel/datos";
 
 export default async function PerfilNegocioPage() {
-  const [cliente, perfil] = await Promise.all([
+  const [cliente, perfil, redes] = await Promise.all([
     getCliente(),
     getPerfilNegocio(),
+    getAsignacion("redes-sociales"),
   ]);
+
+  /* Este formulario es para que la IA escriba POSTS — solo lo usa Redes
+     sociales. Un cliente sin esa automatización (ej. solo Agente de
+     WhatsApp, que arma su propio "cerebro" en Qué sabe / Cómo responde)
+     no tiene por qué ver preguntas sobre publicaciones. El link del
+     sidebar ya lo esconde (ver `shell.tsx`); esto es la red de seguridad
+     si alguien entra por la URL directa. */
+  if (!redes) {
+    return (
+      <>
+        <PageHead titulo="Tu negocio" descripcion="Este formulario es para Redes sociales." />
+        <Caja className="max-w-2xl">
+          <p className="text-[13px] leading-relaxed text-ink-mute">
+            Ninguna de tus automatizaciones actuales usa este formulario todavía —
+            es lo que le da contexto a la IA para escribir publicaciones, y hoy no
+            tenés Redes sociales asignado. Si tu Agente de WhatsApp necesita algo
+            de tu negocio, se configura en{" "}
+            <a href="/panel/agente/que-sabe" className="text-ink underline underline-offset-2">
+              Qué sabe
+            </a>
+            , dentro de su propio entorno.
+          </p>
+        </Caja>
+      </>
+    );
+  }
 
   return (
     <>
