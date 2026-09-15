@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { PanelShell } from "@/components/panel/shell";
 import { Icono } from "@/components/panel/iconos";
+import { SonidoEscalamiento } from "@/components/panel/sonido-escalamiento";
 import { getCliente, getContadoresCliente, getPerfil } from "@/lib/panel/datos";
 import { getContadoresAdmin } from "@/lib/panel/admin";
 
@@ -95,6 +96,7 @@ export default async function PanelLayout({
       aviso={aviso}
       contadores={contadores}
     >
+      {perfil.rol === "cliente" ? <SonidoEscalamiento clienteId={cliente.id} /> : null}
       {children}
     </PanelShell>
   );

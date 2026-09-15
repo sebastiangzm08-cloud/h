@@ -266,7 +266,7 @@ export function SubirContenido({
         <span className="text-[11.5px] text-ink-faint">
           Hasta {MAX_PIEZAS} por tanda · máx {MAX_MB} MB · reels próximamente
         </span>
-        <input
+        <input autoComplete="off"
           ref={inputRef}
           type="file"
           accept="image/*"
@@ -425,7 +425,7 @@ export function SubirContenido({
             <span className="text-[11.5px] font-medium text-ink-mute">
               Contexto para estas fotos <span className="text-ink-faint">(opcional)</span>
             </span>
-            <textarea
+            <textarea autoComplete="off"
               value={contexto}
               onChange={(e) => setContexto(e.target.value)}
               rows={2}
@@ -468,7 +468,7 @@ export function SubirContenido({
             <span className="text-[11.5px] font-medium text-ink-mute">
               Día de publicación <span className="text-ink-faint">(opcional)</span>
             </span>
-            <input
+            <input autoComplete="off"
               type="date"
               value={fecha}
               onChange={(e) => setFecha(e.target.value)}

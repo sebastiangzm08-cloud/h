@@ -3,19 +3,19 @@
    ficha del negocio y el perfil de una sola vez.
    ========================================================================== */
 import { Caja, CajaHead, Nota, PageHead } from "@/components/panel/ui";
-import { FormAlta } from "./form-alta";
+import { AltaGuiada } from "./alta-guiada";
 
 export default function AltaCliente() {
   return (
     <>
       <PageHead
         titulo="Alta de cliente"
-        descripcion="Crea la cuenta, la ficha y —si la elegís acá— la primera automatización, todo de una."
+        descripcion="Cuenta → WhatsApp → agenda, uno detrás del otro. Cada paso se puede saltar y completar después desde la ficha del cliente."
       />
 
       <Caja className="max-w-2xl">
-        <CajaHead eyebrow="Nuevo cliente" titulo="Datos de la cuenta" />
-        <FormAlta />
+        <CajaHead eyebrow="Nuevo cliente" titulo="Alta guiada" />
+        <AltaGuiada />
       </Caja>
 
       <Nota className="max-w-2xl">

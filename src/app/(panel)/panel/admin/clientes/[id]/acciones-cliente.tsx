@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import type { ResultadoAccion } from "@/lib/panel/admin-acciones";
 import { useAccionAdmin } from "@/components/panel/usar-accion-admin";
 import { CampoToken } from "@/components/panel/campo-token";
+import { DIAS_HORARIO, type ConfigAgenda } from "@/lib/panel/agente-config";
 import { cn } from "@/lib/utils";
 
 const campo =
@@ -406,6 +407,312 @@ export function AccesoCliente({
         La contraseña no queda guardada: copiala y pasásela al cliente al toque.
       </p>
     </div>
+  );
+}
+
+/** Conectar (o reconectar) el WhatsApp del cliente: pega el phone_number_id
+    y el token permanente que salieron de generar el Usuario del Sistema en
+    el Business Manager del cliente. Comprueba contra Meta antes de guardar
+    — si el token está mal, se ve acá, no en la primera prueba real. */
+export function ConectarWhatsapp({ clienteId }: { clienteId: string }) {
+  const [estado, ejecutar, pendiente] = useAccionAdmin("conectarWhatsapp");
+  const [abierto, setAbierto] = useState(false);
+
+  if (!abierto) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        className="text-[12px] text-ink-mute underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink"
+      >
+        Conectar WhatsApp
+      </button>
+    );
+  }
+
+  const lbl = "flex flex-col gap-1 text-[11px] font-medium text-ink-mute uppercase";
+  const inp =
+    "h-9 rounded-lg border border-line bg-surface-2 px-2.5 text-[12.5px] normal-case text-ink " +
+    "transition-colors focus:border-line-strong focus:bg-surface-3 focus:outline-none";
+
+  return (
+    <form
+      action={ejecutar}
+      className="mt-3 flex flex-col gap-3 rounded-xl border border-line bg-surface-2 p-3.5"
+    >
+      <CampoToken />
+      <input type="hidden" name="clienteId" value={clienteId} />
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-medium tracking-wide text-ink-mute uppercase">
+          Conectar WhatsApp
+        </span>
+        <button
+          type="button"
+          onClick={() => setAbierto(false)}
+          className="text-[11.5px] text-ink-faint hover:text-ink-mute"
+        >
+          Cerrar
+        </button>
+      </div>
+      <p className="text-[11.5px] text-ink-faint normal-case">
+        Salen de crear el Usuario del Sistema en el Business Manager del
+        cliente: asignale el activo de WhatsApp y generá el token permanente
+        con los permisos <code>whatsapp_business_messaging</code> y{" "}
+        <code>whatsapp_business_management</code>.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className={lbl}>
+          Phone Number ID
+          <input name="phoneNumberId" required placeholder="1316882374848089" className={inp} />
+        </label>
+        <label className={lbl}>
+          Endpoint (opcional)
+          <input name="endpoint" placeholder="https://graph.facebook.com/v21.0" className={inp} />
+        </label>
+      </div>
+      <label className={lbl}>
+        Token permanente
+        <input name="token" type="password" required autoComplete="off" className={inp} />
+      </label>
+      <div className="flex items-center gap-2">
+        <button
+          type="submit"
+          disabled={pendiente}
+          className="inline-flex h-9 items-center rounded-full bg-ink px-4 text-[12px] font-medium text-paper transition-colors hover:bg-ink-soft disabled:opacity-50"
+        >
+          {pendiente ? "Comprobando con Meta…" : "Conectar"}
+        </button>
+      </div>
+      <Mensaje estado={estado} />
+    </form>
+  );
+}
+
+/** Conectar el correo del cliente: una casilla PROPIA y dedicada (Gmail,
+    Outlook, lo que sea) con una contraseña de aplicación — nunca un
+    dominio de Hoshizora ni una casilla compartida entre clientes. Se
+    comprueba contra el SMTP en vivo antes de guardar. */
+export function ConectarCorreo({ clienteId }: { clienteId: string }) {
+  const [estado, ejecutar, pendiente] = useAccionAdmin("conectarCorreo");
+  const [abierto, setAbierto] = useState(false);
+
+  if (!abierto) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        className="text-[12px] text-ink-mute underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink"
+      >
+        Conectar correo
+      </button>
+    );
+  }
+
+  const lbl = "flex flex-col gap-1 text-[11px] font-medium text-ink-mute uppercase";
+  const inp =
+    "h-9 rounded-lg border border-line bg-surface-2 px-2.5 text-[12.5px] normal-case text-ink " +
+    "transition-colors focus:border-line-strong focus:bg-surface-3 focus:outline-none";
+
+  return (
+    <form
+      action={ejecutar}
+      className="mt-3 flex flex-col gap-3 rounded-xl border border-line bg-surface-2 p-3.5"
+    >
+      <CampoToken />
+      <input type="hidden" name="clienteId" value={clienteId} />
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-medium tracking-wide text-ink-mute uppercase">
+          Conectar correo
+        </span>
+        <button
+          type="button"
+          onClick={() => setAbierto(false)}
+          className="text-[11.5px] text-ink-faint hover:text-ink-mute"
+        >
+          Cerrar
+        </button>
+      </div>
+      <p className="text-[11.5px] text-ink-faint normal-case">
+        Una casilla NUEVA y dedicada para este cliente (ej. un Gmail), con
+        una contraseña de aplicación — nunca tu propio correo ni uno
+        compartido entre clientes.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className={lbl}>
+          Correo
+          <input name="correo" type="email" required placeholder="citas.clinica@gmail.com" className={inp} />
+        </label>
+        <label className={lbl}>
+          Nombre del remitente
+          <input name="nombreRemitente" placeholder="Clínica Dental Aurora" className={inp} />
+        </label>
+      </div>
+      <label className={lbl}>
+        Contraseña de aplicación
+        <input name="claveApp" type="password" required autoComplete="off" className={inp} />
+      </label>
+      <details className="text-[11.5px] text-ink-faint normal-case">
+        <summary className="cursor-pointer select-none">Otro proveedor (no Gmail)</summary>
+        <div className="mt-2 grid gap-2.5 sm:grid-cols-2">
+          <label className={lbl}>
+            Servidor IMAP
+            <input name="imapHost" defaultValue="imap.gmail.com" className={inp} />
+          </label>
+          <label className={lbl}>
+            Puerto IMAP
+            <input name="imapPort" type="number" defaultValue={993} className={inp} />
+          </label>
+          <label className={lbl}>
+            Servidor SMTP
+            <input name="smtpHost" defaultValue="smtp.gmail.com" className={inp} />
+          </label>
+          <label className={lbl}>
+            Puerto SMTP
+            <input name="smtpPort" type="number" defaultValue={465} className={inp} />
+          </label>
+        </div>
+      </details>
+      <div className="flex items-center gap-2">
+        <button
+          type="submit"
+          disabled={pendiente}
+          className="inline-flex h-9 items-center rounded-full bg-ink px-4 text-[12px] font-medium text-paper transition-colors hover:bg-ink-soft disabled:opacity-50"
+        >
+          {pendiente ? "Comprobando…" : "Conectar"}
+        </button>
+      </div>
+      <Mensaje estado={estado} />
+    </form>
+  );
+}
+
+/** Sembrar la agenda de un cliente nuevo (capacidad/colchón/horario) desde
+    el alta, en vez de dejarlo en los valores por defecto hasta que el
+    cliente entre por su cuenta a configurarlo. El cliente lo sigue pudiendo
+    editar después desde su propio panel — esto solo le da un punto de
+    partida real en vez de "capacidad 1, sin horario". */
+export function FormaAgendaAdmin({
+  clienteId,
+  agenda,
+  horario,
+}: {
+  clienteId: string;
+  agenda: ConfigAgenda;
+  horario: Record<string, [string, string][]>;
+}) {
+  const [estado, ejecutar, pendiente] = useAccionAdmin("sembrarAgenda");
+  const [abierto, setAbierto] = useState(false);
+  const [cerrados, setCerrados] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(DIAS_HORARIO.map(({ clave }) => [clave, !horario[clave]?.length]))
+  );
+
+  const inp =
+    "h-9 rounded-lg border border-line bg-surface-2 px-2.5 text-[12.5px] normal-case text-ink " +
+    "transition-colors focus:border-line-strong focus:bg-surface-3 focus:outline-none";
+
+  if (!abierto) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        className="text-[12px] text-ink-mute underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink"
+      >
+        Sembrar agenda y horario
+      </button>
+    );
+  }
+
+  return (
+    <form
+      action={ejecutar}
+      className="mt-3 flex flex-col gap-3.5 rounded-xl border border-line bg-surface-2 p-3.5"
+    >
+      <CampoToken />
+      <input type="hidden" name="clienteId" value={clienteId} />
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-medium tracking-wide text-ink-mute uppercase">
+          Agenda y horario
+        </span>
+        <button
+          type="button"
+          onClick={() => setAbierto(false)}
+          className="text-[11.5px] text-ink-faint hover:text-ink-mute"
+        >
+          Cerrar
+        </button>
+      </div>
+
+      <label className="flex cursor-pointer items-center gap-2 text-[12px] text-ink-soft normal-case">
+        <input type="checkbox" name="activa" defaultChecked={agenda.activa} className="h-3.5 w-3.5 accent-ink" />
+        Agenda solo (si se apaga, toma el dato y avisa que alguien confirma)
+      </label>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <label className="flex flex-col gap-1 text-[11px] font-medium text-ink-mute uppercase">
+          Capacidad
+          <input type="number" name="capacidad" min={1} max={20} defaultValue={agenda.capacidad} className={cn(inp, "normal-case")} />
+        </label>
+        <label className="flex flex-col gap-1 text-[11px] font-medium text-ink-mute uppercase">
+          Colchón (min)
+          <input type="number" name="colchonMin" min={0} max={120} defaultValue={agenda.colchonMin} className={cn(inp, "normal-case")} />
+        </label>
+        <label className="flex flex-col gap-1 text-[11px] font-medium text-ink-mute uppercase">
+          Anticipación (min)
+          <input type="number" name="anticipacionMin" min={0} max={1440} defaultValue={agenda.anticipacionMin} className={cn(inp, "normal-case")} />
+        </label>
+        <label className="flex flex-col gap-1 text-[11px] font-medium text-ink-mute uppercase">
+          Días adelante
+          <input type="number" name="maximoDiasAdelante" min={1} max={90} defaultValue={agenda.maximoDiasAdelante} className={cn(inp, "normal-case")} />
+        </label>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        {DIAS_HORARIO.map(({ clave, texto }) => {
+          const bloque = horario[clave]?.[0];
+          const cerrado = cerrados[clave];
+          return (
+            <div key={clave} className="flex items-center gap-2 normal-case">
+              <label className="flex w-24 flex-none items-center gap-1.5 text-[12px] text-ink-soft">
+                <input
+                  type="checkbox"
+                  checked={!cerrado}
+                  onChange={(e) => setCerrados((c) => ({ ...c, [clave]: !e.target.checked }))}
+                  className="h-3.5 w-3.5 accent-ink"
+                />
+                {texto}
+              </label>
+              <input
+                type="time"
+                name={`ini_${clave}`}
+                defaultValue={bloque?.[0] ?? "08:00"}
+                disabled={cerrado}
+                className={cn(inp, "max-w-[110px] disabled:opacity-40")}
+              />
+              <span className="text-ink-faint">–</span>
+              <input
+                type="time"
+                name={`fin_${clave}`}
+                defaultValue={bloque?.[1] ?? "17:00"}
+                disabled={cerrado}
+                className={cn(inp, "max-w-[110px] disabled:opacity-40")}
+              />
+              <input type="hidden" name={`cerrado_${clave}`} value={cerrado ? "on" : ""} />
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          type="submit"
+          disabled={pendiente}
+          className="inline-flex h-9 items-center rounded-full bg-ink px-4 text-[12px] font-medium text-paper transition-colors hover:bg-ink-soft disabled:opacity-50"
+        >
+          {pendiente ? "Guardando…" : "Guardar"}
+        </button>
+      </div>
+      <Mensaje estado={estado} />
+    </form>
   );
 }
 

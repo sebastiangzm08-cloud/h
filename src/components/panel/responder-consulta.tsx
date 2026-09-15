@@ -52,7 +52,7 @@ export function ResponderConsulta({
     >
       {variante === "admin" ? <CampoToken /> : null}
       <input type="hidden" name="mensajeId" value={mensajeId} />
-      <textarea
+      <textarea autoComplete="off"
         id={`resp-${mensajeId}`}
         name="texto"
         required

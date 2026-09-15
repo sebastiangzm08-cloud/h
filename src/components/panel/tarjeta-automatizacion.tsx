@@ -28,6 +28,19 @@ function iconoDe(slug: string): NombreIcono {
   return ICONOS[slug] ?? "automatizaciones";
 }
 
+/**
+ * A dónde lleva la tarjeta. Casi todas abren su ficha con pestañas, pero el
+ * Agente de WhatsApp abre un ENTORNO propio (bandeja, contactos, citas): se
+ * opera todos los días, no se configura y ya. Ver `panel/agente/layout.tsx`.
+ */
+const ENTORNOS: Record<string, string> = {
+  "agente-whatsapp": "/panel/agente",
+};
+
+function destinoDe(slug: string) {
+  return ENTORNOS[slug] ?? `/panel/automatizaciones/${slug}`;
+}
+
 const cajaBase =
   "flex w-full flex-col gap-2.5 rounded-[14px] border p-[15px] text-left transition-[transform,border-color] duration-150";
 
@@ -35,7 +48,7 @@ export function TarjetaContratada({ asignacion }: { asignacion: Asignacion }) {
   const { automatizacion: aut, estado, resumen } = asignacion;
   return (
     <Link
-      href={`/panel/automatizaciones/${aut.slug}`}
+      href={destinoDe(aut.slug)}
       className={cn(
         cajaBase,
         "border-line bg-surface-2 hover:-translate-y-0.5 hover:border-line-strong"

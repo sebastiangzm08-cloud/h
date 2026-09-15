@@ -12,11 +12,14 @@ import { getFichaCliente } from "@/lib/panel/admin";
 import { waLinkCliente } from "@/lib/utils";
 import {
   AccesoCliente,
+  ConectarCorreo,
+  ConectarWhatsapp,
   EliminarCliente,
   AgregarCobro,
   BotonPago,
   BotonServicio,
   EditarDatosCliente,
+  FormaAgendaAdmin,
   PrecioAsignacion,
 } from "./acciones-cliente";
 
@@ -296,6 +299,11 @@ export default async function FichaClientePage({ params }: Props) {
               ))}
             </ul>
           )}
+          <ConectarWhatsapp clienteId={f.id} />
+          <ConectarCorreo clienteId={f.id} />
+          {f.asignacionAgenteId ? (
+            <FormaAgendaAdmin clienteId={f.id} agenda={f.agendaAgente} horario={f.horario} />
+          ) : null}
         </Caja>
 
         <Caja>

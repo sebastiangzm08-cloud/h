@@ -106,8 +106,16 @@ html[data-sitio="oscuro"] :focus-visible {
 
    El color de marca (acento) queda disponible pero NO se usa en el panel:
    el estado activo va en blanco, y el color solo aparece en ok/warn/bad.
-   ========================================================================== */
-.panel-scope {
+
+   INTERRUPTOR CLARO/OSCURO (2026-09-14) — cada quien elige el suyo, se
+   guarda en localStorage (ver `TemaSelector` en `shell.tsx` y el layout del
+   Agente) y se aplica con `data-tema` en el MISMO nodo que lleva
+   `.panel-scope`. Sin atributo todavía (primera visita antes de que el
+   script de arranque lo lea) se queda en oscuro — es el que ya estaba
+   aprobado, así nadie ve un cambio que no pidió. */
+.panel-scope,
+.panel-scope[data-tema="oscuro"],
+.panel-scope[data-tema="automatico"] {
   --color-paper: #08080a;
   --color-surface: #0e0e11;
   --color-surface-2: #131317;
@@ -128,25 +136,103 @@ html[data-sitio="oscuro"] :focus-visible {
   --color-bad: #cf6f6f;
 }
 
+.panel-scope[data-tema="claro"] {
+  --color-paper: #ffffff;
+  --color-surface: #f6f6f7;
+  --color-surface-2: #efeff1;
+  --color-surface-3: #e7e7ea;
+
+  --color-ink: #0a0a0b;
+  --color-ink-soft: #18181b;
+  --color-ink-mute: #52525b;
+  --color-ink-faint: #7a7a84;
+
+  --color-line: #dcdce1;
+  --color-line-strong: #c6c6ce;
+
+  --color-ok: #3f6b4e;
+  --color-warn: #7a5f30;
+  --color-bad: #7a3d3d;
+}
+
+/* "Automático" sigue el sistema operativo — únicamente esta variante. */
+@media (prefers-color-scheme: light) {
+  .panel-scope[data-tema="automatico"] {
+    --color-paper: #ffffff;
+    --color-surface: #f6f6f7;
+    --color-surface-2: #efeff1;
+    --color-surface-3: #e7e7ea;
+
+    --color-ink: #0a0a0b;
+    --color-ink-soft: #18181b;
+    --color-ink-mute: #52525b;
+    --color-ink-faint: #7a7a84;
+
+    --color-line: #dcdce1;
+    --color-line-strong: #c6c6ce;
+
+    --color-ok: #3f6b4e;
+    --color-warn: #7a5f30;
+    --color-bad: #7a3d3d;
+  }
+}
+
 .panel-scope :focus-visible {
   outline-color: rgba(255, 255, 255, 0.55);
 }
+.panel-scope[data-tema="claro"] :focus-visible {
+  outline-color: rgba(10, 10, 11, 0.55);
+}
 
 /* Barra de scroll discreta dentro del panel. La del sistema en Windows es
-   ancha y clara, y en una barra lateral oscura se ve como un error. */
+   ancha y clara, y en una barra lateral oscura se ve como un error. Casi
+   invisible en reposo, un poco más clara al pasar el mouse — como
+   Linear/Notion/Vercel, nunca como el scrollbar nativo del sistema. */
 .panel-scope .scroll-fino {
   scrollbar-width: thin;
   scrollbar-color: var(--color-line-strong) transparent;
 }
 .panel-scope .scroll-fino::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 .panel-scope .scroll-fino::-webkit-scrollbar-thumb {
   background: var(--color-line-strong);
   border-radius: 999px;
+  transition: background-color 150ms ease;
+}
+.panel-scope .scroll-fino::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ink-faint);
 }
 .panel-scope .scroll-fino::-webkit-scrollbar-track {
   background: transparent;
+}
+.panel-scope .scroll-fino::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Sombra bajo un encabezado pegado (`sticky`) al scrollear una tabla — le da
+   la sensación de "flotar" sobre las filas, en vez de quedar plano. */
+.panel-scope .sombra-pegada {
+  box-shadow: 0 4px 10px -6px rgba(0, 0, 0, 0.5);
+}
+
+/* Entrada escalonada de filas de una lista/tabla: cada una sube un poco y
+   aparece, con un pequeño retraso entre ítems (lo pone el componente vía
+   `style={{ animationDelay }}`). Respeta `prefers-reduced-motion` por la
+   regla general de abajo, que ya apaga cualquier animación del panel. */
+@keyframes fila-entra {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.panel-scope .fila-entra {
+  animation: fila-entra 320ms var(--ease-out-quart) both;
 }
 
 /* --------------------------------------------------------------------------

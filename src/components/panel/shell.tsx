@@ -23,6 +23,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { ConstellationMark } from "@/components/constellation";
 import { Icono, type NombreIcono } from "@/components/panel/iconos";
 import { BuscadorPanel, type Destino } from "@/components/panel/buscador-panel";
+import { TemaSelector } from "@/components/panel/tema-selector";
 import { Eyebrow } from "@/components/panel/ui";
 import { cn } from "@/lib/utils";
 
@@ -171,7 +172,14 @@ export function PanelShell({
   }, []);
 
   return (
-    <div className="panel-scope grid min-h-dvh bg-paper text-ink-soft lg:grid-cols-[264px_1fr]">
+    <div
+      className="panel-scope grid min-h-dvh bg-paper text-ink-soft lg:grid-cols-[264px_1fr]"
+      // El script en el layout raíz (antes de hidratar) le pone `data-tema`
+      // según lo que esta persona ya había elegido — el servidor no lo
+      // puede saber, así que esta diferencia entre HTML de servidor y
+      // cliente es esperada, no un bug.
+      suppressHydrationWarning
+    >
       {abierto ? (
         <button
           className="fixed inset-0 z-30 bg-black/50 lg:hidden"
@@ -327,6 +335,7 @@ export function PanelShell({
           <BuscadorPanel destinos={destinos} />
 
           <div className="ml-auto flex items-center gap-2">
+            <TemaSelector />
             {(() => {
               const destinoCampana = enAdmin
                 ? "/panel/admin/mensajes"

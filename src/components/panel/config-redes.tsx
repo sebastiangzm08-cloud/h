@@ -65,7 +65,7 @@ export function ConfigRedes({
         <span className="text-[11.5px] font-medium text-ink-mute">
           Tono de las publicaciones
         </span>
-        <textarea
+        <textarea autoComplete="off"
           name="tono"
           rows={3}
           defaultValue={config.tono}
@@ -78,7 +78,7 @@ export function ConfigRedes({
         <span className="text-[11.5px] font-medium text-ink-mute">
           Largo del texto
         </span>
-        <select
+        <select autoComplete="off"
           name="largo"
           defaultValue={config.largo}
           className={cn(campo, "max-w-[220px] appearance-none")}

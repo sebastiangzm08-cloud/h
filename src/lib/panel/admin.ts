@@ -12,6 +12,7 @@
    ========================================================================== */
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { getPerfil, ultimoAutor } from "./datos";
+import { leerConfigAgenda } from "./agente-config";
 import type { Consulta, EstadoConsulta, HiloConsulta } from "./tipos";
 
 /** Dónde está un cliente en su puesta en marcha. */
@@ -198,6 +199,16 @@ export type FichaCliente = {
   conexiones: { servicio: string; estado: string; referencia: string | null }[];
   actividad: { id: string; cuando: string; descripcion: string; resultado: string }[];
   onboarding: Onboarding;
+  /** Solo para el Agente de WhatsApp; `null` si esa automatización no está asignada. */
+  asignacionAgenteId: string | null;
+  agendaAgente: {
+    activa: boolean;
+    capacidad: number;
+    colchonMin: number;
+    anticipacionMin: number;
+    maximoDiasAdelante: number;
+  };
+  horario: Record<string, [string, string][]>;
 };
 
 export async function getFichaCliente(id: string): Promise<FichaCliente | null> {
@@ -208,13 +219,13 @@ export async function getFichaCliente(id: string): Promise<FichaCliente | null> 
     supabase
       .from("clientes")
       .select(
-        "id, nombre_negocio, persona_contacto, correo, whatsapp, rubro, plan, estado, creado_en, onboarding_completo"
+        "id, nombre_negocio, persona_contacto, correo, whatsapp, rubro, plan, estado, creado_en, onboarding_completo, horario"
       )
       .eq("id", id)
       .maybeSingle(),
     supabase
       .from("asignaciones")
-      .select("id, estado, precio_mensual, catalogo_automatizaciones(slug, nombre)")
+      .select("id, estado, precio_mensual, config, catalogo_automatizaciones(slug, nombre)")
       .eq("cliente_id", id),
     supabase
       .from("cobros")
@@ -245,9 +256,12 @@ export async function getFichaCliente(id: string): Promise<FichaCliente | null> 
     estado: string;
   }[];
   const asigList = (asigs.data ?? []) as {
+    id: string;
     estado: string;
+    config: Record<string, unknown> | null;
     catalogo_automatizaciones: { slug?: string } | null;
   }[];
+  const asignacionAgente = asigList.find((a) => a.catalogo_automatizaciones?.slug === "agente-whatsapp");
   const onboarding = armarOnboarding(
     Boolean(c.onboarding_completo),
     conex.some((x) => x.servicio === "buffer" && x.estado === "conectada"),
@@ -301,6 +315,9 @@ export async function getFichaCliente(id: string): Promise<FichaCliente | null> 
       resultado: x.resultado,
     })),
     onboarding,
+    asignacionAgenteId: asignacionAgente?.id ?? null,
+    agendaAgente: leerConfigAgenda(asignacionAgente?.config ?? null),
+    horario: (c.horario as Record<string, [string, string][]> | null) ?? {},
   };
 }
 

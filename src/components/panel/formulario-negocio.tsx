@@ -65,7 +65,7 @@ export function FormularioNegocio({
           titulo="¿Qué vendés?"
           ayuda="Tus productos o servicios principales, en 2 o 3 líneas."
         >
-          <textarea
+          <textarea autoComplete="off"
             name="queVendes"
             required
             rows={compacto ? 2 : 3}
@@ -80,7 +80,7 @@ export function FormularioNegocio({
           titulo="¿Quién te compra?"
           ayuda="Tu cliente típico: edad aproximada, qué le importa, cómo habla."
         >
-          <textarea
+          <textarea autoComplete="off"
             name="quienCompra"
             rows={2}
             defaultValue={inicial.quienCompra}
@@ -94,7 +94,7 @@ export function FormularioNegocio({
           titulo="¿Qué te hace diferente?"
           ayuda="Por qué te eligen a vos y no a otro que vende lo mismo."
         >
-          <textarea
+          <textarea autoComplete="off"
             name="queTeDiferencia"
             rows={2}
             defaultValue={inicial.queTeDiferencia}
@@ -109,13 +109,13 @@ export function FormularioNegocio({
           ayuda="Cómo querés sonar en las publicaciones."
         >
           <div className="flex flex-wrap gap-3">
-            <select name="voz" defaultValue={inicial.voz} className={cn(campo, "max-w-[200px] appearance-none")}>
+            <select autoComplete="off" name="voz" defaultValue={inicial.voz} className={cn(campo, "max-w-[200px] appearance-none")}>
               <option value="cercano">Cercano y amable</option>
               <option value="divertido">Divertido y relajado</option>
               <option value="experto">Experto y confiable</option>
               <option value="formal">Formal y serio</option>
             </select>
-            <select name="trato" defaultValue={inicial.trato} className={cn(campo, "max-w-[160px] appearance-none")}>
+            <select autoComplete="off" name="trato" defaultValue={inicial.trato} className={cn(campo, "max-w-[160px] appearance-none")}>
               <option value="vos">Tratar de vos</option>
               <option value="usted">Tratar de usted</option>
             </select>
@@ -127,7 +127,7 @@ export function FormularioNegocio({
           titulo="¿Qué NUNCA decir?"
           ayuda="Temas, promesas o palabras que la IA tiene prohibido usar."
         >
-          <textarea
+          <textarea autoComplete="off"
             name="queNuncaDecir"
             rows={2}
             defaultValue={inicial.queNuncaDecir}
@@ -141,7 +141,7 @@ export function FormularioNegocio({
           titulo="Ofertas o promos activas"
           ayuda="Lo que estás empujando ahora. Lo podés cambiar cuando quieras."
         >
-          <textarea
+          <textarea autoComplete="off"
             name="promosActivas"
             rows={2}
             defaultValue={inicial.promosActivas}
@@ -155,7 +155,7 @@ export function FormularioNegocio({
           titulo="Textos que te representan — lo más importante"
           ayuda="Pegá 3 a 5 publicaciones reales, tal cual las escribís vos (o de marcas que admirás). La IA copia el arranque, el ritmo y las muletillas, no el contenido. Sin esto, los textos salen planos."
         >
-          <textarea
+          <textarea autoComplete="off"
             name="ejemplosTexto"
             rows={compacto ? 4 : 7}
             defaultValue={inicial.ejemplosTexto}
@@ -173,7 +173,7 @@ export function FormularioNegocio({
           titulo="Tus links"
           ayuda="Tu página web y tus redes actuales, una por línea."
         >
-          <textarea
+          <textarea autoComplete="off"
             name="links"
             rows={2}
             defaultValue={inicial.links}

@@ -26,7 +26,7 @@ import {
 import { getAutomatizacion, getPerfil } from "./datos";
 
 export type ResultadoAccion =
-  | { ok: true; mensaje: string }
+  | { ok: true; mensaje: string; datos?: Record<string, unknown> }
   | { ok: false; error: string };
 
 /**
@@ -242,7 +242,13 @@ export async function crearCuentaCliente(
     "La contraseña no queda guardada — pasásela ahora.",
   ].join("\n") + avisoAuto;
 
-  return { ok: true, mensaje };
+  return {
+    ok: true,
+    mensaje,
+    /* Para que la Alta guiada sepa a quién le siguió el paso 2 (conectar
+       WhatsApp) sin tener que ir a buscarlo — nunca se parsea del texto. */
+    datos: { clienteId: cli.id, esAgenteWhatsapp: slugAuto === "agente-whatsapp" },
+  };
 }
 
 /* -------------------------------------------------------------------------
@@ -308,6 +314,266 @@ export async function asignarAutomatizacion(
   revalidatePath("/panel/admin/asignar");
 
   return { ok: true, mensaje: `${cat.nombre} asignada.` };
+}
+
+/* -------------------------------------------------------------------------
+   Conectar el WhatsApp de un cliente
+
+   Reemplaza el INSERT a mano en `conexiones` de cada alta nueva. Antes de
+   guardar nada, comprueba el `phone_number_id` + token contra la Graph API
+   de Meta de verdad — si el token está mal copiado o vencido, Meta lo dice
+   ACÁ, no en la primera prueba real con el cliente. Nunca se guarda como
+   "conectada" una credencial que Meta no confirmó (mismo principio que
+   `wa_reservar_cita`: comprobar antes de hablar).
+
+   `detalle.asignacion_id` es LEÍDO por el workflow de n8n (nodo "⚙️ Cómo
+   debe responder") para saber de cuál `asignaciones` sacar la config del
+   agente — sin él, cualquier mensaje de este número tumba la ejecución
+   ("invalid input syntax for type uuid: null"). Se resuelve acá siempre
+   (nunca a mano) y se hace merge con lo que ya hubiera en `detalle`, para
+   no perder ese ni ningún otro dato que ya estuviera guardado ahí.
+   ------------------------------------------------------------------------- */
+export async function conectarWhatsapp(
+  _prev: ResultadoAccion | null,
+  form: FormData
+): Promise<ResultadoAccion> {
+  const noAutor = await exigirAdmin(form);
+  if (noAutor) return noAutor;
+
+  const clienteId = String(form.get("clienteId") ?? "");
+  const phoneNumberId = String(form.get("phoneNumberId") ?? "").trim();
+  const token = String(form.get("token") ?? "").trim();
+  const endpoint =
+    String(form.get("endpoint") ?? "").trim() || "https://graph.facebook.com/v21.0";
+
+  if (!clienteId) return { ok: false, error: "Falta el cliente." };
+  if (!phoneNumberId || !token) {
+    return { ok: false, error: "Falta el ID del número o el token." };
+  }
+
+  const admin = supabaseAdmin();
+
+  const { data: asignacion } = await admin
+    .from("asignaciones")
+    .select("id, catalogo_automatizaciones!inner(slug)")
+    .eq("cliente_id", clienteId)
+    .eq("catalogo_automatizaciones.slug", "agente-whatsapp")
+    .maybeSingle();
+  if (!asignacion) {
+    return {
+      ok: false,
+      error: "Este cliente todavía no tiene asignado el Agente de WhatsApp — asignáselo primero desde su ficha.",
+    };
+  }
+
+  // Comprobar contra Meta ANTES de guardar nada.
+  let numeroVerificado = "";
+  let nombreVerificado = "";
+  try {
+    const res = await fetch(
+      `${endpoint}/${phoneNumberId}?fields=display_phone_number,verified_name`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const cuerpo = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const msg = cuerpo?.error?.message || `Meta respondió ${res.status}`;
+      return { ok: false, error: `Meta rechazó esos datos: ${msg}` };
+    }
+    numeroVerificado = cuerpo.display_phone_number ?? "";
+    nombreVerificado = cuerpo.verified_name ?? "";
+  } catch (e) {
+    return { ok: false, error: `No se pudo comprobar con Meta: ${(e as Error).message}` };
+  }
+
+  const { data: actual } = await admin
+    .from("conexiones")
+    .select("detalle")
+    .eq("cliente_id", clienteId)
+    .eq("servicio", "whatsapp")
+    .maybeSingle();
+
+  const { error } = await admin.from("conexiones").upsert(
+    {
+      cliente_id: clienteId,
+      servicio: "whatsapp",
+      estado: "conectada",
+      referencia_externa: numeroVerificado || phoneNumberId,
+      detalle: {
+        ...(actual?.detalle as Record<string, unknown> | null),
+        phone_number_id: phoneNumberId,
+        token,
+        endpoint,
+        asignacion_id: asignacion.id,
+      },
+    },
+    { onConflict: "cliente_id,servicio" }
+  );
+  if (error) return { ok: false, error: "Meta lo confirmó pero no se pudo guardar. Probá de nuevo." };
+
+  revalidatePath(`/panel/admin/clientes/${clienteId}`);
+  revalidatePath("/panel/admin/clientes");
+  return {
+    ok: true,
+    mensaje: `WhatsApp conectado y confirmado con Meta: ${nombreVerificado || "sin nombre verificado"}${
+      numeroVerificado ? ` (${numeroVerificado})` : ""
+    }.`,
+  };
+}
+
+/* -------------------------------------------------------------------------
+   Conectar el correo de un cliente
+
+   A propósito NO es un dominio de Hoshizora ni una casilla compartida:
+   cada cliente trae su PROPIA casilla dedicada (un Gmail nuevo, por
+   ejemplo) con una contraseña de aplicación — así las respuestas salen
+   con la identidad del cliente, nunca con la de Hoshizora, y si algún
+   cliente tiene problemas de reputación de correo, no salpica a nadie más.
+
+   Comprueba la credencial en vivo contra el SMTP ANTES de guardar nada
+   (mismo principio que `conectarWhatsapp`): una contraseña de aplicación
+   mal copiada se ve acá, no en el primer correo real perdido.
+   ------------------------------------------------------------------------- */
+export async function conectarCorreo(
+  _prev: ResultadoAccion | null,
+  form: FormData
+): Promise<ResultadoAccion> {
+  const noAutor = await exigirAdmin(form);
+  if (noAutor) return noAutor;
+
+  const clienteId = String(form.get("clienteId") ?? "");
+  const correo = String(form.get("correo") ?? "").trim().toLowerCase();
+  const claveApp = String(form.get("claveApp") ?? "").trim();
+  const nombreRemitente = String(form.get("nombreRemitente") ?? "").trim();
+  const imapHost = String(form.get("imapHost") ?? "imap.gmail.com").trim();
+  const imapPort = Number(form.get("imapPort") ?? 993);
+  const smtpHost = String(form.get("smtpHost") ?? "smtp.gmail.com").trim();
+  const smtpPort = Number(form.get("smtpPort") ?? 465);
+
+  if (!clienteId) return { ok: false, error: "Falta el cliente." };
+  if (!correo || !claveApp) return { ok: false, error: "Falta el correo o la contraseña de aplicación." };
+
+  const { data: asignacion } = await supabaseAdmin()
+    .from("asignaciones")
+    .select("id, catalogo_automatizaciones!inner(slug)")
+    .eq("cliente_id", clienteId)
+    .eq("catalogo_automatizaciones.slug", "agente-whatsapp")
+    .maybeSingle();
+  if (!asignacion) {
+    return {
+      ok: false,
+      error: "Este cliente todavía no tiene asignado el Agente — asignáselo primero desde su ficha.",
+    };
+  }
+
+  // Comprobar contra el SMTP de verdad ANTES de guardar nada. El mismo
+  // usuario/clave sirve para IMAP (es la misma cuenta) — si el SMTP
+  // autentica, el IMAP autentica.
+  try {
+    const nodemailer = await import("nodemailer");
+    const transportador = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: { user: correo, pass: claveApp },
+    });
+    await transportador.verify();
+  } catch (e) {
+    return { ok: false, error: `No se pudo autenticar: ${(e as Error).message}` };
+  }
+
+  const { error } = await supabaseAdmin().from("conexiones").upsert(
+    {
+      cliente_id: clienteId,
+      servicio: "correo",
+      estado: "conectada",
+      referencia_externa: correo,
+      detalle: {
+        correo,
+        clave_app: claveApp,
+        nombre_remitente: nombreRemitente || undefined,
+        imap_host: imapHost,
+        imap_port: imapPort,
+        smtp_host: smtpHost,
+        smtp_port: smtpPort,
+        asignacion_id: asignacion.id,
+      },
+    },
+    { onConflict: "cliente_id,servicio" }
+  );
+  if (error) return { ok: false, error: "Se autenticó pero no se pudo guardar. Probá de nuevo." };
+
+  revalidatePath(`/panel/admin/clientes/${clienteId}`);
+  revalidatePath("/panel/admin/clientes");
+  return { ok: true, mensaje: `Correo conectado y confirmado: ${correo}.` };
+}
+
+/* -------------------------------------------------------------------------
+   Sembrar la agenda de un cliente nuevo (admin, en el alta)
+
+   Mismo destino que `guardarAgenda` del propio cliente (`asignaciones.
+   config.agenda` + `clientes.horario`) — pero gateado por `exigirAdmin` y
+   con el `clienteId` explícito en el form, para que Sebastián se lo pueda
+   dejar configurado ANTES de que el cliente entre por primera vez. El
+   cliente lo puede seguir editando después desde su propio panel; esto
+   solo evita que un cliente nuevo arranque con los valores por defecto
+   (capacidad 1, sin horario) hasta que alguien se acuerde de tocarlo.
+   ------------------------------------------------------------------------- */
+const DIAS_AGENDA = ["lun", "mar", "mie", "jue", "vie", "sab", "dom"] as const;
+
+export async function sembrarAgenda(
+  _prev: ResultadoAccion | null,
+  form: FormData
+): Promise<ResultadoAccion> {
+  const noAutor = await exigirAdmin(form);
+  if (noAutor) return noAutor;
+
+  const clienteId = String(form.get("clienteId") ?? "");
+  if (!clienteId) return { ok: false, error: "Falta el cliente." };
+
+  const admin = supabaseAdmin();
+  const { data: asignaciones } = await admin
+    .from("asignaciones")
+    .select("id, config, catalogo_automatizaciones!inner(slug)")
+    .eq("cliente_id", clienteId)
+    .eq("catalogo_automatizaciones.slug", "agente-whatsapp");
+  const asignacion = asignaciones?.[0];
+  if (!asignacion) {
+    return { ok: false, error: "Este cliente todavía no tiene asignado el Agente de WhatsApp." };
+  }
+
+  const num = (v: FormDataEntryValue | null, def: number) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : def;
+  };
+
+  const nuevaAgenda = {
+    activa: form.get("activa") === "on",
+    capacidad: Math.min(20, Math.max(1, num(form.get("capacidad"), 1))),
+    colchonMin: Math.min(120, Math.max(0, num(form.get("colchonMin"), 0))),
+    anticipacionMin: Math.min(1440, Math.max(0, num(form.get("anticipacionMin"), 60))),
+    maximoDiasAdelante: Math.min(90, Math.max(1, num(form.get("maximoDiasAdelante"), 30))),
+  };
+
+  const horario: Record<string, [string, string][]> = {};
+  for (const dia of DIAS_AGENDA) {
+    const cerrado = form.get(`cerrado_${dia}`) === "on";
+    const ini = String(form.get(`ini_${dia}`) ?? "");
+    const fin = String(form.get(`fin_${dia}`) ?? "");
+    horario[dia] = cerrado || !ini || !fin ? [] : [[ini, fin]];
+  }
+
+  const config = (asignacion.config ?? {}) as Record<string, unknown>;
+  const { error: e1 } = await admin
+    .from("asignaciones")
+    .update({ config: { ...config, agenda: nuevaAgenda } })
+    .eq("id", asignacion.id);
+  if (e1) return { ok: false, error: e1.message };
+
+  const { error: e2 } = await admin.from("clientes").update({ horario }).eq("id", clienteId);
+  if (e2) return { ok: false, error: e2.message };
+
+  revalidatePath(`/panel/admin/clientes/${clienteId}`);
+  return { ok: true, mensaje: "Agenda sembrada. El cliente ya puede seguir ajustándola desde su panel." };
 }
 
 /* -------------------------------------------------------------------------
