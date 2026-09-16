@@ -929,9 +929,15 @@ export async function getConexiones(): Promise<Conexion[]> {
   const asignaciones = await getAsignaciones();
 
   // Qué servicios hacen falta, y para qué automatización (el primero que lo pida).
+  // "whatsapp" queda afuera a propósito: el Agente de WhatsApp ya tiene su
+  // propia pantalla de conexión ("/panel/agente/conexion", con chequeo de
+  // salud en vivo contra Meta) — mostrarlo TAMBIÉN acá, en la pantalla
+  // genérica pensada para Redes, era la misma clase de bug que "Mi negocio":
+  // contenido de una automatización colándose donde no aplica.
   const requeridas = new Map<string, string>();
   for (const a of asignaciones) {
     for (const s of a.automatizacion.conexionesRequeridas) {
+      if (s === "whatsapp") continue;
       if (!requeridas.has(s)) requeridas.set(s, a.automatizacion.nombre);
     }
   }

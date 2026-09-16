@@ -24,6 +24,13 @@ import {
   supabaseServidor,
 } from "@/lib/supabase/servidor";
 import { getAutomatizacion, getPerfil } from "./datos";
+import {
+  PLANTILLA_RECORDATORIO_CUERPO,
+  PLANTILLA_RECORDATORIO_EJEMPLO,
+  PLANTILLA_RECORDATORIO_IDIOMA,
+  PLANTILLA_RECORDATORIO_NOMBRE,
+  PLANTILLAS_RECORDATORIO_MANUAL,
+} from "./agente-plantillas";
 
 export type ResultadoAccion =
   | { ok: true; mensaje: string; datos?: Record<string, unknown> }
@@ -343,6 +350,7 @@ export async function conectarWhatsapp(
   const clienteId = String(form.get("clienteId") ?? "");
   const phoneNumberId = String(form.get("phoneNumberId") ?? "").trim();
   const token = String(form.get("token") ?? "").trim();
+  const wabaId = String(form.get("wabaId") ?? "").trim();
   const endpoint =
     String(form.get("endpoint") ?? "").trim() || "https://graph.facebook.com/v21.0";
 
@@ -404,6 +412,7 @@ export async function conectarWhatsapp(
         token,
         endpoint,
         asignacion_id: asignacion.id,
+        ...(wabaId ? { waba_id: wabaId } : {}),
       },
     },
     { onConflict: "cliente_id,servicio" }
@@ -412,12 +421,116 @@ export async function conectarWhatsapp(
 
   revalidatePath(`/panel/admin/clientes/${clienteId}`);
   revalidatePath("/panel/admin/clientes");
+
+  // Mejor esfuerzo: en cuanto hay WABA, dejar sembrada la plantilla que
+  // necesitan los recordatorios de cita — así no queda como un paso aparte
+  // que alguien se puede olvidar de hacer.
+  const notaPlantilla = wabaId
+    ? ` ${(await asegurarPlantillasRecordatorio(endpoint, wabaId, token)).mensaje}`
+    : " Falta el WABA ID para dejar listas las plantillas de recordatorios — se pueden mandar después desde aquí mismo.";
+
   return {
     ok: true,
     mensaje: `WhatsApp conectado y confirmado con Meta: ${nombreVerificado || "sin nombre verificado"}${
       numeroVerificado ? ` (${numeroVerificado})` : ""
-    }.`,
+    }.${notaPlantilla}`,
   };
+}
+
+/**
+ * Deja lista (o confirma que ya existe) UNA plantilla en la WABA de un
+ * cliente. Idempotente a propósito: si Meta dice "ya existe" (mismo nombre +
+ * idioma), eso se trata como éxito, no como error.
+ */
+async function mandarPlantilla(
+  endpoint: string,
+  wabaId: string,
+  token: string,
+  nombre: string,
+  cuerpo: string,
+  ejemplo: string[]
+): Promise<{ ok: boolean; nombre: string; mensaje: string }> {
+  try {
+    const res = await fetch(`${endpoint}/${wabaId}/message_templates`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: nombre,
+        category: "UTILITY",
+        language: PLANTILLA_RECORDATORIO_IDIOMA,
+        components: [{ type: "BODY", text: cuerpo, example: { body_text: [ejemplo] } }],
+      }),
+    });
+    const cuerpoResp = await res.json().catch(() => ({}));
+    if (res.ok) return { ok: true, nombre, mensaje: "mandada a revisión" };
+    const msg = String(cuerpoResp?.error?.error_user_msg || cuerpoResp?.error?.message || "");
+    if (/existe|exists|duplicate/i.test(msg)) return { ok: true, nombre, mensaje: "ya existía" };
+    return { ok: false, nombre, mensaje: msg || `código ${res.status}` };
+  } catch (e) {
+    return { ok: false, nombre, mensaje: (e as Error).message };
+  }
+}
+
+/**
+ * Deja listas (o confirma que ya existen) TODAS las plantillas que el
+ * producto necesita — la de cita y las 3 de recordatorio manual — en la WABA
+ * de un cliente. Se llama sola desde `conectarWhatsapp` cuando ya hay WABA
+ * ID, y también se puede repetir a mano desde la ficha (botón "Reenviar
+ * plantillas de recordatorio") si la primera vez falló o si el cliente no
+ * tenía el WABA ID todavía.
+ */
+async function asegurarPlantillasRecordatorio(
+  endpoint: string,
+  wabaId: string,
+  token: string
+): Promise<{ ok: boolean; mensaje: string }> {
+  const todas = [
+    { nombre: PLANTILLA_RECORDATORIO_NOMBRE, cuerpo: PLANTILLA_RECORDATORIO_CUERPO, ejemplo: PLANTILLA_RECORDATORIO_EJEMPLO },
+    ...PLANTILLAS_RECORDATORIO_MANUAL.map((p) => ({ nombre: p.nombrePlantilla, cuerpo: p.cuerpo, ejemplo: p.ejemplo })),
+  ];
+
+  const resultados = await Promise.all(
+    todas.map((p) => mandarPlantilla(endpoint, wabaId, token, p.nombre, p.cuerpo, p.ejemplo))
+  );
+
+  const fallidas = resultados.filter((r) => !r.ok);
+  if (fallidas.length === 0) {
+    return { ok: true, mensaje: `Las ${resultados.length} plantillas de recordatorio quedaron listas (mandadas o ya existentes).` };
+  }
+  return {
+    ok: false,
+    mensaje: `${resultados.length - fallidas.length} de ${resultados.length} plantillas quedaron listas. Fallaron: ${fallidas
+      .map((f) => `${f.nombre} (${f.mensaje})`)
+      .join("; ")}.`,
+  };
+}
+
+export async function reenviarPlantillaRecordatorio(
+  _prev: ResultadoAccion | null,
+  form: FormData
+): Promise<ResultadoAccion> {
+  const noAutor = await exigirAdmin(form);
+  if (noAutor) return noAutor;
+
+  const clienteId = String(form.get("clienteId") ?? "");
+  const admin = supabaseAdmin();
+  const { data } = await admin
+    .from("conexiones")
+    .select("detalle")
+    .eq("cliente_id", clienteId)
+    .eq("servicio", "whatsapp")
+    .maybeSingle();
+
+  const detalle = (data?.detalle ?? {}) as Record<string, unknown>;
+  const endpoint = String(detalle.endpoint || "https://graph.facebook.com/v21.0");
+  const wabaId = String(detalle.waba_id || "");
+  const token = String(detalle.token || "");
+
+  if (!wabaId) return { ok: false, error: "Este cliente no tiene WABA ID guardado — agregalo reconectando el WhatsApp." };
+  if (!token) return { ok: false, error: "Este cliente no tiene WhatsApp conectado." };
+
+  const r = await asegurarPlantillasRecordatorio(endpoint, wabaId, token);
+  return r.ok ? { ok: true, mensaje: r.mensaje } : { ok: false, error: r.mensaje };
 }
 
 /* -------------------------------------------------------------------------

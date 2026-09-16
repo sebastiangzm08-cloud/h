@@ -12,7 +12,8 @@ import {
   fechaCorta,
   relativa,
 } from "@/lib/panel/agente";
-import { getCliente } from "@/lib/panel/datos";
+import { getAsignacion, getCliente } from "@/lib/panel/datos";
+import { leerConfigAgente } from "@/lib/panel/agente-config";
 
 function saludo() {
   const h = new Date().getHours();
@@ -27,7 +28,7 @@ function primerNombre(nombre: string) {
 }
 
 export default async function ResumenAgentePage() {
-  const [resumen, conversaciones, citas, correcciones, cliente, ejemplo, embudo] = await Promise.all([
+  const [resumen, conversaciones, citas, correcciones, cliente, ejemplo, embudo, asignacion] = await Promise.all([
     getResumenAgente(),
     getConversaciones(),
     getCitas(),
@@ -35,7 +36,9 @@ export default async function ResumenAgentePage() {
     getCliente(),
     enModoEjemplo(),
     getEmbudoSemana(),
+    getAsignacion("agente-whatsapp"),
   ]);
+  const onboardingCompleto = leerConfigAgente(asignacion?.config).onboardingCompleto;
 
   const esperando = conversaciones.filter((c) => c.estado === "espera");
   const pct =
@@ -68,6 +71,22 @@ export default async function ResumenAgentePage() {
       <AvisoEjemplo visible={ejemplo} />
 
       <Cuerpo className="flex flex-col gap-6">
+        {!onboardingCompleto ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line-strong bg-surface-2 px-4 py-3.5">
+            <Icono nombre="negocio" className="h-4 w-4 flex-none text-ink-soft" />
+            <p className="min-w-0 flex-1 text-[13px] text-ink-soft">
+              <span className="font-medium text-ink">Faltan 7 preguntas cortas</span> para que el agente
+              conteste con los datos reales de tu negocio (servicios, precios, horario…).
+            </p>
+            <Link
+              href="/panel/agente/onboarding"
+              className="rounded-lg bg-ink px-3 py-1.5 text-[13px] font-medium whitespace-nowrap text-paper transition-colors hover:bg-ink-soft"
+            >
+              Contestarlas
+            </Link>
+          </div>
+        ) : null}
+
         {esperando.length > 0 ? (
           <div className="flex flex-wrap items-center gap-3 rounded-xl border border-warn/30 bg-warn/[0.07] px-4 py-3">
             <Icono nombre="pendientes" className="h-4 w-4 flex-none text-warn" />

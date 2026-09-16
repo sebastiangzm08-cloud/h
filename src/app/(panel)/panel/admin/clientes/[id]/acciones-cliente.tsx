@@ -464,6 +464,11 @@ export function ConectarWhatsapp({ clienteId }: { clienteId: string }) {
         Token permanente
         <input name="token" type="password" required autoComplete="off" className={inp} />
       </label>
+      <label className={lbl}>
+        WABA ID (WhatsApp Business Account){" "}
+        <span className="text-ink-faint normal-case">— opcional, pero sin esto no se puede armar la plantilla de recordatorios</span>
+        <input name="wabaId" placeholder="102938475610234" className={inp} />
+      </label>
       <div className="flex items-center gap-2">
         <button
           type="submit"
@@ -473,6 +478,28 @@ export function ConectarWhatsapp({ clienteId }: { clienteId: string }) {
           {pendiente ? "Comprobando con Meta…" : "Conectar"}
         </button>
       </div>
+      <Mensaje estado={estado} />
+    </form>
+  );
+}
+
+/** Para cuando el WABA ID se agregó DESPUÉS de conectar (o la primera vez
+    falló) — reintenta mandar la plantilla sin tener que volver a pegar el
+    token. Vive junto al botón de "Conectar WhatsApp" en la ficha. */
+export function ReenviarPlantillaRecordatorio({ clienteId }: { clienteId: string }) {
+  const [estado, ejecutar, pendiente] = useAccionAdmin("reenviarPlantillaRecordatorio");
+
+  return (
+    <form action={ejecutar} className="flex flex-col gap-2">
+      <CampoToken />
+      <input type="hidden" name="clienteId" value={clienteId} />
+      <button
+        type="submit"
+        disabled={pendiente}
+        className="self-start text-[12px] text-ink-mute underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink disabled:opacity-50"
+      >
+        {pendiente ? "Mandando a Meta…" : "Reenviar plantillas de recordatorio"}
+      </button>
       <Mensaje estado={estado} />
     </form>
   );

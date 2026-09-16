@@ -16,6 +16,7 @@ import { revalidatePath } from "next/cache";
 import { supabaseAdmin, supabaseConToken, supabaseServidor } from "@/lib/supabase/servidor";
 import { getPerfil } from "./datos";
 import { leerConfigAgenda, leerConfigAgente } from "./agente-config";
+import { PLANTILLAS_RECORDATORIO_MANUAL } from "./agente-plantillas";
 
 export type ResultadoAccion =
   | { ok: true; mensaje: string }
@@ -80,6 +81,7 @@ function revalidarAgente() {
     "/panel/agente/que-sabe",
     "/panel/agente/como-responde",
     "/panel/agente/correo",
+    "/panel/agente/onboarding",
   ]) {
     revalidatePath(ruta);
   }
@@ -1109,6 +1111,128 @@ export async function agregarConocimiento(
   return { ok: true, mensaje: "Agregado." };
 }
 
+/* -------------------------------------------------------------------------
+   Onboarding del Agente — 7 preguntas cortas, una sola vez, las llena el
+   CLIENTE (wizard propio en "/panel/agente/onboarding"). Junta en un solo
+   guardado lo mínimo para que el agente ya sepa contestar bien desde el
+   primer mensaje real: descripción, trato, horario, servicios con precio,
+   dirección, formas de pago y qué nunca debe prometer.
+
+   La marca de "ya lo completó" vive en `asignaciones.config.onboardingCompleto`,
+   NO en `clientes.onboarding_completo` — ese es el de Redes (ver
+   `perfil-acciones.ts`), y un cliente puede tener las dos automatizaciones
+   asignadas sin que terminar una tache la otra.
+   ------------------------------------------------------------------------- */
+export async function guardarOnboardingAgente(
+  _prev: ResultadoAccion | null,
+  form: FormData
+): Promise<ResultadoAccion> {
+  const auth = await exigirCliente(form);
+  if (!auth.ok) return auth;
+
+  const descripcion = String(form.get("descripcion") ?? "").trim().slice(0, 200);
+  if (!descripcion) {
+    return { ok: false, error: "Contanos en una línea a qué se dedica el negocio." };
+  }
+
+  const sb = await supabaseServidor();
+  const asignacion = await traerAsignacionAgente(sb, auth.clienteId);
+  if (!asignacion) return { ok: false, error: "No encontré la asignación del agente." };
+
+  const nuevoConfig = {
+    ...asignacion.config,
+    trato: form.get("trato") === "vos" ? "vos" : "usted",
+    onboardingCompleto: true,
+  };
+  const { error: e1 } = await sb.from("asignaciones").update({ config: nuevoConfig }).eq("id", asignacion.id);
+  if (e1) return { ok: false, error: e1.message };
+
+  const { error: e2 } = await sb
+    .from("clientes")
+    .update({ descripcion_corta: descripcion })
+    .eq("id", auth.clienteId);
+  if (e2) return { ok: false, error: e2.message };
+
+  const horario: Record<string, [string, string][]> = {};
+  for (const dia of DIAS_ORDEN) {
+    const cerrado = form.get(`cerrado_${dia}`) === "on";
+    const ini = String(form.get(`ini_${dia}`) ?? "");
+    const fin = String(form.get(`fin_${dia}`) ?? "");
+    horario[dia] = cerrado || !ini || !fin ? [] : [[ini, fin]];
+  }
+  const { error: e3 } = await sb.from("clientes").update({ horario }).eq("id", auth.clienteId);
+  if (e3) return { ok: false, error: e3.message };
+
+  type FilaNueva = { tipo: "servicio" | "dato" | "regla"; clave: string; valor: string; monto: number | null };
+  const filasNuevas: FilaNueva[] = [];
+
+  const nombres = form.getAll("servicioNombre").map((v) => String(v).trim());
+  const precios = form.getAll("servicioPrecio").map((v) => String(v).trim());
+  nombres.forEach((nombre, i) => {
+    if (!nombre) return;
+    const montoRaw = precios[i] ?? "";
+    filasNuevas.push({
+      tipo: "servicio",
+      clave: nombre.slice(0, 120),
+      valor: "",
+      monto: montoRaw ? Number(montoRaw) : null,
+    });
+  });
+
+  const direccion = String(form.get("direccion") ?? "").trim();
+  if (direccion) {
+    filasNuevas.push({ tipo: "dato", clave: "Dirección", valor: direccion.slice(0, 300), monto: null });
+  }
+
+  const formasPago = String(form.get("formasPago") ?? "").trim();
+  if (formasPago) {
+    filasNuevas.push({ tipo: "dato", clave: "Formas de pago", valor: formasPago.slice(0, 300), monto: null });
+  }
+
+  const queNuncaPrometer = String(form.get("queNuncaPrometer") ?? "").trim();
+  if (queNuncaPrometer) {
+    filasNuevas.push({
+      tipo: "regla",
+      clave: "Qué nunca prometer",
+      valor: queNuncaPrometer.slice(0, 500),
+      monto: null,
+    });
+  }
+
+  if (filasNuevas.length > 0) {
+    const ordenPorTipo: Record<string, number> = {};
+    for (const tipo of ["servicio", "dato", "regla"] as const) {
+      const { data: max } = await sb
+        .from("wa_conocimiento")
+        .select("orden")
+        .eq("cliente_id", auth.clienteId)
+        .eq("tipo", tipo)
+        .order("orden", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      ordenPorTipo[tipo] = max?.orden ?? 0;
+    }
+
+    const filas = filasNuevas.map((f) => ({
+      cliente_id: auth.clienteId,
+      tipo: f.tipo,
+      clave: f.clave,
+      valor: f.valor,
+      monto: f.monto,
+      duracion_min: null,
+      orden: ++ordenPorTipo[f.tipo],
+      activo: true,
+    }));
+
+    const { error: e4 } = await sb.from("wa_conocimiento").insert(filas);
+    if (e4) return { ok: false, error: e4.message };
+  }
+
+  revalidarAgente();
+  revalidatePath("/panel/agente/onboarding");
+  return { ok: true, mensaje: "Listo. El agente ya tiene lo esencial para contestar bien." };
+}
+
 export async function eliminarConocimiento(
   _prev: ResultadoAccion | null,
   form: FormData
@@ -1168,13 +1292,38 @@ export async function crearRecordatorio(
   if (!auth.ok) return auth;
 
   const contactoId = String(form.get("contactoId") ?? "");
-  const mensaje = String(form.get("mensaje") ?? "").trim();
   const cuando = String(form.get("cuando") ?? "");
-  if (!contactoId || !mensaje || !cuando) return { ok: false, error: "Faltan datos." };
+  const tipo = String(form.get("tipo") ?? "libre");
+  if (!contactoId || !cuando) return { ok: false, error: "Faltan datos." };
 
   const cuandoMs = new Date(cuando).getTime();
   if (!Number.isFinite(cuandoMs) || cuandoMs <= Date.now()) {
     return { ok: false, error: "La fecha tiene que ser en el futuro." };
+  }
+
+  /* "libre" = texto 100% libre, como siempre — solo funciona si la persona
+     escribió hace menos de 24 h (WhatsApp rechaza texto libre fuera de esa
+     ventana). Cualquier otro tipo usa una plantilla YA APROBADA: la persona
+     sigue redactando el contenido, solo que llenando espacios en blanco en
+     vez de un cuadro en blanco entero — eso es lo que la deja funcionar sin
+     importar cuánto tiempo haya pasado. */
+  let mensaje: string;
+  let plantillaNombre: string | null = null;
+  let plantillaParametros: string[] | null = null;
+
+  if (tipo === "libre") {
+    mensaje = String(form.get("mensaje") ?? "").trim();
+    if (!mensaje) return { ok: false, error: "Escribí el mensaje." };
+  } else {
+    const plantilla = PLANTILLAS_RECORDATORIO_MANUAL.find((p) => p.tipo === tipo);
+    if (!plantilla) return { ok: false, error: "Tipo de recordatorio desconocido." };
+    const valores = form.getAll("campoValor").map((v) => String(v).trim());
+    if (valores.length < plantilla.campos.length || valores.some((v) => !v)) {
+      return { ok: false, error: "Completá todos los campos." };
+    }
+    mensaje = plantilla.armarMensaje(valores);
+    plantillaNombre = plantilla.nombrePlantilla;
+    plantillaParametros = valores;
   }
 
   const repetirCadaHoras = Number(form.get("repetirCadaHoras") ?? "");
@@ -1188,14 +1337,32 @@ export async function crearRecordatorio(
     cuando: new Date(cuandoMs).toISOString(),
     mensaje,
     origen: "manual",
+    plantilla_nombre: plantillaNombre,
+    plantilla_parametros: plantillaParametros,
     repetir_cada_horas: repite ? repetirCadaHoras : null,
     // La PRIMERA vez ya cuenta como una: si pidieron 3 en total, quedan 2 más después de esta.
     repeticiones_restantes: repite ? repeticiones - 1 : null,
   });
   if (error) return { ok: false, error: error.message };
 
+  // Aviso, no bloqueo: fuera de la ventana de 24 h, el texto libre lo va a
+  // rechazar WhatsApp — mejor decirlo ahora que dejar que falle en silencio.
+  let aviso = "";
+  if (tipo === "libre") {
+    const { data: conv } = await sb
+      .from("wa_conversaciones")
+      .select("ultimo_en")
+      .eq("contacto_id", contactoId)
+      .maybeSingle();
+    const ultimoEn = conv?.ultimo_en ? new Date(conv.ultimo_en).getTime() : null;
+    if (ultimoEn === null || cuandoMs - ultimoEn > 23 * 3600_000) {
+      aviso =
+        " Ojo: si nadie escribe antes de esa hora, WhatsApp probablemente lo rechace (más de 24 h sin mensaje de la persona, y el texto libre no tiene plantilla) — para eso están los tipos de arriba.";
+    }
+  }
+
   revalidarAgente();
-  return { ok: true, mensaje: "Recordatorio programado." };
+  return { ok: true, mensaje: `Recordatorio programado.${aviso}` };
 }
 
 export async function cancelarRecordatorio(

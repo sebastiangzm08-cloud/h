@@ -12,7 +12,7 @@
    ========================================================================== */
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { getPerfil, ultimoAutor } from "./datos";
-import { leerConfigAgenda } from "./agente-config";
+import { leerConfigAgenda, leerConfigAgente } from "./agente-config";
 import type { Consulta, EstadoConsulta, HiloConsulta } from "./tipos";
 
 /** Dónde está un cliente en su puesta en marcha. */
@@ -40,14 +40,18 @@ export type ClienteAdmin = {
   onboarding: Onboarding;
 };
 
-/** Arma el estado de onboarding. `tieneRedes` decide si Buffer/contenido cuentan. */
+/** Arma el estado de onboarding del formulario de Redes. Si el cliente no
+    tiene Redes, no hay nada que pedirle acá — `pasos` queda vacío y
+    `completo` da `true` (nada pendiente), en vez de mostrar para siempre
+    "falta el perfil" a un cliente que nunca iba a llenar ese formulario.
+    Mismo criterio que `getPrimerosPasos` en `datos.ts`. */
 function armarOnboarding(
   perfil: boolean,
   buffer: boolean,
   contenido: boolean,
   tieneRedes: boolean
 ): Onboarding {
-  const pasos = tieneRedes ? [perfil, buffer, contenido] : [perfil];
+  const pasos = tieneRedes ? [perfil, buffer, contenido] : [];
   const hechos = pasos.filter(Boolean).length;
   return {
     perfil,
@@ -201,6 +205,8 @@ export type FichaCliente = {
   onboarding: Onboarding;
   /** Solo para el Agente de WhatsApp; `null` si esa automatización no está asignada. */
   asignacionAgenteId: string | null;
+  /** ¿Ya llenó el onboarding propio del Agente (7 preguntas)? `null` si no tiene esa automatización. */
+  onboardingAgente: boolean | null;
   agendaAgente: {
     activa: boolean;
     capacidad: number;
@@ -316,6 +322,7 @@ export async function getFichaCliente(id: string): Promise<FichaCliente | null> 
     })),
     onboarding,
     asignacionAgenteId: asignacionAgente?.id ?? null,
+    onboardingAgente: asignacionAgente ? leerConfigAgente(asignacionAgente.config).onboardingCompleto : null,
     agendaAgente: leerConfigAgenda(asignacionAgente?.config ?? null),
     horario: (c.horario as Record<string, [string, string][]> | null) ?? {},
   };

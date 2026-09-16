@@ -21,6 +21,7 @@ import {
   EditarDatosCliente,
   FormaAgendaAdmin,
   PrecioAsignacion,
+  ReenviarPlantillaRecordatorio,
 } from "./acciones-cliente";
 
 type Props = { params: Promise<{ id: string }> };
@@ -53,6 +54,7 @@ export default async function FichaClientePage({ params }: Props) {
     .filter((a) => a.estado === "activa")
     .reduce((s, a) => s + a.precioMensual, 0);
   const cobroPendiente = f.cobros.find((c) => c.estado !== "pagado");
+  const tieneRedes = f.automatizaciones.some((a) => a.slug === "redes-sociales" && a.estado === "activa");
 
   return (
     <>
@@ -99,7 +101,16 @@ export default async function FichaClientePage({ params }: Props) {
               ["Correo", f.correo],
               ["WhatsApp", f.whatsapp || "—"],
               ["Plan", f.plan],
-              ["Formulario del negocio", f.onboardingCompleto ? "Completo" : "Sin llenar"],
+              /* Cada fila de onboarding solo aparece si el cliente tiene esa
+                 automatización — mostrar "Sin llenar" del formulario de Redes
+                 a alguien que solo tiene el Agente (o viceversa) es la misma
+                 clase de bug que ya se corrigió en "Mi negocio" del cliente. */
+              ...(tieneRedes
+                ? [["Formulario de Redes", f.onboarding.completo ? "Completo" : "Sin llenar"]]
+                : []),
+              ...(f.onboardingAgente !== null
+                ? [["Onboarding del Agente", f.onboardingAgente ? "Completo" : "Sin llenar"]]
+                : []),
               ["Ingreso mensual", colones(ingreso)],
             ].map(([k, v], i, arr) => (
               <div
@@ -300,6 +311,7 @@ export default async function FichaClientePage({ params }: Props) {
             </ul>
           )}
           <ConectarWhatsapp clienteId={f.id} />
+          {f.asignacionAgenteId ? <ReenviarPlantillaRecordatorio clienteId={f.id} /> : null}
           <ConectarCorreo clienteId={f.id} />
           {f.asignacionAgenteId ? (
             <FormaAgendaAdmin clienteId={f.id} agenda={f.agendaAgente} horario={f.horario} />

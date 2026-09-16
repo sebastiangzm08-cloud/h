@@ -9,7 +9,10 @@
 import { useState } from "react";
 import { CampoToken } from "@/components/panel/campo-token";
 import { useAccionAgente } from "@/components/panel/usar-accion-agente";
+import { PLANTILLAS_RECORDATORIO_MANUAL, type TipoRecordatorioManual } from "@/lib/panel/agente-plantillas";
 import { cn } from "@/lib/utils";
+
+type TipoRecordatorio = TipoRecordatorioManual | "libre";
 
 const campo =
   "w-full rounded-lg border border-line-strong bg-surface-2 px-3 py-2 text-[13px] text-ink " +
@@ -61,6 +64,8 @@ function FormularioRecordatorio({
 }) {
   const [estado, crear, creando] = useAccionAgente("crearRecordatorio");
   const [repite, setRepite] = useState(false);
+  const [tipo, setTipo] = useState<TipoRecordatorio>("libre");
+  const plantilla = PLANTILLAS_RECORDATORIO_MANUAL.find((p) => p.tipo === tipo);
 
   return (
     <form action={crear} className="flex flex-col gap-2.5 rounded-xl border border-line bg-surface-2/40 p-3">
@@ -68,17 +73,50 @@ function FormularioRecordatorio({
       <CampoToken />
 
       <p className="text-[11.5px] text-ink-faint">
-        Para <span className="text-ink-soft">{nombre}</span>. Escribilo tal cual se lo vas a mandar — es lo
-        que se envía, sin que el agente lo cambie.
+        Para <span className="text-ink-soft">{nombre}</span>.
       </p>
 
-      <textarea autoComplete="off"
-        name="mensaje"
-        required
-        rows={2}
-        placeholder="Ej.: Recuerde tomar su antibiótico cada 8 horas."
-        className={cn(campo, "resize-none")}
-      />
+      <label className="flex flex-col gap-1">
+        <span className="text-[11px] text-ink-faint">Tipo de recordatorio</span>
+        <select
+          name="tipo"
+          value={tipo}
+          onChange={(e) => setTipo(e.target.value as TipoRecordatorio)}
+          className={cn(campo, "appearance-none")}
+        >
+          <option value="libre">Texto libre (solo si escribió hace poco)</option>
+          {PLANTILLAS_RECORDATORIO_MANUAL.map((p) => (
+            <option key={p.tipo} value={p.tipo}>
+              {p.etiqueta}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {tipo === "libre" ? (
+        <>
+          <p className="text-[11px] text-ink-faint">
+            Escribilo tal cual se lo vas a mandar. Funciona solo si la persona escribió en las últimas 24
+            h — si no, mejor elegí uno de los tipos de arriba.
+          </p>
+          <textarea autoComplete="off"
+            name="mensaje"
+            required
+            rows={2}
+            placeholder="Ej.: Recuerde tomar su antibiótico cada 8 horas."
+            className={cn(campo, "resize-none")}
+          />
+        </>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {plantilla?.campos.map((c) => (
+            <label key={c.nombre} className="flex flex-col gap-1">
+              <span className="text-[11px] text-ink-faint">{c.etiqueta}</span>
+              <input autoComplete="off" name="campoValor" required placeholder={c.placeholder} className={campo} />
+            </label>
+          ))}
+        </div>
+      )}
 
       <label className="flex flex-col gap-1.5">
         <span className="text-[11px] text-ink-faint">Cuándo mandarlo</span>

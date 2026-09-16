@@ -261,6 +261,10 @@ export function AltaGuiada() {
               Token permanente
               <input name="token" type="password" autoComplete="off" className={cn(campoChico, "h-11 normal-case text-[14px]")} />
             </label>
+            <label className={lblChico}>
+              WABA ID (opcional, para la plantilla de recordatorios)
+              <input name="wabaId" placeholder="102938475610234" className={cn(campoChico, "h-11 normal-case text-[14px]")} />
+            </label>
 
             <ErrorBox error={!estadoWa?.ok ? estadoWa?.error : undefined} />
 

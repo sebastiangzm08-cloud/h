@@ -27,6 +27,11 @@ export type ConfigAgente = {
   /** Qué hace fuera del horario de atención. */
   fueraDeHorario: "responde" | "avisa" | "callado";
   transcribirAudios: boolean;
+  /** ¿Ya llenó el onboarding propio del Agente (7 preguntas, una sola vez)?
+      Separado a propósito de `clientes.onboarding_completo` — ese es el del
+      formulario de Redes, y un cliente puede tener las dos automatizaciones
+      a la vez sin que completar una tache la otra. */
+  onboardingCompleto: boolean;
 };
 
 export const CONFIG_AGENTE_POR_DEFECTO: ConfigAgente = {
@@ -43,6 +48,7 @@ export const CONFIG_AGENTE_POR_DEFECTO: ConfigAgente = {
   ],
   fueraDeHorario: "responde",
   transcribirAudios: true,
+  onboardingCompleto: false,
 };
 
 function texto(v: unknown, porDefecto: string) {
@@ -77,6 +83,7 @@ export function leerConfigAgente(raw: Record<string, unknown> | null | undefined
         ? (c.fueraDeHorario as ConfigAgente["fueraDeHorario"])
         : d.fueraDeHorario,
     transcribirAudios: c.transcribirAudios !== false,
+    onboardingCompleto: c.onboardingCompleto === true,
   };
 }
 
