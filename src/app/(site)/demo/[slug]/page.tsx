@@ -43,13 +43,49 @@ export default async function DemoPage({
 
   const mensajeCTA = `Hola, vi la demo de "${demo.nombreNegocio}" y quiero esto para mi negocio.`;
 
+  const pasos = [
+    {
+      n: "1",
+      t: "Con tus precios y tu horario reales",
+      d: "Le pasamos lo que cobrás y cuándo atendés. Nunca inventa un número que no le dimos.",
+    },
+    {
+      n: "2",
+      t: "Responde en vivo, no un guion",
+      d: "Cada respuesta la genera la IA en el momento — probalo con lo que se te ocurra.",
+    },
+    {
+      n: "3",
+      t: "Así atendería tu WhatsApp real",
+      d: "Si te convence, lo activamos con tu número en pocos días.",
+    },
+  ];
+
   return (
     <>
       <PageHeader
         eyebrow="Demo personalizada"
         title={`Así atendería el Agente de WhatsApp a ${demo.nombreNegocio}`}
         lead="Escribile como si fueras un cliente tuyo. Las respuestas son reales, generadas en el momento con los datos que nos diste — no es un guion grabado."
-      />
+      >
+        <Reveal delay={80}>
+          <div className="mt-12 grid grid-cols-1 gap-8 border-t border-line pt-10 sm:grid-cols-3 sm:gap-6">
+            {pasos.map((p) => (
+              <div key={p.n}>
+                <span className="font-mono text-[0.75rem] tracking-wide text-acento">
+                  {p.n}
+                </span>
+                <p className="mt-2 text-[0.9375rem] font-medium tracking-tight text-ink">
+                  {p.t}
+                </p>
+                <p className="mt-1.5 text-[0.875rem] leading-relaxed text-ink-mute">
+                  {p.d}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Reveal>
+      </PageHeader>
 
       <section className="bg-paper">
         <div className="mx-auto max-w-7xl px-5 pb-24 sm:px-8 sm:pb-32">
