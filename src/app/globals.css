@@ -217,6 +217,43 @@ html[data-sitio="oscuro"] :focus-visible {
   box-shadow: 0 4px 10px -6px rgba(0, 0, 0, 0.5);
 }
 
+/* Barra de scroll fina en TODO el sitio (no solo el panel): la barra nativa
+   de Windows/Chrome es gruesa y blanca, y desentona con un sitio oscuro.
+   Pedido por Sebastián el 2026-09-16 viendo la demo de venta. */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+html::-webkit-scrollbar {
+  width: 10px;
+}
+html::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 999px;
+  border: 2px solid var(--color-paper);
+}
+html::-webkit-scrollbar-track {
+  background: var(--color-paper);
+}
+
+/* La misma idea DENTRO del mockup de WhatsApp de la demo, pero con los
+   colores propios de WhatsApp (no los del sitio) — el mockup imita una
+   pantalla ajena a propósito, ver chat-whatsapp.tsx. */
+.scroll-wa {
+  scrollbar-width: thin;
+  scrollbar-color: #3b4a54 transparent;
+}
+.scroll-wa::-webkit-scrollbar {
+  width: 6px;
+}
+.scroll-wa::-webkit-scrollbar-thumb {
+  background: #3b4a54;
+  border-radius: 999px;
+}
+.scroll-wa::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 /* Entrada escalonada de filas de una lista/tabla: cada una sube un poco y
    aparece, con un pequeño retraso entre ítems (lo pone el componente vía
    `style={{ animationDelay }}`). Respeta `prefers-reduced-motion` por la

@@ -168,7 +168,7 @@ export function ChatWhatsapp({
         </div>
 
         {/* mensajes */}
-        <div className="scroll-fino flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-3 py-3">
+        <div className="scroll-wa flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-3 py-3">
           {mensajes.map((m) => (
             <div
               key={m.id}
@@ -208,6 +208,20 @@ export function ChatWhatsapp({
             onChange={(e) => setValor(e.target.value)}
             disabled={agotado}
             placeholder={agotado ? "Esta demo ya terminó" : "Escribí un mensaje"}
+            /* Sin esto, Chrome y los gestores de contraseñas (LastPass,
+               1Password, Bitwarden...) confunden este campo con un login y le
+               pegan encima su icono de "rellenar" — se ve como una manchita
+               blanca sobre el input. Estos atributos le avisan a cada uno que
+               lo ignore. */
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            name="mensaje-demo-wa"
+            data-lpignore="true"
+            data-1p-ignore="true"
+            data-bwignore="true"
+            data-form-type="other"
             className="h-10 flex-1 rounded-full bg-[#2a3942] px-4 text-[13.5px] text-white placeholder:text-[#8696a0] focus:outline-none disabled:opacity-60"
           />
           <button
