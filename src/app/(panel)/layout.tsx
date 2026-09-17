@@ -37,9 +37,18 @@ export default async function PanelLayout({
      lo manda de vuelta a su panel en vez de mostrarle todo en cero, que
      parece un cliente fantasma o una cuenta rota. `x-pathname` lo pone
      `proxy.ts` — un layout de servidor no tiene la URL actual de otra
-     forma. */
+     forma.
+
+     OJO: en los pedidos internos de refresco de React (`_rsc=...`) este
+     dato a veces llega vacío. Con `!pathname.startsWith(...)`, una cadena
+     vacía "no empieza con /panel/admin" y disparaba la redirección aunque
+     el admin YA estuviera ahí — eso mandaba a `/panel/admin` de nuevo, que
+     volvía a fallar el mismo chequeo vacío, en un bucle sin fin que se
+     encontró en vivo el 2026-09-17 (cientos de pedidos seguidos, pantalla
+     en negro). Por eso ahora exige un pathname que SÍ llegó, nunca uno
+     vacío. */
   const pathname = (await headers()).get("x-pathname") ?? "";
-  if (perfil.rol === "admin" && !pathname.startsWith("/panel/admin")) {
+  if (perfil.rol === "admin" && pathname && !pathname.startsWith("/panel/admin")) {
     redirect("/panel/admin");
   }
 
