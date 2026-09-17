@@ -624,3 +624,47 @@ export async function getConsultaAdmin(
       })),
   };
 }
+
+/* -------------------------------------------------------------------------
+   Demos de venta — lectura para /panel/admin/demos (ver demos-venta.sql y
+   crearDemo en admin-acciones.ts).
+   ------------------------------------------------------------------------- */
+export type DemoAdmin = {
+  id: string;
+  slug: string;
+  nombreNegocio: string;
+  rubro: string;
+  servicios: string;
+  horario: string;
+  mensajesTope: number;
+  mensajesUsados: number;
+  activo: boolean;
+  creadoEn: string;
+};
+
+export async function getDemosAdmin(): Promise<DemoAdmin[]> {
+  if (!(await soyAdmin())) return [];
+
+  const supabase = await supabaseServidor();
+  const { data, error } = await supabase
+    .from("demos")
+    .select(
+      "id, slug, nombre_negocio, rubro, servicios, horario, mensajes_tope, mensajes_usados, activo, creado_en"
+    )
+    .order("creado_en", { ascending: false });
+
+  if (error || !data) return [];
+
+  return data.map((d) => ({
+    id: d.id,
+    slug: d.slug,
+    nombreNegocio: d.nombre_negocio,
+    rubro: d.rubro,
+    servicios: d.servicios,
+    horario: d.horario,
+    mensajesTope: d.mensajes_tope,
+    mensajesUsados: d.mensajes_usados,
+    activo: d.activo,
+    creadoEn: d.creado_en,
+  }));
+}

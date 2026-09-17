@@ -87,6 +87,7 @@ const NAV_ADMIN: Grupo[] = [
         icono: "asignar",
       },
       { href: "/panel/admin/alta", label: "Alta de cliente", icono: "alta" },
+      { href: "/panel/admin/demos", label: "Demos de venta", icono: "demo" },
     ],
   },
   {

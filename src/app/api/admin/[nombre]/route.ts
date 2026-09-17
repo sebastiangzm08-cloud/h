@@ -19,11 +19,15 @@ import {
   sembrarAgenda,
   crearCobro,
   crearCuentaCliente,
+  crearDemo,
   editarCliente,
   eliminarCliente,
+  eliminarDemo,
   generarCobrosDelMes,
   marcarCobroPagado,
+  pausarDemo,
   reactivarCliente,
+  reactivarDemo,
   reenviarPlantillaRecordatorio,
   resetearClaveCliente,
   responderConsultaAdmin,
@@ -56,6 +60,10 @@ const ACCIONES: Record<string, FnAccion> = {
   cambiarCorreoAcceso,
   editarCliente,
   eliminarCliente,
+  crearDemo,
+  pausarDemo,
+  reactivarDemo,
+  eliminarDemo,
 };
 
 export const dynamic = "force-dynamic";

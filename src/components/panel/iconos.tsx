@@ -29,6 +29,7 @@ export type NombreIcono =
   | "reporte"
   | "documento"
   | "camion"
+  | "demo"
   | "flecha"
   | "sol"
   | "luna"
@@ -174,6 +175,12 @@ const TRAZOS: Record<NombreIcono, React.ReactNode> = {
       <path d="M3 7h13v10H3zM16 10h3l2 3v4h-5z" />
       <circle cx="7" cy="18" r="1.6" />
       <circle cx="18" cy="18" r="1.6" />
+    </>
+  ),
+  demo: (
+    <>
+      <path d="M4 5h16v10H8l-4 4V5Z" />
+      <path d="M10.5 8.5v4l3.5-2Z" />
     </>
   ),
   flecha: <path d="m9 6 6 6-6 6" />,

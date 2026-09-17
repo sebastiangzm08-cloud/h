@@ -1206,3 +1206,122 @@ export async function eliminarCliente(
   // la lista — ver EliminarCliente en acciones-cliente.tsx.
   return { ok: true, mensaje: `${cli.nombre_negocio} eliminado.` };
 }
+
+/* -------------------------------------------------------------------------
+   Demos de venta — simulador de WhatsApp por prospecto (ver demos-venta.sql
+   para el porqué de la tabla separada, sin foto ni logo a propósito).
+
+   No son clientes: no llevan cobro ni asignación. `demos_admin` en RLS ya
+   le da al admin acceso total, así que esto usa el cliente normal
+   (`supabaseServidor`), igual que el resto de este archivo — nada acá
+   necesita saltarse RLS.
+   ------------------------------------------------------------------------- */
+function slugDemo(nombreNegocio: string) {
+  const base = nombreNegocio
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  // Sufijo al azar: el slug hace de "contraseña" del link — nadie más lo
+  // adivina probando nombres de negocio comunes.
+  const sufijo = Math.random().toString(36).slice(2, 7);
+  return `${base || "demo"}-${sufijo}`;
+}
+
+export async function crearDemo(
+  _prev: ResultadoAccion | null,
+  form: FormData
+): Promise<ResultadoAccion> {
+  const noAutor = await exigirAdmin(form);
+  if (noAutor) return noAutor;
+
+  const nombreNegocio = String(form.get("nombreNegocio") ?? "").trim();
+  const servicios = String(form.get("servicios") ?? "").trim();
+  const horario = String(form.get("horario") ?? "").trim();
+
+  if (!nombreNegocio) return { ok: false, error: "Ponele un nombre al negocio." };
+  if (!servicios || !horario) {
+    return {
+      ok: false,
+      error:
+        "Servicios/precios y horario son obligatorios — sin eso el bot no tiene de dónde responder.",
+    };
+  }
+
+  const emojisForm = String(form.get("emojis") ?? "pocos");
+  const slug = slugDemo(nombreNegocio);
+
+  const supabase = await supabaseServidor();
+  const { error } = await supabase.from("demos").insert({
+    slug,
+    nombre_negocio: nombreNegocio,
+    rubro: String(form.get("rubro") ?? "").trim(),
+    trato: form.get("trato") === "vos" ? "vos" : "usted",
+    estilo: String(form.get("estilo") ?? "").trim(),
+    emojis: ["ninguno", "pocos", "varios"].includes(emojisForm) ? emojisForm : "pocos",
+    servicios,
+    horario,
+    nota_extra: String(form.get("notaExtra") ?? "").trim(),
+  });
+
+  if (error) return { ok: false, error: "No se pudo crear la demo. Probá de nuevo." };
+
+  revalidatePath("/panel/admin/demos");
+  return { ok: true, mensaje: "Demo creada.", datos: { slug } };
+}
+
+export async function pausarDemo(
+  _prev: ResultadoAccion | null,
+  form: FormData
+): Promise<ResultadoAccion> {
+  const noAutor = await exigirAdmin(form);
+  if (noAutor) return noAutor;
+
+  const id = String(form.get("demoId") ?? "");
+  if (!id) return { ok: false, error: "Falta la demo." };
+
+  const supabase = await supabaseServidor();
+  const { error } = await supabase.from("demos").update({ activo: false }).eq("id", id);
+  if (error) return { ok: false, error: "No se pudo pausar." };
+
+  revalidatePath("/panel/admin/demos");
+  return { ok: true, mensaje: "Demo pausada — el link deja de responder." };
+}
+
+export async function reactivarDemo(
+  _prev: ResultadoAccion | null,
+  form: FormData
+): Promise<ResultadoAccion> {
+  const noAutor = await exigirAdmin(form);
+  if (noAutor) return noAutor;
+
+  const id = String(form.get("demoId") ?? "");
+  if (!id) return { ok: false, error: "Falta la demo." };
+
+  const supabase = await supabaseServidor();
+  const { error } = await supabase.from("demos").update({ activo: true }).eq("id", id);
+  if (error) return { ok: false, error: "No se pudo reactivar." };
+
+  revalidatePath("/panel/admin/demos");
+  return { ok: true, mensaje: "Demo reactivada." };
+}
+
+export async function eliminarDemo(
+  _prev: ResultadoAccion | null,
+  form: FormData
+): Promise<ResultadoAccion> {
+  const noAutor = await exigirAdmin(form);
+  if (noAutor) return noAutor;
+
+  const id = String(form.get("demoId") ?? "");
+  if (!id) return { ok: false, error: "Falta la demo." };
+
+  const supabase = await supabaseServidor();
+  const { error } = await supabase.from("demos").delete().eq("id", id);
+  if (error) return { ok: false, error: "No se pudo eliminar." };
+
+  revalidatePath("/panel/admin/demos");
+  return { ok: true, mensaje: "Demo eliminada." };
+}
