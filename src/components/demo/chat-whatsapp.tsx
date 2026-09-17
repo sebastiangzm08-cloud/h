@@ -151,7 +151,7 @@ export function ChatWhatsapp({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[380px] overflow-hidden rounded-[2.25rem] border-[6px] border-[#0a0a0a] bg-black shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)]">
+    <div className="mx-auto w-full max-w-[380px] overflow-hidden rounded-[2.25rem] border-[6px] border-[#0a0a0a] bg-black shadow-[0_40px_100px_-24px_rgba(124,92,255,0.35)] ring-1 ring-white/10">
       <div className="flex h-[640px] flex-col bg-[#0b141a]">
         {/* cabecera */}
         <div className="flex flex-none items-center gap-3 bg-[#1f2c34] px-4 py-3">
