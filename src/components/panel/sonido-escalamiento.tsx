@@ -13,6 +13,13 @@
       hasta que alguien recargaba la página a mano o le daba clic de nuevo
       al hilo — encontrado probando en vivo con un cliente real.
 
+      El refresco va con un debounce de 500ms (se reinicia con cada evento
+      nuevo): en una conversación real los mensajes llegan en ráfaga, y un
+      `router.refresh()` por CADA uno (en vez de uno solo al final de la
+      ráfaga) era justo lo que causaba el lag y el parpadeo a negro del
+      esqueleto de carga que Sebastian reportó probando en vivo
+      (2026-09-16) — de rebote, "peor" que la pantalla pegada de antes.
+
    Escucha en vivo con Supabase Realtime — no hay nada que recargar a mano.
    El correo (ver n8n) sigue siendo el aviso para cuando el panel NO está
    abierto; las dos cosas se complementan, igual que WhatsApp Web.
@@ -33,6 +40,7 @@ export function SonidoEscalamiento({ clienteId }: { clienteId: string }) {
   const router = useRouter();
   const routerRef = useRef(router);
   routerRef.current = router;
+  const refrescoPendiente = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!clienteId) return;
@@ -54,19 +62,23 @@ export function SonidoEscalamiento({ clienteId }: { clienteId: string }) {
         (payload) => {
           const antes = (payload.old as FilaConversacion)?.estado;
           const ahora = (payload.new as FilaConversacion)?.estado;
-          // El sonido solo en la TRANSICIÓN hacia "espera" — si ya estaba en
-          // espera y se actualiza otra cosa de la fila, no vuelve a sonar.
+          // El sonido suena al toque, sin esperar el debounce del refresco.
           if (ahora === "espera" && antes !== "espera") {
             reproducirDing();
           }
-          // El refresco, en cambio, en CUALQUIER cambio — es lo que hace que
-          // un mensaje nuevo aparezca solo sin recargar la página.
-          routerRef.current.refresh();
+          // El refresco, en cambio, con debounce: junta la ráfaga de una
+          // conversación real en un solo `router.refresh()` en vez de uno
+          // por mensaje.
+          if (refrescoPendiente.current) clearTimeout(refrescoPendiente.current);
+          refrescoPendiente.current = setTimeout(() => {
+            routerRef.current.refresh();
+          }, 500);
         }
       )
       .subscribe();
 
     return () => {
+      if (refrescoPendiente.current) clearTimeout(refrescoPendiente.current);
       supabase.removeChannel(canal);
     };
   }, [clienteId]);

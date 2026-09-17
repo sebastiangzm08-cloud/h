@@ -709,7 +709,7 @@ export async function getPendientes(): Promise<Pendiente[]> {
       .order("creado_en", { ascending: false }),
     supabase
       .from("actividad")
-      .select("id, descripcion, asignacion_id, creada_en")
+      .select("id, descripcion, asignacion_id, datos, creada_en")
       .eq("cliente_id", perfil.clienteId)
       .eq("resultado", "atencion")
       .order("creada_en", { ascending: false })
@@ -723,6 +723,19 @@ export async function getPendientes(): Promise<Pendiente[]> {
   const hrefAut = (asignacionId: string | null) => {
     const slug = asignacionId ? slugPorAsignacion.get(asignacionId) : null;
     return slug ? `/panel/automatizaciones/${slug}` : "/panel/actividad";
+  };
+  // Si la actividad ya trae la conversación puntual (WhatsApp guarda
+  // `datos.conversacion_id` desde 2026-09-16), lleva directo al hilo en vez
+  // de la pantalla genérica de la automatización — antes de eso, cualquier
+  // fila vieja de "atencion" cae al fallback de siempre.
+  const hrefAtencion = (asignacionId: string | null, datos: unknown) => {
+    const conversacionId =
+      datos && typeof datos === "object" && "conversacion_id" in datos
+        ? (datos as { conversacion_id?: string }).conversacion_id
+        : null;
+    return conversacionId
+      ? `/panel/agente/conversaciones?c=${conversacionId}`
+      : hrefAut(asignacionId);
   };
 
   const pendientes: Pendiente[] = [];
@@ -758,7 +771,10 @@ export async function getPendientes(): Promise<Pendiente[]> {
       titulo: `${necesitan.length} ${necesitan.length === 1 ? "cosa necesita" : "cosas necesitan"} tu atención`,
       detalle: necesitan[0].descripcion,
       gravedad: "urgente",
-      accion: { texto: "Ver", href: hrefAut(necesitan[0].asignacion_id) },
+      accion: {
+        texto: "Ver",
+        href: hrefAtencion(necesitan[0].asignacion_id, necesitan[0].datos),
+      },
     });
   }
 
