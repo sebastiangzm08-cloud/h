@@ -14,6 +14,7 @@
    ========================================================================== */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { Icono, type NombreIcono } from "@/components/panel/iconos";
 import { TemaSelector } from "@/components/panel/tema-selector";
 import { LinkReiniciarTour, TourGuiado, type PasoTour } from "@/components/panel/tour";
@@ -104,6 +105,14 @@ export function AgenteBarra({
   correcciones: number;
 }) {
   const pathname = usePathname();
+  /* Antes, en celular, la barra entera se aplastaba en una fila horizontal
+     con TODO visible (10 ítems desparramados, sin agrupar) — encontrado por
+     Sebastián probando en su teléfono: "que tenga las 3 rayas en vez de todo
+     desplegado", igual que ya tiene el panel principal (`shell.tsx`). Ahora
+     en celular es una barra angosta con el nombre + botón de menú, y el
+     contenido de siempre se abre como cajón lateral — en escritorio (`md:`)
+     sigue exactamente igual que antes, fija a la izquierda. */
+  const [abierto, setAbierto] = useState(false);
 
   const grupos: Grupo[] = [
     {
@@ -169,90 +178,131 @@ export function AgenteBarra({
     href === "/panel/agente" ? pathname === href : pathname.startsWith(href);
 
   return (
-    <aside className="scroll-fino flex shrink-0 flex-col border-line bg-surface md:h-dvh md:w-[248px] md:overflow-y-auto md:border-r max-md:border-b">
-      <div className="border-b border-line px-3.5 pt-3.5 pb-3">
-        <div className="-mx-1.5 mb-3 flex items-center justify-between gap-2">
-          <Link
-            href="/panel/automatizaciones"
-            className="-mt-1 inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs text-ink-faint transition-colors hover:bg-surface-2 hover:text-ink-soft"
-          >
-            <Icono nombre="flecha" className="h-3 w-3 rotate-180" />
-            Automatizaciones
-          </Link>
-          <TemaSelector />
-        </div>
-
-        <div className="flex items-start gap-2.5">
-          <span className="grid h-[30px] w-[30px] flex-none place-items-center rounded-lg border border-line-strong bg-surface-3 text-ok">
-            <Icono nombre="mensajes" className="h-4 w-4" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold tracking-tight text-ink">
-              Agente de WhatsApp
-            </p>
-            <p className="mt-0.5 flex items-center gap-1.5 font-mono text-[11px] text-ink-mute">
-              <span
-                className={cn(
-                  "h-1.5 w-1.5 flex-none rounded-full",
-                  activo ? "bg-ok" : "bg-ink-faint"
-                )}
-              />
-              <span className="truncate">
-                {activo ? "Activo" : "En pausa"}
-                {telefono ? ` · ${telefono}` : ""}
-              </span>
-            </p>
-          </div>
-        </div>
+    <>
+      {/* Barra angosta de celular — lo único visible ahí hasta que se abre
+          el cajón. Reemplaza la fila horizontal con todo desparramado que
+          había antes. */}
+      <div className="flex flex-none items-center gap-2.5 border-b border-line bg-surface px-3.5 py-2.5 md:hidden">
+        <button
+          type="button"
+          onClick={() => setAbierto(true)}
+          aria-label="Abrir menú"
+          aria-expanded={abierto}
+          className="grid h-8 w-8 flex-none place-items-center rounded-[9px] border border-line-strong text-ink-mute transition-colors hover:bg-surface-2"
+        >
+          <Icono nombre="menu" className="h-4 w-4" />
+        </button>
+        <span className="grid h-7 w-7 flex-none place-items-center rounded-lg border border-line-strong bg-surface-3 text-ok">
+          <Icono nombre="mensajes" className="h-3.5 w-3.5" />
+        </span>
+        <p className="min-w-0 flex-1 truncate text-[13px] font-semibold tracking-tight text-ink">
+          Agente de WhatsApp
+        </p>
+        <span className={cn("h-1.5 w-1.5 flex-none rounded-full", activo ? "bg-ok" : "bg-ink-faint")} />
       </div>
 
-      <nav className="scroll-fino flex-1 px-2.5 py-3 max-md:flex max-md:gap-4 max-md:overflow-x-auto">
-        {grupos.map((g) => (
-          <div key={g.titulo} className="max-md:flex max-md:items-center max-md:gap-1 [&+div]:md:mt-[18px]">
-            <p className="px-2 pb-[7px] font-mono text-[10px] tracking-[0.12em] text-ink-faint uppercase max-md:hidden">
-              {g.titulo}
-            </p>
-            {g.items.map((it) => {
-              const actual = esActual(it.href);
-              return (
-                <Link
-                  key={it.href}
-                  href={it.href}
-                  data-tour={it.tour}
-                  aria-current={actual ? "page" : undefined}
+      {abierto ? (
+        <button
+          type="button"
+          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          aria-label="Cerrar menú"
+          onClick={() => setAbierto(false)}
+        />
+      ) : null}
+
+      <aside
+        className={cn(
+          "scroll-fino fixed inset-y-0 left-0 z-40 flex h-dvh w-[264px] flex-col border-line bg-surface transition-transform duration-200 ease-out",
+          "md:sticky md:top-0 md:z-auto md:h-dvh md:w-[248px] md:translate-x-0 md:overflow-y-auto md:border-r",
+          abierto ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="border-b border-line px-3.5 pt-3.5 pb-3">
+          <div className="-mx-1.5 mb-3 flex items-center justify-between gap-2">
+            <Link
+              href="/panel/automatizaciones"
+              onClick={() => setAbierto(false)}
+              className="-mt-1 inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs text-ink-faint transition-colors hover:bg-surface-2 hover:text-ink-soft"
+            >
+              <Icono nombre="flecha" className="h-3 w-3 rotate-180" />
+              Automatizaciones
+            </Link>
+            <TemaSelector />
+          </div>
+
+          <div className="flex items-start gap-2.5">
+            <span className="grid h-[30px] w-[30px] flex-none place-items-center rounded-lg border border-line-strong bg-surface-3 text-ok">
+              <Icono nombre="mensajes" className="h-4 w-4" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold tracking-tight text-ink">
+                Agente de WhatsApp
+              </p>
+              <p className="mt-0.5 flex items-center gap-1.5 font-mono text-[11px] text-ink-mute">
+                <span
                   className={cn(
-                    "flex items-center gap-2.5 rounded-[7px] px-2 py-[7px] text-[13px] transition-colors max-md:whitespace-nowrap",
-                    actual
-                      ? "bg-surface-3 font-medium text-ink"
-                      : "text-ink-mute hover:bg-surface-2 hover:text-ink-soft"
+                    "h-1.5 w-1.5 flex-none rounded-full",
+                    activo ? "bg-ok" : "bg-ink-faint"
                   )}
-                >
-                  <Icono nombre={it.icono} className="h-[15px] w-[15px] flex-none opacity-85" />
-                  <span className="flex-1 truncate">{it.texto}</span>
-                  {it.cuenta ? (
-                    <span
-                      className={cn(
-                        "min-w-[18px] rounded-full border px-1.5 text-center font-mono text-[10px] tabular-nums",
-                        it.alerta
-                          ? "border-warn/40 bg-warn/15 text-warn"
-                          : "border-line-strong bg-surface-3 text-ink-mute"
-                      )}
-                    >
-                      {it.cuenta}
-                    </span>
-                  ) : null}
-                </Link>
-              );
-            })}
+                />
+                <span className="truncate">
+                  {activo ? "Activo" : "En pausa"}
+                  {telefono ? ` · ${telefono}` : ""}
+                </span>
+              </p>
+            </div>
           </div>
-        ))}
-      </nav>
+        </div>
 
-      <div className="flex-none border-t border-line px-3.5 py-2.5 max-md:hidden">
-        <LinkReiniciarTour id="agente-whatsapp" />
-      </div>
+        <nav className="scroll-fino flex-1 px-2.5 py-3">
+          {grupos.map((g) => (
+            <div key={g.titulo} className="[&+div]:mt-[18px]">
+              <p className="px-2 pb-[7px] font-mono text-[10px] tracking-[0.12em] text-ink-faint uppercase">
+                {g.titulo}
+              </p>
+              {g.items.map((it) => {
+                const actual = esActual(it.href);
+                return (
+                  <Link
+                    key={it.href}
+                    href={it.href}
+                    data-tour={it.tour}
+                    onClick={() => setAbierto(false)}
+                    aria-current={actual ? "page" : undefined}
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-[7px] px-2 py-[7px] text-[13px] transition-colors",
+                      actual
+                        ? "bg-surface-3 font-medium text-ink"
+                        : "text-ink-mute hover:bg-surface-2 hover:text-ink-soft"
+                    )}
+                  >
+                    <Icono nombre={it.icono} className="h-[15px] w-[15px] flex-none opacity-85" />
+                    <span className="flex-1 truncate">{it.texto}</span>
+                    {it.cuenta ? (
+                      <span
+                        className={cn(
+                          "min-w-[18px] rounded-full border px-1.5 text-center font-mono text-[10px] tabular-nums",
+                          it.alerta
+                            ? "border-warn/40 bg-warn/15 text-warn"
+                            : "border-line-strong bg-surface-3 text-ink-mute"
+                        )}
+                      >
+                        {it.cuenta}
+                      </span>
+                    ) : null}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
 
-      <TourGuiado id="agente-whatsapp" pasos={PASOS_TOUR} />
-    </aside>
+        <div className="flex-none border-t border-line px-3.5 py-2.5">
+          <LinkReiniciarTour id="agente-whatsapp" />
+        </div>
+
+        <TourGuiado id="agente-whatsapp" pasos={PASOS_TOUR} />
+      </aside>
+    </>
   );
 }

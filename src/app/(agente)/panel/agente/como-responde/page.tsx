@@ -8,7 +8,6 @@ import {
   leerConfigAgente,
   leerConfigAgenda,
   TEXTO_EMOJIS,
-  TEXTO_FUERA,
   TEXTO_LARGO,
   DIAS_HORARIO,
   textoBloquesHorario,
@@ -38,13 +37,17 @@ export default async function ComoRespondePage() {
           <Fila k="Largo de respuesta" v={TEXTO_LARGO[cfg.largo]} />
         </Bloque>
 
+        {/* Estas 3 filas son fijas a propósito (no leen `cfg`): esperaSegundos,
+            transcribirAudios y fueraDeHorario se sacaron del formulario de
+            abajo porque el bot nunca las respetaba — mostrar acá lo que
+            guardó el cliente en vez de lo que el bot REALMENTE hace sería
+            la misma mentira con otra cara. Esto es lo que pasa de verdad,
+            siempre, hasta que se conecten de verdad (ver memoria del
+            proyecto). */}
         <Bloque titulo="Antes de contestar" sub="El agente espera a que la persona termine de escribir">
-          <Fila k="Espera después del último mensaje" v={`${cfg.esperaSegundos} segundos`} />
-          <Fila
-            k="Notas de voz"
-            v={cfg.transcribirAudios ? "Las escucha y transcribe" : "No las procesa"}
-          />
-          <Fila k="Fuera de horario" v={TEXTO_FUERA[cfg.fueraDeHorario]} />
+          <Fila k="Espera después del último mensaje" v="12 segundos" />
+          <Fila k="Notas de voz" v="Las escucha y transcribe siempre" />
+          <Fila k="Fuera de horario" v="Responde igual y agenda" />
         </Bloque>
 
         <Bloque titulo="Cuándo llamarte a vos" sub="Si pasa esto, el agente se frena y te avisa">

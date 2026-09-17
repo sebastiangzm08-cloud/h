@@ -7,9 +7,17 @@
    Component"). Estas tres son puras, así que las puede usar cualquiera.
    ========================================================================== */
 
+/* Costa Rica fijo, sin horario de verano — igual que el resto del proyecto
+   (n8n, `agendarCitaManual`). SIN esto, `toLocaleTimeString`/`getDay()`
+   usan la zona horaria del SERVIDOR (normalmente UTC en el VPS), no la de
+   Costa Rica: una cita guardada correctamente a las 8 a.m. se mostraba acá
+   como "2:00 p.m." — encontrado probando en vivo con citas reales, la hora
+   SÍ se guardaba bien, solo se leía mal. */
+const ZONA_CR = "America/Costa_Rica";
+
 export function hora(iso: string) {
   return new Date(iso)
-    .toLocaleTimeString("es-CR", { hour: "numeric", minute: "2-digit", hour12: true })
+    .toLocaleTimeString("es-CR", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: ZONA_CR })
     .replace(/\s?a\.?\s?m\.?/i, " a.m.")
     .replace(/\s?p\.?\s?m\.?/i, " p.m.");
 }
@@ -24,10 +32,17 @@ export function relativa(iso: string) {
   return d === 1 ? "ayer" : `hace ${d} días`;
 }
 
+const DIA_EN_A_ES: Record<string, string> = {
+  Sun: "Dom", Mon: "Lun", Tue: "Mar", Wed: "Mié", Thu: "Jue", Fri: "Vie", Sat: "Sáb",
+};
+
 export function fechaCorta(iso: string) {
   const d = new Date(iso);
-  const dias = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-  return `${dias[d.getDay()]} ${d.getDate()} · ${hora(iso)}`;
+  // `en-US` porque su abreviatura de 3 letras es estable para mapear ("Mon",
+  // "Tue"…); el nombre en español final sale del diccionario de arriba.
+  const diaEn = new Intl.DateTimeFormat("en-US", { timeZone: ZONA_CR, weekday: "short" }).format(d);
+  const diaNum = new Intl.DateTimeFormat("en-US", { timeZone: ZONA_CR, day: "numeric" }).format(d);
+  return `${DIA_EN_A_ES[diaEn] ?? diaEn} ${diaNum} · ${hora(iso)}`;
 }
 
 export const VERTICALES_WHATSAPP = [

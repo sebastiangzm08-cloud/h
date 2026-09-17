@@ -61,20 +61,6 @@ export function FormaConfigAgente({ config }: { config: ConfigAgente }) {
             <option value="largo">Largo</option>
           </select>
         </label>
-
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[11.5px] font-medium text-ink-mute">
-            Espera después del último mensaje (segundos)
-          </span>
-          <input autoComplete="off"
-            type="number"
-            name="esperaSegundos"
-            min={0}
-            max={60}
-            defaultValue={config.esperaSegundos}
-            className={campo}
-          />
-        </label>
       </div>
 
       <label className="flex flex-col gap-1.5">
@@ -97,29 +83,6 @@ export function FormaConfigAgente({ config }: { config: ConfigAgente }) {
           rows={4}
           defaultValue={config.escalar.join("\n")}
           className={cn(campo, "resize-none font-mono text-[12.5px]")}
-        />
-      </label>
-
-      <label className="flex flex-col gap-1.5">
-        <span className="text-[11.5px] font-medium text-ink-mute">Fuera de horario</span>
-        <select autoComplete="off"
-          name="fueraDeHorario"
-          defaultValue={config.fueraDeHorario}
-          className={cn(campo, "max-w-[260px] appearance-none")}
-        >
-          <option value="responde">Responde igual y agenda</option>
-          <option value="avisa">Avisa que están cerrados</option>
-          <option value="callado">No responde hasta abrir</option>
-        </select>
-      </label>
-
-      <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-line bg-surface-2 px-4 py-3">
-        <span className="text-[13px] text-ink-soft">Escuchar y transcribir notas de voz</span>
-        <input
-          type="checkbox"
-          name="transcribirAudios"
-          defaultChecked={config.transcribirAudios}
-          className="h-4 w-4 accent-ink"
         />
       </label>
 

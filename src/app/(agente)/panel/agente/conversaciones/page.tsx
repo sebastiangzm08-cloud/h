@@ -54,6 +54,11 @@ export default async function ConversacionesPage({
   const abierta = lista.find((x) => x.id === c) ?? lista[0] ?? null;
   const mensajes = abierta ? await getMensajes(abierta.id) : [];
   const contacto = abierta ? contactos.find((x) => x.id === abierta.contactoId) ?? null : null;
+  /* En celular no caben la lista y el hilo lado a lado — se muestra uno u
+     otro. `abierta` siempre trae algo por defecto (para que el escritorio
+     arranque con la primera conversación ya abierta), así que el toggle de
+     celular se decide por si `c` vino explícito en la URL, no por `abierta`. */
+  const conversacionElegida = Boolean(c);
 
   const cuenta = (clave: Filtro) =>
     clave === "todas" ? todas.length : todas.filter((x) => x.estado === clave).length;
@@ -92,7 +97,12 @@ export default async function ConversacionesPage({
           como pasaba antes. */}
       <div className="grid min-h-0 flex-1 md:grid-cols-[300px_1fr] xl:grid-cols-[300px_1fr_290px]">
         {/* ---------- lista ---------- */}
-        <div className="scroll-fino min-h-0 overflow-y-auto border-line max-md:border-b md:border-r">
+        <div
+          className={cn(
+            "scroll-fino min-h-0 overflow-y-auto border-line max-md:border-b md:border-r",
+            conversacionElegida && "max-md:hidden"
+          )}
+        >
           {lista.length === 0 ? (
             <Vacio>No hay conversaciones con ese filtro.</Vacio>
           ) : (
@@ -139,12 +149,24 @@ export default async function ConversacionesPage({
         </div>
 
         {/* ---------- hilo ---------- */}
-        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden border-line xl:border-r">
+        <div
+          className={cn(
+            "flex min-h-0 min-w-0 flex-col overflow-hidden border-line xl:border-r",
+            !conversacionElegida && "max-md:hidden"
+          )}
+        >
           {!abierta ? (
             <Vacio>Elegí una conversación de la lista.</Vacio>
           ) : (
             <>
               <div className="flex flex-none items-center gap-3 border-b border-line px-5 py-3">
+                <Link
+                  href={`/panel/agente/conversaciones?f=${filtro}`}
+                  className="-ml-1.5 flex-none rounded-lg p-1.5 text-ink-mute transition-colors hover:bg-surface-2 md:hidden"
+                  aria-label="Volver a la lista"
+                >
+                  <Icono nombre="flecha" className="h-4 w-4 rotate-180" />
+                </Link>
                 <span className="grid h-8 w-8 flex-none place-items-center rounded-full border border-line-strong bg-surface-3 font-mono text-[11px] text-ink-mute">
                   {iniciales(abierta.nombre)}
                 </span>

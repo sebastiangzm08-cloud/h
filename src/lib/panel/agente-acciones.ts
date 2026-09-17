@@ -672,79 +672,31 @@ export async function marcarCitaCumplida(
  * con la misma lógica que ya usa `📅 Calcular disponibilidad` en el
  * workflow (grilla en hora de Costa Rica, offset fijo -06:00).
  */
-export async function agendarCitaManual(
-  _prev: ResultadoAccion | null,
-  form: FormData
-): Promise<ResultadoAccion> {
-  const auth = await exigirCliente(form);
-  if (!auth.ok) return auth;
+/**
+ * El corazón de "reservar en tal fecha/hora para tal contacto+servicio":
+ * valida anticipación mínima, máximo de días adelante, que la cita quepa
+ * dentro del horario del negocio, y llama al RPC atómico. Lo comparten
+ * `agendarCitaManual` y `reagendarCita` — antes estaba duplicado entero en
+ * cada una, con el riesgo real de que un arreglo (como el de zona horaria)
+ * quedara solo en una de las dos copias.
+ */
+async function reservarValidada(
+  sb: Awaited<ReturnType<typeof supabaseServidor>>,
+  clienteId: string,
+  contactoId: string,
+  servicio: { clave: string; monto: number | null; duracion_min: number | null },
+  cuando: Date
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (Number.isNaN(cuando.getTime())) return { ok: false, error: "Fecha u hora inválida." };
 
-  const contactoId = String(form.get("contactoId") ?? "").trim();
-  const telefonoNuevo = String(form.get("telefonoNuevo") ?? "").trim();
-  const nombreNuevo = String(form.get("nombreNuevo") ?? "").trim();
-  const servicioClave = String(form.get("servicio") ?? "").trim();
-  const fecha = String(form.get("fecha") ?? "");
-  const hora = String(form.get("hora") ?? "");
-  if ((!contactoId && !telefonoNuevo) || !servicioClave || !fecha || !hora) {
-    return { ok: false, error: "Faltan datos: a quién, servicio, fecha y hora." };
-  }
-
-  const sb = await supabaseServidor();
-
-  let contacto: { id: string; nombre: string; telefono: string } | null = null;
-
-  if (contactoId) {
-    const { data, error } = await sb
-      .from("wa_contactos")
-      .select("id, nombre, telefono")
-      .eq("id", contactoId)
-      .eq("cliente_id", auth.clienteId)
-      .maybeSingle();
-    if (error || !data) return { ok: false, error: "No encontré ese contacto." };
-    contacto = data;
-  } else {
-    /* Número escrito a mano — alguien que nunca escribió por WhatsApp
-       (llegó sin avisar, llamó por teléfono). Mismo hueco que ya se resolvió
-       para Correo: `wa_contactos` tampoco tiene grant de insert para un
-       cliente normal (solo n8n/service_role crea contactos nuevos), así que
-       esto usa `supabaseAdmin()` para ESTA escritura puntual. */
-    const telefonoLimpio = telefonoNuevo.replace(/[^\d+]/g, "");
-    if (telefonoLimpio.replace(/\+/g, "").length < 8) {
-      return { ok: false, error: "Ese número no parece válido — escribilo con código de país (ej. 50688881234)." };
-    }
-    const admin = supabaseAdmin();
-    const { data, error } = await admin
-      .from("wa_contactos")
-      .upsert(
-        { cliente_id: auth.clienteId, telefono: telefonoLimpio, nombre: nombreNuevo || undefined },
-        { onConflict: "cliente_id,telefono", ignoreDuplicates: false }
-      )
-      .select("id, nombre, telefono")
-      .single();
-    if (error || !data) return { ok: false, error: error?.message || "No se pudo crear el contacto." };
-    contacto = data;
-  }
-
-  const { data: servicio, error: eServicio } = await sb
-    .from("wa_conocimiento")
-    .select("clave, monto, duracion_min")
-    .eq("cliente_id", auth.clienteId)
-    .eq("tipo", "servicio")
-    .eq("clave", servicioClave)
-    .maybeSingle();
-  if (eServicio || !servicio) return { ok: false, error: "No encontré ese servicio." };
-
-  const asignacion = await traerAsignacionAgente(sb, auth.clienteId);
+  const asignacion = await traerAsignacionAgente(sb, clienteId);
   if (!asignacion) return { ok: false, error: "No encontré la asignación del agente." };
   const agenda = leerConfigAgenda(asignacion.config);
 
-  const { data: clienteRow } = await sb.from("clientes").select("horario").eq("id", auth.clienteId).maybeSingle();
+  const { data: clienteRow } = await sb.from("clientes").select("horario").eq("id", clienteId).maybeSingle();
   const horario = (clienteRow?.horario ?? {}) as Record<string, [string, string][]>;
 
   const duracionMin = Number(servicio.duracion_min) > 0 ? Number(servicio.duracion_min) : 30;
-
-  const cuando = new Date(`${fecha}T${hora}:00-06:00`);
-  if (Number.isNaN(cuando.getTime())) return { ok: false, error: "Fecha u hora inválida." };
 
   const ahora = Date.now();
   if (cuando.getTime() < ahora + agenda.anticipacionMin * 60_000) {
@@ -786,8 +738,8 @@ export async function agendarCitaManual(
 
   const admin = supabaseAdmin();
   const { data: citaCreada, error: eRpc } = await admin.rpc("wa_reservar_cita", {
-    p_cliente_id: auth.clienteId,
-    p_contacto_id: contacto.id,
+    p_cliente_id: clienteId,
+    p_contacto_id: contactoId,
     p_cuando: cuando.toISOString(),
     p_servicio: servicio.clave,
     p_monto: servicio.monto,
@@ -799,55 +751,227 @@ export async function agendarCitaManual(
   if (!citaCreada) {
     return { ok: false, error: "Ya no hay cupo en ese horario — alguien más lo tomó. Probá otro horario." };
   }
+  return { ok: true };
+}
+
+/** Avisa a un paciente por WhatsApp de un agendado/cambio y lo deja en el
+    hilo de la conversación — mismo texto que vería si se lo hubiera escrito
+    el dueño a mano. Comparten esto `agendarCitaManual` y `reagendarCita`. */
+async function avisarCitaPorWhatsapp(
+  sb: Awaited<ReturnType<typeof supabaseServidor>>,
+  clienteId: string,
+  contacto: { id: string; telefono: string },
+  texto: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!contacto.telefono) return { ok: true };
+  const envio = await enviarPorWhatsapp(clienteId, contacto.telefono, texto);
+  if (!envio.ok) return { ok: false, error: envio.error };
+
+  const { data: conv } = await sb
+    .from("wa_conversaciones")
+    .select("id")
+    .eq("contacto_id", contacto.id)
+    .maybeSingle();
+  if (conv?.id) {
+    await sb.from("wa_mensajes").insert({
+      cliente_id: clienteId,
+      conversacion_id: conv.id,
+      autor: "humano",
+      tipo: "texto",
+      texto,
+    });
+    await sb
+      .from("wa_conversaciones")
+      .update({ ultimo_mensaje: texto, ultimo_en: new Date().toISOString() })
+      .eq("id", conv.id);
+  }
+  return { ok: true };
+}
+
+export async function agendarCitaManual(
+  _prev: ResultadoAccion | null,
+  form: FormData
+): Promise<ResultadoAccion> {
+  const auth = await exigirCliente(form);
+  if (!auth.ok) return auth;
+
+  const contactoId = String(form.get("contactoId") ?? "").trim();
+  const telefonoNuevo = String(form.get("telefonoNuevo") ?? "").trim();
+  const nombreNuevo = String(form.get("nombreNuevo") ?? "").trim();
+  const servicioClave = String(form.get("servicio") ?? "").trim();
+  const fecha = String(form.get("fecha") ?? "");
+  const hora = String(form.get("hora") ?? "");
+  if ((!contactoId && !telefonoNuevo) || !servicioClave || !fecha || !hora) {
+    return { ok: false, error: "Faltan datos: a quién, servicio, fecha y hora." };
+  }
+
+  const sb = await supabaseServidor();
+
+  let contacto: { id: string; nombre: string; telefono: string } | null = null;
+
+  if (contactoId) {
+    const { data, error } = await sb
+      .from("wa_contactos")
+      .select("id, nombre, telefono")
+      .eq("id", contactoId)
+      .eq("cliente_id", auth.clienteId)
+      .maybeSingle();
+    if (error || !data) return { ok: false, error: "No encontré ese contacto." };
+    contacto = data;
+  } else {
+    /* Número escrito a mano — alguien que nunca escribió por WhatsApp
+       (llegó sin avisar, llamó por teléfono). Mismo hueco que ya se resolvió
+       para Correo: `wa_contactos` tampoco tiene grant de insert para un
+       cliente normal (solo n8n/service_role crea contactos nuevos), así que
+       esto usa `supabaseAdmin()` para ESTA escritura puntual.
+
+       OJO — si ese teléfono YA existe (por ejemplo, esa persona ya le
+       escribió antes por WhatsApp con un nombre de perfil distinto, o vacío),
+       este upsert SÍ pisa el nombre con `nombreNuevo` cuando venga lleno —
+       a propósito: acá es una PERSONA la que está escribiendo el nombre
+       correcto a mano, a diferencia del upsert automático del workflow
+       (ver `agente-whatsapp-BUILDER.mjs`, que ya NO pisa un nombre existente
+       solo). Si `nombreNuevo` viene vacío, no se toca el nombre que ya tenía. */
+    const telefonoLimpio = telefonoNuevo.replace(/[^\d+]/g, "");
+    if (telefonoLimpio.replace(/\+/g, "").length < 8) {
+      return { ok: false, error: "Ese número no parece válido — escribilo con código de país (ej. 50688881234)." };
+    }
+    const admin = supabaseAdmin();
+    const { data, error } = await admin
+      .from("wa_contactos")
+      .upsert(
+        { cliente_id: auth.clienteId, telefono: telefonoLimpio, nombre: nombreNuevo || undefined },
+        { onConflict: "cliente_id,telefono", ignoreDuplicates: false }
+      )
+      .select("id, nombre, telefono")
+      .single();
+    if (error || !data) return { ok: false, error: error?.message || "No se pudo crear el contacto." };
+    contacto = data;
+  }
+
+  const { data: servicio, error: eServicio } = await sb
+    .from("wa_conocimiento")
+    .select("clave, monto, duracion_min")
+    .eq("cliente_id", auth.clienteId)
+    .eq("tipo", "servicio")
+    .eq("clave", servicioClave)
+    .maybeSingle();
+  if (eServicio || !servicio) return { ok: false, error: "No encontré ese servicio." };
+
+  const cuando = new Date(`${fecha}T${hora}:00-06:00`);
+  const resultado = await reservarValidada(sb, auth.clienteId, contacto.id, servicio, cuando);
+  if (!resultado.ok) return resultado;
 
   /* Mismo aviso que manda `cancelarCita`: que la persona se entere por
      WhatsApp, no que se quede pensando que nadie confirmó nada. */
-  if (contacto.telefono) {
-    const cuandoTexto = cuando.toLocaleString("es-CR", {
-      timeZone: "America/Costa_Rica",
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-    const texto = `Le confirmamos su cita${servicio.clave ? " de " + servicio.clave : ""} para el ${cuandoTexto}. Cualquier cambio, escríbanos por acá.`;
-    const envio = await enviarPorWhatsapp(auth.clienteId, contacto.telefono, texto);
-    if (envio.ok) {
-      const { data: conv } = await sb
-        .from("wa_conversaciones")
-        .select("id")
-        .eq("contacto_id", contacto.id)
-        .maybeSingle();
-      if (conv?.id) {
-        await sb.from("wa_mensajes").insert({
-          cliente_id: auth.clienteId,
-          conversacion_id: conv.id,
-          autor: "humano",
-          tipo: "texto",
-          texto,
-        });
-        await sb
-          .from("wa_conversaciones")
-          .update({ ultimo_mensaje: texto, ultimo_en: new Date().toISOString() })
-          .eq("id", conv.id);
-      }
-    } else {
-      /* La cita SÍ quedó — eso ya pasó por `wa_reservar_cita` y no se
-         deshace. Pero avisar que "se le avisó por WhatsApp" cuando en
-         realidad el envío falló (token vencido, número inválido, lo que
-         sea) es exactamente el error que no se puede cometer: quien lea
-         esto tiene que saber que tiene que avisarle a mano. */
-      revalidarAgente();
-      return {
-        ok: true,
-        mensaje: `Cita agendada, pero NO se pudo avisar por WhatsApp (${envio.error}). Avisále a mano.`,
-      };
-    }
-  }
+  const cuandoTexto = cuando.toLocaleString("es-CR", {
+    timeZone: "America/Costa_Rica",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  const texto = `Le confirmamos su cita${servicio.clave ? " de " + servicio.clave : ""} para el ${cuandoTexto}. Cualquier cambio, escríbanos por acá.`;
+  const aviso = await avisarCitaPorWhatsapp(sb, auth.clienteId, contacto, texto);
 
   revalidarAgente();
+  if (!aviso.ok) {
+    /* La cita SÍ quedó — eso ya pasó por `wa_reservar_cita` y no se
+       deshace. Pero avisar que "se le avisó por WhatsApp" cuando en
+       realidad el envío falló (token vencido, número inválido, lo que
+       sea) es exactamente el error que no se puede cometer: quien lea
+       esto tiene que saber que tiene que avisarle a mano. */
+    return {
+      ok: true,
+      mensaje: `Cita agendada, pero NO se pudo avisar por WhatsApp (${aviso.error}). Avisále a mano.`,
+    };
+  }
   return { ok: true, mensaje: "Cita agendada y paciente avisado por WhatsApp." };
+}
+
+/**
+ * Reagendar = cancelar la vieja Y reservar la nueva en un solo paso, en vez
+ * de que alguien tenga que acordarse de cancelar primero. Bug real
+ * encontrado por Sebastián (2026-09-16): sin esto, "reagendar" a mano era
+ * en realidad "agendar una cita nueva sin tocar la anterior" — las citas se
+ * duplicaban porque la vieja nunca se cancelaba.
+ *
+ * La vieja se cancela DESPUÉS de que la nueva ya reservó de verdad — si el
+ * horario nuevo no tenía cupo, la cita original se queda intacta en vez de
+ * perderse.
+ */
+export async function reagendarCita(
+  _prev: ResultadoAccion | null,
+  form: FormData
+): Promise<ResultadoAccion> {
+  const auth = await exigirCliente(form);
+  if (!auth.ok) return auth;
+
+  const citaId = String(form.get("citaId") ?? "").trim();
+  const fecha = String(form.get("fecha") ?? "");
+  const hora = String(form.get("hora") ?? "");
+  if (!citaId || !fecha || !hora) return { ok: false, error: "Faltan datos: fecha y hora nuevas." };
+
+  const sb = await supabaseServidor();
+  const { data: citaVieja, error: eVieja } = await sb
+    .from("wa_citas")
+    .select("id, estado, servicio, wa_contactos(id, telefono)")
+    .eq("id", citaId)
+    .eq("cliente_id", auth.clienteId)
+    .maybeSingle();
+  if (eVieja || !citaVieja) return { ok: false, error: "No encontré esa cita." };
+  if (citaVieja.estado === "cancelada") return { ok: false, error: "Esa cita ya está cancelada." };
+
+  const contactoRaw = citaVieja.wa_contactos as
+    | { id: string; telefono: string }
+    | { id: string; telefono: string }[]
+    | null;
+  const contacto = Array.isArray(contactoRaw) ? contactoRaw[0] : contactoRaw;
+  if (!contacto) return { ok: false, error: "No encontré el contacto de esa cita." };
+
+  const { data: servicio, error: eServicio } = await sb
+    .from("wa_conocimiento")
+    .select("clave, monto, duracion_min")
+    .eq("cliente_id", auth.clienteId)
+    .eq("tipo", "servicio")
+    .eq("clave", citaVieja.servicio)
+    .maybeSingle();
+  if (eServicio || !servicio) {
+    return { ok: false, error: "No encontré el servicio de esa cita (¿lo borraron de \"Qué sabe\"?)." };
+  }
+
+  const cuando = new Date(`${fecha}T${hora}:00-06:00`);
+  const resultado = await reservarValidada(sb, auth.clienteId, contacto.id, servicio, cuando);
+  if (!resultado.ok) return resultado;
+
+  const { error: eCancelar } = await sb.from("wa_citas").update({ estado: "cancelada" }).eq("id", citaId);
+  if (eCancelar) {
+    // La nueva ya quedó reservada — no se deshace por esto, pero hay que
+    // decirlo tal cual para que alguien cancele la vieja a mano.
+    revalidarAgente();
+    return { ok: true, mensaje: `Se reservó la nueva cita, pero no se pudo cancelar la anterior (${eCancelar.message}) — cancelala a mano.` };
+  }
+
+  const cuandoTexto = cuando.toLocaleString("es-CR", {
+    timeZone: "America/Costa_Rica",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  const texto = `Le cambiamos su cita${servicio.clave ? " de " + servicio.clave : ""} para el ${cuandoTexto}. Cualquier cambio, escríbanos por acá.`;
+  const aviso = await avisarCitaPorWhatsapp(sb, auth.clienteId, contacto, texto);
+
+  revalidarAgente();
+  if (!aviso.ok) {
+    return {
+      ok: true,
+      mensaje: `Cita reagendada, pero NO se pudo avisar por WhatsApp (${aviso.error}). Avisále a mano.`,
+    };
+  }
+  return { ok: true, mensaje: "Cita reagendada y paciente avisado por WhatsApp." };
 }
 
 /* -------------------------------------------------------------------------
@@ -889,10 +1013,16 @@ export async function guardarConfigAgente(
     estilo: String(form.get("estilo") ?? actual.estilo).trim() || actual.estilo,
     emojis: form.get("emojis") ?? actual.emojis,
     largo: form.get("largo") ?? actual.largo,
-    esperaSegundos: Math.min(60, Math.max(0, Number(form.get("esperaSegundos") ?? actual.esperaSegundos))),
     escalar: escalar.length ? escalar : actual.escalar,
-    fueraDeHorario: form.get("fueraDeHorario") ?? actual.fueraDeHorario,
-    transcribirAudios: form.get("transcribirAudios") === "on",
+    /* esperaSegundos, fueraDeHorario y transcribirAudios se sacaron del
+       formulario (2026-09-16): el workflow de n8n nunca los leía — cambiar
+       cualquiera de los 3 en el panel no hacía nada de verdad, así que
+       mostrar el control era mentirle al cliente. Se congelan tal cual
+       estaban en vez de borrarlos del todo, por si algún día se conectan de
+       verdad. Ver [[project-agente-whatsapp]] para el detalle completo. */
+    esperaSegundos: actual.esperaSegundos,
+    fueraDeHorario: actual.fueraDeHorario,
+    transcribirAudios: actual.transcribirAudios,
   };
 
   const { error } = await sb.from("asignaciones").update({ config: nuevoConfig }).eq("id", asignacion.id);
