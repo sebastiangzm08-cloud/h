@@ -5,6 +5,7 @@ import Script from "next/script";
 import "./globals.css";
 import { site } from "@/config/site";
 import { SCRIPT_APLICAR_TEMA } from "@/lib/panel/tema";
+import { JsonLd } from "@/components/seo/json-ld";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,13 +19,59 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+const titulo = `${site.nombre} — ${site.claim}`;
+const descripcion =
+  "Automatizamos los procesos de captación, atención, administración y operación de cualquier negocio que ya use tecnología, sin cambiar tus herramientas.";
+
 export const metadata: Metadata = {
-  title: `${site.nombre} — ${site.claim}`,
-  description:
-    "Automatizamos los procesos de captación, atención, administración y operación de cualquier negocio que ya use tecnología, sin cambiar tus herramientas.",
+  metadataBase: new URL(site.url),
+  title: titulo,
+  description: descripcion,
+  keywords: [
+    "Hoshizora",
+    "Hoshizora Studio",
+    "agencia de automatizaciones",
+    "automatización de procesos",
+    "automatización de negocios Costa Rica",
+    "automatización con inteligencia artificial",
+    "agente de WhatsApp",
+    "n8n Costa Rica",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: titulo,
+    description: descripcion,
+    url: "/",
+    siteName: site.nombre,
+    locale: "es_CR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: titulo,
+    description: descripcion,
+  },
   robots: site.noIndexar
     ? { index: false, follow: false }
     : { index: true, follow: true },
+};
+
+const organizacionJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: site.nombre,
+  alternateName: "Hoshizora Studio",
+  url: site.url,
+  description: descripcion,
+  email: site.contacto.email,
+  telephone: `+${site.contacto.whatsapp}`,
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: site.contacto.ubicacion,
+    addressCountry: "CR",
+  },
 };
 
 export default function RootLayout({
@@ -43,6 +90,7 @@ export default function RootLayout({
         className="flex min-h-full flex-col bg-paper text-ink"
         suppressHydrationWarning
       >
+        <JsonLd data={organizacionJsonLd} />
         {/* Corre ANTES de que React hidrate cualquier pantalla del panel —
             así el tema claro/oscuro que ya eligieron no parpadea al negro
             de siempre en cada carga completa. Vive acá (layout raíz) y no

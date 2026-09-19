@@ -1,10 +1,25 @@
 import { Reveal } from "@/components/reveal";
 import { FaqAccordion } from "@/components/faq-accordion";
+import { JsonLd } from "@/components/seo/json-ld";
 import { faq } from "@/lib/content";
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faq.map(({ q, a }) => ({
+    "@type": "Question",
+    name: q,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: a,
+    },
+  })),
+};
 
 export function FaqSection() {
   return (
     <section className="border-b border-line bg-paper">
+      <JsonLd data={faqJsonLd} />
       <div className="mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-32">
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12">
           <div className="lg:col-span-4">

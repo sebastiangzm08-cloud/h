@@ -3,18 +3,58 @@ import Link from "next/link";
 import { Info } from "@phosphor-icons/react/dist/ssr";
 import { PageHeader } from "@/components/page-header";
 import { PlansGrid } from "@/components/plans/plans-grid";
+import { JsonLd } from "@/components/seo/json-ld";
 import { planes } from "@/lib/content";
 import { site } from "@/config/site";
 
+const tituloPlanes = `Planes y precios — ${site.nombre}`;
+const descripcionPlanes =
+  "Planes mensuales de automatización, con precio cerrado y las automatizaciones incluidas en cada uno.";
+
 export const metadata: Metadata = {
-  title: `Planes y precios — ${site.nombre}`,
-  description:
-    "Planes mensuales de automatización, con precio cerrado y las automatizaciones incluidas en cada uno.",
+  title: tituloPlanes,
+  description: descripcionPlanes,
+  alternates: { canonical: "/planes" },
+  openGraph: { title: tituloPlanes, description: descripcionPlanes, url: "/planes" },
+};
+
+const planesJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Service",
+  serviceType: "Automatización de procesos de negocio",
+  provider: {
+    "@type": "Organization",
+    name: site.nombre,
+    url: site.url,
+  },
+  areaServed: "CR",
+  hasOfferCatalog: {
+    "@type": "OfferCatalog",
+    name: "Planes de Hoshizora",
+    itemListElement: planes.map((plan) => ({
+      "@type": "Offer",
+      name: plan.nombre,
+      description: plan.para,
+      ...("aCotizar" in plan && plan.aCotizar
+        ? {}
+        : {
+            price: plan.mensual,
+            priceCurrency: site.pago.moneda,
+            priceSpecification: {
+              "@type": "UnitPriceSpecification",
+              price: plan.mensual,
+              priceCurrency: site.pago.moneda,
+              billingDuration: "P1M",
+            },
+          }),
+    })),
+  },
 };
 
 export default function PlanesPage() {
   return (
     <>
+      <JsonLd data={planesJsonLd} />
       <PageHeader
         eyebrow="Shop"
         title="Precios claros, sin llamada obligatoria para verlos"

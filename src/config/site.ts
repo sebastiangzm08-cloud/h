@@ -25,7 +25,7 @@ export const site = {
 
   /* Evita que Google indexe el sitio mientras está en borrador (precios y
      contenido de ejemplo). Poné false cuando esté listo para lanzar. */
-  noIndexar: true,
+  noIndexar: false,
 
   contacto: {
     email: "sebastian@hoshizora.agency",
