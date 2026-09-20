@@ -101,6 +101,19 @@ export function FormaCrearDemo() {
       </div>
 
       <label className="flex flex-col gap-1.5">
+        <span className="text-[11.5px] font-medium text-ink-mute">
+          URL del logo o foto de perfil (opcional)
+        </span>
+        <input
+          autoComplete="off"
+          name="logoUrl"
+          type="url"
+          placeholder="https://... — si no lo tenés hosteado, dejalo vacío y sale con la inicial"
+          className={campo}
+        />
+      </label>
+
+      <label className="flex flex-col gap-1.5">
         <span className="text-[11.5px] font-medium text-ink-mute">Estilo (opcional)</span>
         <input
           autoComplete="off"

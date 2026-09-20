@@ -9,9 +9,10 @@
    pantalla ajena a propósito, para que se sienta real. Todo lo demás
    alrededor (la página, el CTA) sí usa el sistema de diseño normal.
 
-   Sin foto del negocio (pedido explícito, 2026-09-16): el avatar es solo la
-   inicial, como en el resto del panel — nada de fingir una imagen que no
-   tenemos.
+   Avatar: si al crear la demo se cargó `logoUrl` (la foto/logo REAL del
+   negocio, ej. su foto de perfil de WhatsApp), se usa esa. Si no, cae a la
+   inicial (pedido explícito, 2026-09-16: nada de fingir una imagen que no
+   tenemos — pero una que sí tenemos, sí se muestra).
    ========================================================================== */
 import { useEffect, useRef, useState } from "react";
 
@@ -80,9 +81,11 @@ function BurbujaTyping() {
 export function ChatWhatsapp({
   slug,
   nombreNegocio,
+  logoUrl,
 }: {
   slug: string;
   nombreNegocio: string;
+  logoUrl?: string | null;
 }) {
   const [mensajes, setMensajes] = useState<Turno[]>([
     {
@@ -155,12 +158,21 @@ export function ChatWhatsapp({
       <div className="flex h-[640px] flex-col bg-[#0b141a]">
         {/* cabecera */}
         <div className="flex flex-none items-center gap-3 bg-[#1f2c34] px-4 py-3">
-          <div
-            className="grid h-9 w-9 flex-none place-items-center rounded-full text-[13px] font-semibold text-white"
-            style={{ background: colorAvatar(nombreNegocio) }}
-          >
-            {inicial(nombreNegocio)}
-          </div>
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl}
+              alt=""
+              className="h-9 w-9 flex-none rounded-full object-cover"
+            />
+          ) : (
+            <div
+              className="grid h-9 w-9 flex-none place-items-center rounded-full text-[13px] font-semibold text-white"
+              style={{ background: colorAvatar(nombreNegocio) }}
+            >
+              {inicial(nombreNegocio)}
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-[15px] font-medium text-white">{nombreNegocio}</p>
             <p className="text-[12px] text-[#8696a0]">{escribiendo ? "escribiendo…" : "en línea"}</p>

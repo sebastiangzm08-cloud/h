@@ -20,6 +20,7 @@ export type DemoPublica = {
   servicios: string;
   horario: string;
   notaExtra: string;
+  logoUrl: string | null;
   mensajesTope: number;
   mensajesUsados: number;
   activo: boolean;
@@ -31,7 +32,7 @@ export async function getDemoPublicaPorSlug(slug: string): Promise<DemoPublica |
   const { data, error } = await supabaseAdmin()
     .from("demos")
     .select(
-      "id, slug, nombre_negocio, rubro, trato, estilo, emojis, servicios, horario, nota_extra, mensajes_tope, mensajes_usados, activo"
+      "id, slug, nombre_negocio, rubro, trato, estilo, emojis, servicios, horario, nota_extra, logo_url, mensajes_tope, mensajes_usados, activo"
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -50,6 +51,7 @@ export async function getDemoPublicaPorSlug(slug: string): Promise<DemoPublica |
     servicios: data.servicios,
     horario: data.horario,
     notaExtra: data.nota_extra,
+    logoUrl: data.logo_url ?? null,
     mensajesTope: data.mensajes_tope,
     mensajesUsados: data.mensajes_usados,
     activo: data.activo,

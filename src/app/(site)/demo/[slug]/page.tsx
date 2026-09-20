@@ -90,7 +90,7 @@ export default async function DemoPage({
       <section className="bg-paper">
         <div className="mx-auto max-w-7xl px-5 pb-24 sm:px-8 sm:pb-32">
           <Reveal>
-            <ChatWhatsapp slug={demo.slug} nombreNegocio={demo.nombreNegocio} />
+            <ChatWhatsapp slug={demo.slug} nombreNegocio={demo.nombreNegocio} logoUrl={demo.logoUrl} />
           </Reveal>
 
           <Reveal delay={120}>

@@ -1252,6 +1252,7 @@ export async function crearDemo(
 
   const emojisForm = String(form.get("emojis") ?? "pocos");
   const slug = slugDemo(nombreNegocio);
+  const logoUrl = String(form.get("logoUrl") ?? "").trim();
 
   const supabase = await supabaseServidor();
   const { error } = await supabase.from("demos").insert({
@@ -1264,6 +1265,7 @@ export async function crearDemo(
     servicios,
     horario,
     nota_extra: String(form.get("notaExtra") ?? "").trim(),
+    logo_url: logoUrl || null,
   });
 
   if (error) return { ok: false, error: "No se pudo crear la demo. Probá de nuevo." };
