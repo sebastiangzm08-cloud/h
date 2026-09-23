@@ -78,24 +78,38 @@ export async function GET(req: NextRequest) {
     ok: true,
     actualizado_en: new Date().toISOString(),
     resumen,
-    envios: (envios ?? []).map((e) => ({
-      id: e.id,
-      paso: e.paso,
-      asunto: e.asunto,
-      enviado_en: e.enviado_en,
-      nombre: e.prospeccion_prospectos?.nombre ?? "",
-      pais: e.prospeccion_prospectos?.pais ?? "",
-      nicho: e.prospeccion_prospectos?.nicho ?? "",
-      correo: e.prospeccion_prospectos?.correo ?? "",
-    })),
-    respuestas: (respuestas ?? []).map((r) => ({
-      id: r.id,
-      clasificacion: r.clasificacion,
-      resumen: r.resumen,
-      recibido_en: r.recibido_en,
-      nombre: r.prospeccion_prospectos?.nombre ?? "",
-      pais: r.prospeccion_prospectos?.pais ?? "",
-      correo: r.prospeccion_prospectos?.correo ?? "",
-    })),
+    envios: (envios ?? []).map((e) => {
+      // El embed de Supabase para una relación a-uno lo tipa como arreglo
+      // (no puede distinguirlo sin un tipo de base de datos generado) pero
+      // en runtime es un solo objeto — de ahí el `[0]` en vez de acceder
+      // directo a la propiedad.
+      const p = Array.isArray(e.prospeccion_prospectos)
+        ? e.prospeccion_prospectos[0]
+        : e.prospeccion_prospectos;
+      return {
+        id: e.id,
+        paso: e.paso,
+        asunto: e.asunto,
+        enviado_en: e.enviado_en,
+        nombre: p?.nombre ?? "",
+        pais: p?.pais ?? "",
+        nicho: p?.nicho ?? "",
+        correo: p?.correo ?? "",
+      };
+    }),
+    respuestas: (respuestas ?? []).map((r) => {
+      const p = Array.isArray(r.prospeccion_prospectos)
+        ? r.prospeccion_prospectos[0]
+        : r.prospeccion_prospectos;
+      return {
+        id: r.id,
+        clasificacion: r.clasificacion,
+        resumen: r.resumen,
+        recibido_en: r.recibido_en,
+        nombre: p?.nombre ?? "",
+        pais: p?.pais ?? "",
+        correo: p?.correo ?? "",
+      };
+    }),
   });
 }
