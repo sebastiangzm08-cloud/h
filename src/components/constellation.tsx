@@ -1,28 +1,27 @@
-import { cn } from "@/lib/utils";
+/* La animación arranca en el nodo grande del centro (15,9) y de ahí salen las
+   tres líneas hacia afuera, a la vez y a velocidad constante, así que llegan
+   una tras otra según su distancia: derecha → abajo derecha → abajo izquierda.
+   Cada nodo del extremo se enciende poco antes de que llegue su línea. Todo
+   dura ~1,1 s y se ve UNA vez. */
+const SEG_POR_UNIDAD = 0.0267; // segundos por unidad de largo del trazo
+const SALE_EN = 0.18; // el nodo central ya está creciendo cuando salen las líneas
+const EASE_LINEA = "cubic-bezier(0.4, 0, 0.2, 1)";
 
-/** Vértices de la estrella en el orden en que la traza el path (pentagrama:
-    un pentágono conectando cada segundo vértice, como se dibuja una estrella
-    de un solo trazo). El índice es el orden de llegada, usado para escalonar
-    la animación de construcción de los nodos. */
-const puntos = [
-  { x: 16, y: 3, orden: 0 },
-  { x: 23.6, y: 26.5, orden: 1 },
-  { x: 3.6, y: 12, orden: 2 },
-  { x: 28.4, y: 12, orden: 3 },
-  { x: 8.4, y: 26.5, orden: 4 },
-];
-
-const DURACION_TRAZO = 1.1;
+const RAMAS = [
+  { d: "M15 9L26 13", largo: 11.7, nodo: { cx: 26, cy: 13, r: 1.75 } },
+  { d: "M15 9L21 22", largo: 14.32, nodo: { cx: 21, cy: 22, r: 1.75 } },
+  { d: "M15 9L6 24", largo: 17.49, nodo: { cx: 6, cy: 24, r: 2 } },
+] as const;
 
 /**
- * Motivo gráfico de marca: una estrella de cinco puntas dibujada como
- * constelación (pentagrama de un solo trazo, con un nodo en cada punta).
- * Reutilizado como logo, favicon e imágenes de preview. Puramente
- * decorativo: aria-hidden.
+ * Motivo gráfico de marca: nodos conectados por líneas finas — un nodo central
+ * con tres líneas hacia otros tres nodos. Reutilizado como logo, favicon,
+ * textura de fondo y diagramas de flujo de producto. Puramente decorativo:
+ * aria-hidden.
  *
- * `animate`: la dibuja de un trazo y va "prendiendo" cada punta en el orden
- * en que la línea la alcanza — pensado para un momento puntual (el logo al
- * cargar la página, la ilustración del 404), no para verse en bucle.
+ * `animate`: la dibuja desde el nodo central hacia afuera. Pensado para un
+ * momento puntual (el logo al cargar la página, la ilustración del 404), no
+ * para verse en bucle. Sin `animate` es el dibujo estático de siempre.
  */
 export function ConstellationMark({
   className,
@@ -31,38 +30,49 @@ export function ConstellationMark({
   className?: string;
   animate?: boolean;
 }) {
+  if (!animate) {
+    return (
+      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true" className={className}>
+        <path d="M6 24L15 9L26 13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        <path d="M15 9L21 22" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        <circle cx="6" cy="24" r="2" fill="currentColor" />
+        <circle cx="15" cy="9" r="2.25" fill="currentColor" />
+        <circle cx="26" cy="13" r="1.75" fill="currentColor" />
+        <circle cx="21" cy="22" r="1.75" fill="currentColor" />
+      </svg>
+    );
+  }
+
   return (
-    <svg
-      viewBox="0 0 32 32"
-      fill="none"
-      aria-hidden="true"
-      className={className}
-    >
-      <path
-        d="M16 3L23.6 26.5L3.6 12L28.4 12L8.4 26.5Z"
-        stroke="currentColor"
-        strokeWidth="2.1"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        pathLength={100}
-        className={cn(animate && "trazo-construye")}
-        style={
-          animate ? { animationDuration: `${DURACION_TRAZO}s` } : undefined
-        }
-      />
-      {puntos.map((p) => (
+    <svg viewBox="0 0 32 32" fill="none" aria-hidden="true" className={className}>
+      {RAMAS.map((r) => (
+        <path
+          key={r.d}
+          d={r.d}
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+          pathLength={100}
+          className="trazo-construye"
+          style={{
+            animationDuration: `${(r.largo * SEG_POR_UNIDAD).toFixed(3)}s`,
+            animationDelay: `${SALE_EN}s`,
+            animationTimingFunction: EASE_LINEA,
+          }}
+        />
+      ))}
+      <circle cx="15" cy="9" r="2.25" fill="currentColor" className="punto-construye" />
+      {RAMAS.map((r) => (
         <circle
-          key={p.orden}
-          cx={p.x}
-          cy={p.y}
-          r="2.5"
+          key={r.d}
+          cx={r.nodo.cx}
+          cy={r.nodo.cy}
+          r={r.nodo.r}
           fill="currentColor"
-          className={cn(animate && "punto-construye")}
-          style={
-            animate
-              ? { animationDelay: `${(p.orden / puntos.length) * DURACION_TRAZO}s` }
-              : undefined
-          }
+          className="punto-construye"
+          style={{
+            animationDelay: `${(SALE_EN + r.largo * SEG_POR_UNIDAD * 0.85).toFixed(3)}s`,
+          }}
         />
       ))}
     </svg>
