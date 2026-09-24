@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { PanelShell } from "@/components/panel/shell";
+import { PanelShell, type PlanTarjeta, type ModulosCliente } from "@/components/panel/shell";
 import { Icono } from "@/components/panel/iconos";
 import { SonidoEscalamiento } from "@/components/panel/sonido-escalamiento";
-import { getAsignacion, getCliente, getContadoresCliente, getPerfil } from "@/lib/panel/datos";
+import { getCliente, getPerfil } from "@/lib/panel/datos";
 import { getContadoresAdmin } from "@/lib/panel/admin";
+import { getDatosShellCliente } from "@/lib/panel/shell-datos";
 
 /* El panel NUNCA se indexa: es área con sesión. */
 export const metadata: Metadata = {
@@ -22,11 +23,6 @@ export default async function PanelLayout({
   /* Los datos de identidad se piden una sola vez acá y bajan por props.
      Ninguna pantalla vuelve a preguntar quién es el usuario. */
   const [perfil, cliente] = await Promise.all([getPerfil(), getCliente()]);
-  /* "Tu negocio" (el formulario de posts) y su aviso de onboarding solo le
-     competen a quien tiene Redes sociales — ver el porqué en
-     `panel/perfil/page.tsx`. */
-  const redes = perfil.rol === "cliente" ? await getAsignacion("redes-sociales") : null;
-  const tieneRedes = Boolean(redes);
 
   /* Portón real de la sesión: acá (Node) `getPerfil()` valida el token
      contra Supabase sin rotarlo. El proxy sólo hace un chequeo local. */
@@ -53,8 +49,13 @@ export default async function PanelLayout({
   }
 
   /* Contadores reales para las pastillas de la barra y la campana. Se piden
-     según el rol; van por href para que el shell no tenga que saber nada. */
-  const contadores: Record<string, number> = {};
+     según el rol; van por href para que el shell no tenga que saber nada.
+     Del cliente sale también qué tiene contratado (decide el menú: "Tu
+     negocio" y su aviso de onboarding solo le competen a quien tiene Redes
+     sociales — ver el porqué en `panel/perfil/page.tsx`) y su plan. */
+  let contadores: Record<string, number> = {};
+  let modulos: ModulosCliente | undefined;
+  let planTarjeta: PlanTarjeta | undefined;
   if (perfil.rol === "admin") {
     const c = await getContadoresAdmin();
     contadores["/panel/admin/clientes"] = c.clientes;
@@ -62,9 +63,10 @@ export default async function PanelLayout({
     contadores["/panel/admin/ejecuciones"] = c.erroresHoy;
     contadores["/panel/admin/pagos"] = c.pagosVencidos;
   } else {
-    const c = await getContadoresCliente(perfil.clienteId);
-    contadores["/panel/pendientes"] = c.pendientes;
-    contadores["/panel/automatizaciones"] = c.automatizaciones;
+    const datos = await getDatosShellCliente(perfil.clienteId, cliente);
+    contadores = datos.contadores;
+    modulos = datos.modulos;
+    planTarjeta = datos.plan;
   }
 
   /* Bandas de aviso, por prioridad:
@@ -88,7 +90,7 @@ export default async function PanelLayout({
         Ver facturación
       </Link>
     </div>
-  ) : perfil.rol === "cliente" && tieneRedes && !cliente.onboardingCompleto ? (
+  ) : perfil.rol === "cliente" && modulos?.redes && !cliente.onboardingCompleto ? (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12.5px]">
       <span className="inline-flex items-center gap-2 text-ink-soft">
         <Icono nombre="negocio" className="h-3.5 w-3.5 text-ink-mute" />
@@ -106,10 +108,12 @@ export default async function PanelLayout({
   return (
     <PanelShell
       nombre={perfil.rol === "admin" ? perfil.nombre : cliente.nombreNegocio}
-      subtitulo={perfil.rol === "admin" ? "Administración" : `Plan ${cliente.plan}`}
+      persona={perfil.nombre}
+      subtitulo={perfil.rol === "admin" ? "Administración" : cliente.nombreNegocio}
       aviso={aviso}
       contadores={contadores}
-      tieneRedes={tieneRedes}
+      modulos={modulos}
+      plan={planTarjeta}
     >
       {perfil.rol === "cliente" ? <SonidoEscalamiento clienteId={cliente.id} /> : null}
       {children}

@@ -64,7 +64,7 @@ export default async function ConversacionesPage({
     clave === "todas" ? todas.length : todas.filter((x) => x.estado === clave).length;
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="flex flex-none flex-wrap items-center gap-2.5 border-b border-line bg-surface px-4 py-3">
         {FILTROS.map((x) => {
           const n = cuenta(x.clave);
@@ -92,7 +92,7 @@ export default async function ConversacionesPage({
       </div>
 
       {/* min-h-0 es lo que hace que esta fila SÍ pueda encogerse dentro del
-          h-dvh de arriba — sin esto, cada columna crece con su contenido y
+          contenedor de arriba (ocupa el alto que deja la barra superior) — sin esto, cada columna crece con su contenido y
           termina estirando la página entera en vez de scrollear por dentro,
           como pasaba antes. */}
       <div className="grid min-h-0 flex-1 md:grid-cols-[300px_1fr] xl:grid-cols-[300px_1fr_290px]">

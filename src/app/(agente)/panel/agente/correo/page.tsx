@@ -61,7 +61,7 @@ export default async function CorreoPage({
     clave === "todas" ? todas.length : todas.filter((x) => x.estado === clave).length;
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="flex-none border-b border-line bg-surface px-4 pt-3">
         <BotonCorreoNuevo />
       </div>

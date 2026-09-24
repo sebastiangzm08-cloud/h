@@ -36,7 +36,7 @@ export default async function ContactosPage() {
   }
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* Cabecera + recordatorios: fijos. Nunca crecen sin límite porque no
           hay decenas de recordatorios pendientes a la vez en la práctica —
           lo que sí crece sin límite es la lista de contactos de abajo, y esa

@@ -192,7 +192,7 @@ export function LinkReiniciarTour({ id, texto = "Ver el recorrido" }: { id: stri
         localStorage.removeItem(claveTour(id));
         window.dispatchEvent(new CustomEvent("hoshizora-tour-reiniciar", { detail: { id } }));
       }}
-      className="text-[11.5px] text-ink-faint underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink-mute"
+      className="-my-2 py-2 text-[12.5px] text-ink-faint underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink-mute lg:-my-0.5 lg:py-0.5 lg:text-[11.5px]"
     >
       {texto}
     </button>

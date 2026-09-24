@@ -1109,6 +1109,323 @@ export async function getEmbudoSemana(): Promise<EmbudoSemana> {
 }
 
 /* -------------------------------------------------------------------------
+   Inicio del cliente — lo que se ve de un vistazo (Fase 1 del rediseño).
+
+   TODO son cuentas EXACTAS (`count` de Supabase, sin traer filas), a
+   propósito: "conversaciones distintas por semana" no se puede contar bien
+   sin traer todos los mensajes (y PostgREST corta a 1.000 filas), y una
+   comparación contra la semana anterior con un número aproximado sería
+   mentirle al dueño. Por eso los KPIs son mensajes, citas y contactos, no
+   "conversaciones".
+
+   Costa Rica no tiene horario de verano: UTC-6 fijo, igual que n8n.
+   ------------------------------------------------------------------------- */
+const DESFASE_CR_MS = 6 * 3_600_000;
+const DIA_MS = 86_400_000;
+
+/** "2026-09-23" del día de Costa Rica al que pertenece ese instante. */
+function diaCR(ms: number) {
+  return new Date(ms - DESFASE_CR_MS).toISOString().slice(0, 10);
+}
+
+export type KpiSemana = { actual: number; anterior: number };
+
+export type KpisInicio = {
+  mensajesRecibidos: KpiSemana;
+  respuestasAgente: KpiSemana;
+  citasAgendadas: KpiSemana;
+  contactosNuevos: KpiSemana;
+  /** Conversaciones donde el agente se frenó y espera a una persona. */
+  esperando: number;
+};
+
+const EJEMPLO_KPIS: KpisInicio = {
+  mensajesRecibidos: { actual: 342, anterior: 289 },
+  respuestasAgente: { actual: 278, anterior: 224 },
+  citasAgendadas: { actual: 48, anterior: 36 },
+  contactosNuevos: { actual: 26, anterior: 18 },
+  esperando: 2,
+};
+
+export async function getKpisInicio(): Promise<KpisInicio> {
+  if (await enModoEjemplo()) return EJEMPLO_KPIS;
+
+  const id = await clienteId();
+  const vacio: KpiSemana = { actual: 0, anterior: 0 };
+  if (!id) {
+    return {
+      mensajesRecibidos: vacio,
+      respuestasAgente: vacio,
+      citasAgendadas: vacio,
+      contactosNuevos: vacio,
+      esperando: 0,
+    };
+  }
+
+  const sb = await supabaseServidor();
+  const ahora = Date.now();
+  const t7 = new Date(ahora - 7 * DIA_MS).toISOString();
+  const t14 = new Date(ahora - 14 * DIA_MS).toISOString();
+
+  /* Una semana = [desde, hasta). La actual no lleva tope superior. */
+  const cuentaMensajes = (autor: "contacto" | "agente", desde: string, hasta?: string) => {
+    let q = sb
+      .from("wa_mensajes")
+      .select("id", { count: "exact", head: true })
+      .eq("cliente_id", id)
+      .eq("autor", autor)
+      .gte("creado_en", desde);
+    if (hasta) q = q.lt("creado_en", hasta);
+    return q;
+  };
+  const cuentaFilas = (tabla: "wa_citas" | "wa_contactos", columna: string, desde: string, hasta?: string) => {
+    let q = sb
+      .from(tabla)
+      .select("id", { count: "exact", head: true })
+      .eq("cliente_id", id)
+      .gte(columna, desde);
+    if (hasta) q = q.lt(columna, hasta);
+    return q;
+  };
+
+  const [rc, rp, ac, ap, cc, cp, nc, np, esp] = await Promise.all([
+    cuentaMensajes("contacto", t7),
+    cuentaMensajes("contacto", t14, t7),
+    cuentaMensajes("agente", t7),
+    cuentaMensajes("agente", t14, t7),
+    cuentaFilas("wa_citas", "creada_en", t7),
+    cuentaFilas("wa_citas", "creada_en", t14, t7),
+    cuentaFilas("wa_contactos", "creado_en", t7),
+    cuentaFilas("wa_contactos", "creado_en", t14, t7),
+    sb
+      .from("wa_conversaciones")
+      .select("id", { count: "exact", head: true })
+      .eq("cliente_id", id)
+      .eq("estado", "espera"),
+  ]);
+
+  return {
+    mensajesRecibidos: { actual: rc.count ?? 0, anterior: rp.count ?? 0 },
+    respuestasAgente: { actual: ac.count ?? 0, anterior: ap.count ?? 0 },
+    citasAgendadas: { actual: cc.count ?? 0, anterior: cp.count ?? 0 },
+    contactosNuevos: { actual: nc.count ?? 0, anterior: np.count ?? 0 },
+    esperando: esp.count ?? 0,
+  };
+}
+
+/**
+ * Números de las pastillas de la barra lateral. Solo CUENTAN (`head: true`):
+ * antes el layout traía las listas enteras de conversaciones, contactos y
+ * citas en CADA navegación nada más para leerles el `.length`.
+ * Son las tres cosas que le tocan a una persona; el resto no lleva número.
+ */
+export type ContadoresAgente = {
+  esperando: number;
+  esperandoCorreo: number;
+  correcciones: number;
+};
+
+export async function getContadoresAgente(): Promise<ContadoresAgente> {
+  if (await enModoEjemplo()) {
+    return {
+      esperando: EJEMPLO_CONVERSACIONES.filter((c) => c.estado === "espera").length,
+      esperandoCorreo: 0,
+      correcciones: EJEMPLO_CORRECCIONES.length,
+    };
+  }
+
+  const id = await clienteId();
+  if (!id) return { esperando: 0, esperandoCorreo: 0, correcciones: 0 };
+
+  const sb = await supabaseServidor();
+  const [wa, correo, correcciones] = await Promise.all([
+    sb
+      .from("wa_conversaciones")
+      .select("id", { count: "exact", head: true })
+      .eq("cliente_id", id)
+      .eq("estado", "espera"),
+    sb
+      .from("correo_conversaciones")
+      .select("id", { count: "exact", head: true })
+      .eq("cliente_id", id)
+      .eq("estado", "espera"),
+    sb
+      .from("wa_correcciones")
+      .select("id", { count: "exact", head: true })
+      .eq("cliente_id", id)
+      .eq("estado", "pendiente"),
+  ]);
+
+  return {
+    esperando: wa.count ?? 0,
+    esperandoCorreo: correo.count ?? 0,
+    correcciones: correcciones.count ?? 0,
+  };
+}
+
+export type DiaActividad = {
+  /** "2026-09-23", día de Costa Rica. */
+  fecha: string;
+  recibidos: number;
+  respuestasAgente: number;
+};
+
+export type ActividadWhatsapp = {
+  dias: DiaActividad[];
+  /** `true` si Supabase cortó en el tope de filas: los días más viejos
+      podrían estar incompletos. Se avisa en pantalla en vez de callarlo. */
+  incompleto: boolean;
+};
+
+const TOPE_FILAS_ACTIVIDAD = 1000;
+
+export async function getActividadWhatsapp(dias: 7 | 14 | 30): Promise<ActividadWhatsapp> {
+  const ahora = Date.now();
+  const claves: string[] = [];
+  for (let i = dias - 1; i >= 0; i -= 1) claves.push(diaCR(ahora - i * DIA_MS));
+
+  const vacios = (): DiaActividad[] =>
+    claves.map((fecha) => ({ fecha, recibidos: 0, respuestasAgente: 0 }));
+
+  if (await enModoEjemplo()) {
+    /* Forma de semana laboral: baja el fin de semana. Solo para el modo
+       ejemplo (tablas todavía no creadas), nunca con datos reales. */
+    const base = [46, 61, 58, 72, 79, 33, 24];
+    return {
+      dias: claves.map((fecha, i) => {
+        const recibidos = base[i % base.length] + (i % 3) * 3;
+        return { fecha, recibidos, respuestasAgente: Math.round(recibidos * 0.82) };
+      }),
+      incompleto: false,
+    };
+  }
+
+  const id = await clienteId();
+  if (!id) return { dias: vacios(), incompleto: false };
+
+  /* El primer día en hora de Costa Rica empieza a las 06:00 UTC. */
+  const desde = `${claves[0]}T06:00:00.000Z`;
+  const sb = await supabaseServidor();
+  const { data, error } = await sb
+    .from("wa_mensajes")
+    .select("autor, creado_en")
+    .eq("cliente_id", id)
+    .in("autor", ["contacto", "agente"])
+    .gte("creado_en", desde)
+    .order("creado_en", { ascending: false })
+    .limit(TOPE_FILAS_ACTIVIDAD);
+
+  if (error || !data) return { dias: vacios(), incompleto: false };
+
+  const porDia = new Map(vacios().map((d) => [d.fecha, d]));
+  for (const f of data as { autor: string; creado_en: string }[]) {
+    const dia = porDia.get(diaCR(new Date(f.creado_en).getTime()));
+    if (!dia) continue;
+    if (f.autor === "contacto") dia.recibidos += 1;
+    else if (f.autor === "agente") dia.respuestasAgente += 1;
+  }
+
+  return { dias: [...porDia.values()], incompleto: data.length >= TOPE_FILAS_ACTIVIDAD };
+}
+
+export type MovimientoAgente = {
+  id: string;
+  cuandoIso: string;
+  tipo: "cita" | "contacto" | "espera";
+  titulo: string;
+  detalle: string;
+};
+
+/**
+ * Lo último que pasó en el negocio, sacado de datos reales: citas nuevas,
+ * contactos nuevos y conversaciones que esperan a una persona. Se mezclan y
+ * se ordenan por hora.
+ */
+export async function getMovimientosAgente(limite = 6): Promise<MovimientoAgente[]> {
+  if (await enModoEjemplo()) {
+    const ejemplo: MovimientoAgente[] = [
+      { id: "ej-1", cuandoIso: haceMin(5), tipo: "cita", titulo: "Cita agendada", detalle: "Limpieza dental · María Jiménez" },
+      { id: "ej-2", cuandoIso: haceMin(12), tipo: "espera", titulo: "Necesita a una persona", detalle: "Rodrigo Solís · pidió el precio de un puente" },
+      { id: "ej-3", cuandoIso: haceMin(64), tipo: "contacto", titulo: "Contacto nuevo", detalle: "Andrea Vargas" },
+      { id: "ej-4", cuandoIso: haceMin(130), tipo: "cita", titulo: "Cita agendada", detalle: "Blanqueamiento · Kimberly Mora" },
+    ];
+    return ejemplo.slice(0, limite);
+  }
+
+  const id = await clienteId();
+  if (!id) return [];
+
+  const sb = await supabaseServidor();
+  const [citas, contactos, espera] = await Promise.all([
+    sb
+      .from("wa_citas")
+      .select("id, creada_en, servicio, wa_contactos(nombre, telefono)")
+      .eq("cliente_id", id)
+      .order("creada_en", { ascending: false })
+      .limit(limite),
+    sb
+      .from("wa_contactos")
+      .select("id, creado_en, nombre, telefono")
+      .eq("cliente_id", id)
+      .order("creado_en", { ascending: false })
+      .limit(limite),
+    sb
+      .from("wa_conversaciones")
+      .select("id, ultimo_en, motivo_espera, wa_contactos(nombre, telefono)")
+      .eq("cliente_id", id)
+      .eq("estado", "espera")
+      .order("ultimo_en", { ascending: false })
+      .limit(limite),
+  ]);
+
+  type Contacto = { nombre: string | null; telefono: string } | null;
+  const nombreDe = (c: Contacto) => c?.nombre?.trim() || c?.telefono || "Sin nombre";
+
+  const salida: MovimientoAgente[] = [];
+  for (const f of (citas.data ?? []) as unknown as {
+    id: string;
+    creada_en: string;
+    servicio: string | null;
+    wa_contactos: Contacto;
+  }[]) {
+    salida.push({
+      id: `cita-${f.id}`,
+      cuandoIso: f.creada_en,
+      tipo: "cita",
+      titulo: "Cita agendada",
+      detalle: [f.servicio?.trim(), nombreDe(f.wa_contactos)].filter(Boolean).join(" · "),
+    });
+  }
+  for (const f of (contactos.data ?? []) as { id: string; creado_en: string; nombre: string | null; telefono: string }[]) {
+    salida.push({
+      id: `contacto-${f.id}`,
+      cuandoIso: f.creado_en,
+      tipo: "contacto",
+      titulo: "Contacto nuevo",
+      detalle: nombreDe({ nombre: f.nombre, telefono: f.telefono }),
+    });
+  }
+  for (const f of (espera.data ?? []) as unknown as {
+    id: string;
+    ultimo_en: string;
+    motivo_espera: string | null;
+    wa_contactos: Contacto;
+  }[]) {
+    salida.push({
+      id: `espera-${f.id}`,
+      cuandoIso: f.ultimo_en,
+      tipo: "espera",
+      titulo: "Necesita a una persona",
+      detalle: [nombreDe(f.wa_contactos), f.motivo_espera?.trim()].filter(Boolean).join(" · "),
+    });
+  }
+
+  return salida
+    .sort((a, b) => new Date(b.cuandoIso).getTime() - new Date(a.cuandoIso).getTime())
+    .slice(0, limite);
+}
+
+/* -------------------------------------------------------------------------
    Formato — vive acá para que todas las pantallas escriban la hora igual.
    ------------------------------------------------------------------------- */
 

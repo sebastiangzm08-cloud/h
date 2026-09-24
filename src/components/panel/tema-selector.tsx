@@ -50,7 +50,7 @@ export function TemaSelector() {
           onClick={() => elegir(o.valor)}
           title={o.etiqueta}
           className={cn(
-            "grid h-[26px] w-[26px] place-items-center rounded-[7px] transition-colors",
+            "grid h-10 w-10 place-items-center rounded-[8px] transition-colors lg:h-[26px] lg:w-[26px] lg:rounded-[7px]",
             tema === o.valor
               ? "bg-surface-3 text-ink shadow-[inset_0_0_0_1px_rgba(255,255,255,0.11)]"
               : "text-ink-faint hover:text-ink-mute"

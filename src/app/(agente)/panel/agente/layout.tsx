@@ -1,15 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AgenteBarra } from "@/components/panel/agente-barra";
+import { PanelShell } from "@/components/panel/shell";
 import { SonidoEscalamiento } from "@/components/panel/sonido-escalamiento";
-import { getAsignacion, getCliente, getPerfil } from "@/lib/panel/datos";
-import {
-  getContactos,
-  getCitas,
-  getConversaciones,
-  getConversacionesCorreo,
-  getCorrecciones,
-} from "@/lib/panel/agente";
+import { getCliente, getPerfil } from "@/lib/panel/datos";
+import { getDatosShellCliente } from "@/lib/panel/shell-datos";
 
 export const metadata: Metadata = {
   title: "Agente de WhatsApp · Hoshizora",
@@ -19,12 +13,18 @@ export const metadata: Metadata = {
 /* ==========================================================================
    Armazón del entorno del agente.
 
+   Desde el rediseño (Fase 1, 2026-09-23) usa la MISMA barra que el resto del
+   panel (`PanelShell`): el Agente ya no "cambia" de barra al entrar. El
+   armazón detecta por la URL que está en `/panel/agente/*` y pasa a modo
+   "aplicación" (la ventana no scrollea, `<main>` ocupa el alto que queda y
+   cada pantalla pone sus márgenes), que es lo que necesitan Conversaciones,
+   Contactos y Correo.
+
    POR QUÉ VIVE EN SU PROPIO GRUPO DE RUTAS `(agente)` Y NO EN `(panel)`:
-   el Agente no es una pantalla más, es un entorno con barra lateral propia.
-   Los layouts de Next se ANIDAN, nunca se reemplazan — si estas rutas
-   colgaran de `(panel)`, el `PanelShell` seguiría dibujando su barra y
-   quedarían dos, una al lado de la otra. Un grupo aparte es la única forma
-   limpia de sustituir el armazón.
+   quedó así de cuando tenía barra propia. Los layouts de Next se ANIDAN,
+   nunca se reemplazan, y mover las 11 pantallas a `(panel)` cambiaría
+   demasiado de una vez. Los dos grupos dibujan el mismo `PanelShell` con los
+   mismos datos (`getDatosShellCliente`), así que el menú es idéntico.
 
    (Se intentó antes saltarse el shell leyendo `x-pathname` en el layout de
    `(panel)`. No sirve: ese header lo pone `proxy.ts` en la RESPUESTA, y
@@ -49,17 +49,7 @@ export default async function AgenteLayout({
      Misma regla que en `(panel)/layout.tsx`. */
   if (perfil.rol === "admin") redirect("/panel/admin");
 
-  const asignacion = await getAsignacion("agente-whatsapp");
-  if (!asignacion) redirect("/panel/automatizaciones/agente-whatsapp");
-
-  const [cliente, conversaciones, conversacionesCorreo, contactos, citas, correcciones] = await Promise.all([
-    getCliente(),
-    getConversaciones(),
-    getConversacionesCorreo(),
-    getContactos(),
-    getCitas(),
-    getCorrecciones(),
-  ]);
+  const cliente = await getCliente();
 
   /* Servicio suspendido = el agente NO está contestando. Mostrarle igual el
      entorno lleno de datos sería mentirle: se lo manda al panel, donde la
@@ -68,30 +58,20 @@ export default async function AgenteLayout({
     redirect("/panel");
   }
 
+  const datos = await getDatosShellCliente(perfil.clienteId, cliente);
+  if (!datos.agente) redirect("/panel/automatizaciones/agente-whatsapp");
+
   return (
-    <div
-      className="panel-scope flex min-h-dvh flex-col bg-paper text-ink-soft md:flex-row"
-      // Mismo motivo que en `shell.tsx`: el script del layout raíz aplica
-      // `data-tema` antes de hidratar, según lo que ya se había elegido.
-      suppressHydrationWarning
+    <PanelShell
+      nombre={cliente.nombreNegocio}
+      persona={perfil.nombre}
+      subtitulo={cliente.nombreNegocio}
+      contadores={datos.contadores}
+      modulos={datos.modulos}
+      plan={datos.plan}
     >
-      <AgenteBarra
-        telefono={cliente.whatsapp}
-        activo={asignacion.estado === "activa"}
-        esperando={conversaciones.filter((c) => c.estado === "espera").length}
-        esperandoCorreo={conversacionesCorreo.filter((c) => c.estado === "espera").length}
-        contactos={contactos.length}
-        citas={citas.length}
-        correcciones={correcciones.length}
-      />
       <SonidoEscalamiento clienteId={cliente.id} />
-      {/* `<main>` es el ÚNICO que scrollea en escritorio — mismo trato que
-          la barra lateral (`md:h-dvh md:overflow-y-auto`), para que TODAS
-          las pantallas (las cortas como Qué sabe y las que ya manejan su
-          propio scroll interno como Conversaciones) usen el mismo scrollbar
-          fino, en vez de que unas lo tengan y otras dejen que la página
-          entera scrollee con la barra nativa y gruesa del navegador. */}
-      <main className="scroll-fino min-w-0 flex-1 md:h-dvh md:overflow-y-auto">{children}</main>
-    </div>
+      {children}
+    </PanelShell>
   );
 }

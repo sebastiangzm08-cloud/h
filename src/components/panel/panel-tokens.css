@@ -1,0 +1,57 @@
+/* ==========================================================================
+   Toques de color del panel (Fase 1 del rediseño, 2026-09-23).
+
+   Vive en su propio archivo, importado desde `shell.tsx`, para no tocar
+   `globals.css` (que comparten el sitio y el resto del panel).
+
+   POR QUÉ HAY VIOLETA AHORA: el 2026-09-06 el panel se aprobó "casi negro y
+   neutro, sin el violeta del sitio". Las imágenes de referencia que mandó
+   Sebastian para el rediseño (2026-09-23) SÍ llevan el violeta de la marca en
+   lo activo y lo principal: el ítem actual de la barra, las barras de la
+   gráfica y los botones de acción. Se aplica SOLO ahí, con estas variables:
+   si algún día se prefiere volver a neutro, se cambian estas cuatro líneas y
+   todo el panel obedece.
+   ========================================================================== */
+.panel-scope {
+  --panel-acento: #7c5cff;
+  --panel-acento-texto: #a68bff;
+  --panel-acento-fondo: rgba(124, 92, 255, 0.14);
+  --panel-acento-borde: rgba(124, 92, 255, 0.34);
+}
+
+.panel-scope[data-tema="claro"] {
+  --panel-acento-texto: #5b3fd6;
+  --panel-acento-fondo: rgba(124, 92, 255, 0.1);
+  --panel-acento-borde: rgba(124, 92, 255, 0.3);
+}
+
+@media (prefers-color-scheme: light) {
+  .panel-scope[data-tema="automatico"] {
+    --panel-acento-texto: #5b3fd6;
+    --panel-acento-fondo: rgba(124, 92, 255, 0.1);
+    --panel-acento-borde: rgba(124, 92, 255, 0.3);
+  }
+}
+
+/* Barras de la gráfica de actividad: crecen desde la base al cargar, una
+   tras otra. `transform` y no `height` para no provocar reflow. */
+@keyframes panel-barra-sube {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.panel-barra {
+  transform-origin: bottom;
+  animation: panel-barra-sube 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-barra {
+    animation: none;
+  }
+}

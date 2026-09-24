@@ -4,7 +4,7 @@
    Búsqueda del panel: salto rápido a cualquier sección. No busca dentro de
    los datos (todavía) — filtra los destinos del menú y te lleva ahí.
    ========================================================================== */
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Icono } from "@/components/panel/iconos";
 import { cn } from "@/lib/utils";
@@ -19,12 +19,40 @@ function normal(s: string) {
     .toLowerCase();
 }
 
-export function BuscadorPanel({ destinos }: { destinos: Destino[] }) {
+export function BuscadorPanel({
+  destinos,
+  placeholder = "Ir a una sección…",
+}: {
+  destinos: Destino[];
+  placeholder?: string;
+}) {
   const router = useRouter();
   const [texto, setTexto] = useState("");
   const [abierto, setAbierto] = useState(false);
   const [activo, setActivo] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  /* Ctrl+K / ⌘+K enfoca la búsqueda desde cualquier pantalla. La tecla que
+     se muestra depende del sistema: en el servidor no se sabe (queda vacía) y
+     en el navegador se lee con `useSyncExternalStore`, que es la forma de
+     leer algo externo sin dar un HTML de servidor distinto al del navegador. */
+  const atajo = useSyncExternalStore(
+    () => () => {},
+    () => (/mac|iphone|ipad/i.test(navigator.userAgent) ? "⌘K" : "Ctrl K"),
+    () => ""
+  );
+
+  useEffect(() => {
+    function alTeclear(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }
+    }
+    window.addEventListener("keydown", alTeclear);
+    return () => window.removeEventListener("keydown", alTeclear);
+  }, []);
 
   const resultados = useMemo(() => {
     const q = normal(texto.trim());
@@ -43,16 +71,17 @@ export function BuscadorPanel({ destinos }: { destinos: Destino[] }) {
   }
 
   return (
-    <div className="relative flex max-w-[400px] flex-1">
-      <div className="flex w-full items-center gap-2.5 rounded-full border border-line bg-surface-2 px-3 py-2 transition-colors duration-200 focus-within:border-line-strong">
+    <div className="relative flex min-w-0 max-w-[400px] flex-1">
+      <div className="flex w-full items-center gap-2.5 rounded-full border border-line bg-surface-2 px-3.5 py-3 transition-colors duration-200 focus-within:border-line-strong sm:px-3 sm:py-2">
         <Icono nombre="buscar" className="h-[15px] w-[15px] flex-none text-ink-faint" />
         <input
           ref={inputRef}
           type="search"
           value={texto}
-          placeholder="Ir a…  (facturación, conexiones, clientes)"
+          placeholder={placeholder}
           aria-label="Buscar en el panel"
-          className="min-w-0 flex-1 bg-transparent text-[13px] text-ink-soft outline-none placeholder:text-ink-faint"
+          aria-keyshortcuts="Control+K Meta+K"
+          className="min-w-0 flex-1 bg-transparent text-[16px] text-ink-soft outline-none placeholder:text-ink-faint sm:text-[13px]"
           onFocus={() => setAbierto(true)}
           onBlur={() => setTimeout(() => setAbierto(false), 120)}
           onChange={(e) => {
@@ -76,6 +105,11 @@ export function BuscadorPanel({ destinos }: { destinos: Destino[] }) {
             }
           }}
         />
+        {atajo ? (
+          <kbd className="hidden flex-none rounded-md border border-line-strong bg-surface-3 px-1.5 py-px font-mono text-[10px] text-ink-faint sm:block">
+            {atajo}
+          </kbd>
+        ) : null}
       </div>
 
       {abierto && resultados.length > 0 ? (

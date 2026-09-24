@@ -102,7 +102,7 @@ export function PrimerosPasos({
                 <Link
                   href={p.href}
                   className={cn(
-                    "mt-px shrink-0 rounded-full px-3 py-1 text-[11.5px] font-medium transition-colors",
+                    "mt-px shrink-0 rounded-full px-4 py-2.5 text-[12.5px] font-medium transition-colors sm:px-3 sm:py-1 sm:text-[11.5px]",
                     esSiguiente
                       ? "bg-ink text-paper hover:bg-ink-soft"
                       : "text-ink-mute hover:text-ink"
