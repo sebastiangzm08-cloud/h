@@ -110,7 +110,10 @@ export async function proxy(request: NextRequest) {
     if (!data?.user) {
       return conCookiesDe(respuesta, new URL("/acceso", request.url));
     }
-    if (!pathname.startsWith("/panel/admin")) {
+    // `/panel/salir` se salta esta regla: es la que cierra la sesión. Sin la
+    // excepción, el admin (que no está bajo `/panel/admin`) era rebotado a
+    // `/panel/admin` ANTES de llegar al `signOut`, y nunca podía salir.
+    if (!pathname.startsWith("/panel/admin") && pathname !== "/panel/salir") {
       // Solo se consulta el rol cuando hace falta decidir esto — no en
       // cada request al panel, para no sumar una consulta de más siempre.
       const { data: perfil } = await supabase

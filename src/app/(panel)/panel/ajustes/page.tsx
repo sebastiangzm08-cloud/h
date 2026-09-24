@@ -62,12 +62,16 @@ export default async function AjustesPage() {
         <p className="text-[13px] text-ink-faint">
           Cierra tu sesión acá. En otros dispositivos seguís dentro.
         </p>
-        <Link
-          href="/panel/salir"
-          className="mt-3.5 inline-flex h-10 items-center justify-center rounded-full border border-line-strong px-5 text-[13px] text-ink transition-colors hover:bg-surface-2"
-        >
-          Cerrar sesión
-        </Link>
+        {/* `<form method="post">`, no un `<Link>`: `/panel/salir` sólo acepta
+            POST, así que un enlace (GET) daba 405 y no cerraba nada. */}
+        <form action="/panel/salir" method="post">
+          <button
+            type="submit"
+            className="mt-3.5 inline-flex h-10 items-center justify-center rounded-full border border-line-strong px-5 text-[13px] text-ink transition-colors hover:bg-surface-2"
+          >
+            Cerrar sesión
+          </button>
+        </form>
       </Caja>
     </>
   );
