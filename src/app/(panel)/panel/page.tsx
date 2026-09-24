@@ -22,22 +22,26 @@ import {
   ConversacionesRecientes,
   EncabezadoBloque,
   GraficaWhatsapp,
-  Movimientos,
+  ImpactoDelMes,
+  LineaDelTiempo,
   ProximasCitas,
+  ResumenDeHoy,
   SelectorRango,
   TarjetaKpi,
-  pieDelta,
+  comparar,
 } from "@/components/panel/inicio";
 import { Icono } from "@/components/panel/iconos";
 import { PrimerosPasos } from "@/components/panel/primeros-pasos";
 import { TarjetaContratada, TarjetaSumar } from "@/components/panel/tarjeta-automatizacion";
 import { Caja, CajaHead, Chip, Medidor } from "@/components/panel/ui";
 import {
+  getActividadWhatsapp,
   getCitas,
   getConversaciones,
+  getImpactoMes,
   getKpisInicio,
-  getMovimientosAgente,
-  getActividadWhatsapp,
+  getLineaDelTiempo,
+  getResumenHoy,
 } from "@/lib/panel/agente";
 import { leerConfigAgente } from "@/lib/panel/agente-config";
 import {
@@ -91,8 +95,10 @@ export default async function InicioPanel({
           getKpisInicio(),
           getActividadWhatsapp(rango),
           getConversaciones(),
-          getMovimientosAgente(6),
+          getLineaDelTiempo(8),
           getCitas(),
+          getResumenHoy(),
+          getImpactoMes(),
         ])
       : null,
     Promise.all([getUsoDiario(), getUsoHoyPorAutomatizacion(), getMedidores(), getActividad(4)]),
@@ -101,12 +107,16 @@ export default async function InicioPanel({
   const kpis = datosAgente?.[0] ?? null;
   const actividadWa = datosAgente?.[1] ?? null;
   const conversaciones = (datosAgente?.[2] ?? []).slice(0, 5);
-  const movimientos = datosAgente?.[3] ?? [];
+  const linea = datosAgente?.[3] ?? [];
   const proximas = (datosAgente?.[4] ?? []).filter((c) => c.estado !== "cancelada").slice(0, 3);
+  const resumenHoy = datosAgente?.[5] ?? null;
+  const impacto = datosAgente?.[6] ?? null;
   const [uso, desglose, medidores, actividad] = datosGenericos;
   const totalHoy = desglose.reduce((suma, d) => suma + d.valor, 0);
 
   const primerNombre = perfil.nombre.split(" ")[0];
+  const fechaCorta = new Date().toLocaleDateString("es-CR", { weekday: "short", day: "numeric", month: "short", timeZone: "America/Costa_Rica" });
+  const mesActual = new Date().toLocaleDateString("es-CR", { month: "long", timeZone: "America/Costa_Rica" });
   const fecha = mayuscula(
     new Date().toLocaleDateString("es-CR", {
       weekday: "long",
@@ -244,53 +254,21 @@ export default async function InicioPanel({
       ) : null}
 
       {/* ---------- Cifras ---------- */}
-      {agente && kpis ? (
-        <section aria-label="Resumen de la semana" className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <TarjetaKpi
-            icono="mensajes"
-            etiqueta="Mensajes recibidos"
-            valor={kpis.mensajesRecibidos.actual}
-            pie={pieDelta(kpis.mensajesRecibidos.actual, kpis.mensajesRecibidos.anterior)}
-            href="/panel/agente/conversaciones"
-          />
-          <TarjetaKpi
-            icono="automatizaciones"
-            etiqueta="Respuestas del agente"
-            valor={kpis.respuestasAgente.actual}
-            pie={pieDelta(kpis.respuestasAgente.actual, kpis.respuestasAgente.anterior)}
-            href="/panel/agente/conversaciones"
-          />
-          <TarjetaKpi
-            icono="calendario"
-            etiqueta="Citas agendadas"
-            valor={kpis.citasAgendadas.actual}
-            pie={pieDelta(kpis.citasAgendadas.actual, kpis.citasAgendadas.anterior)}
-            href="/panel/agente/citas"
-          />
-          <TarjetaKpi
-            icono="clientes"
-            etiqueta="Contactos nuevos"
-            valor={kpis.contactosNuevos.actual}
-            pie={pieDelta(kpis.contactosNuevos.actual, kpis.contactosNuevos.anterior)}
-            href="/panel/agente/contactos"
-          />
-          <TarjetaKpi
-            icono="pendientes"
-            etiqueta="Esperan a una persona"
-            valor={kpis.esperando}
-            pie={
-              kpis.esperando > 0
-                ? { texto: "Necesitan tu respuesta", clase: "text-warn" }
-                : { texto: "Todo al día", clase: "text-ok" }
-            }
-            href="/panel/agente/conversaciones"
-            alerta={kpis.esperando > 0}
-            className="col-span-2 sm:col-span-1"
-          />
-          <p className="col-span-2 text-[11px] text-ink-faint sm:hidden">
-            Los porcentajes comparan con la semana anterior.
-          </p>
-        </section>
+      {agente && kpis && resumenHoy && impacto ? (
+        <>
+          <section aria-label="Resumen de tu negocio, hoy" className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <h2 className="text-[16px] font-semibold tracking-tight text-ink">Resumen de tu negocio</h2>
+              <span className="font-mono text-[11px] tracking-wide text-ink-faint uppercase">Hoy · {fechaCorta}</span>
+            </div>
+            <ResumenDeHoy hoy={resumenHoy} esperando={kpis.esperando} />
+            <p className="text-[11px] leading-snug text-ink-faint">
+              Cuenta a las personas distintas que escribieron hoy. En <b className="font-medium text-ink-mute">Oportunidades</b> entran
+              las que preguntaron el precio y todavía no tienen cita.
+            </p>
+          </section>
+          <ImpactoDelMes impacto={impacto} mes={mesActual} />
+        </>
       ) : (
         <section aria-label="Resumen" className="grid gap-3 sm:grid-cols-3">
           <TarjetaKpi
@@ -331,6 +309,27 @@ export default async function InicioPanel({
                 <SelectorRango rango={rango} />
               </EncabezadoBloque>
               <GraficaWhatsapp datos={actividadWa} rango={rango} />
+              {kpis ? (
+                <p className="mt-3 border-t border-line pt-3 text-[11.5px] leading-relaxed text-ink-mute">
+                  <span className="text-ink-faint">Últimos 7 días: </span>
+                  {[
+                    ["mensajes recibidos", kpis.mensajesRecibidos],
+                    ["respuestas del agente", kpis.respuestasAgente],
+                    ["citas", kpis.citasAgendadas],
+                    ["contactos nuevos", kpis.contactosNuevos],
+                  ].map(([nombre, k], i) => {
+                    const d = comparar((k as typeof kpis.mensajesRecibidos).actual, (k as typeof kpis.mensajesRecibidos).anterior);
+                    return (
+                      <span key={nombre as string}>
+                        {i > 0 ? " · " : ""}
+                        <b className="font-medium text-ink">{(k as typeof kpis.mensajesRecibidos).actual.toLocaleString("es-CR")}</b>{" "}
+                        {nombre as string}{" "}
+                        <span className={d.tono === "sube" ? "text-ok" : d.tono === "baja" ? "text-bad" : "text-ink-faint"}>({d.texto})</span>
+                      </span>
+                    );
+                  })}
+                </p>
+              ) : null}
             </Caja>
 
             <Caja>
@@ -341,8 +340,15 @@ export default async function InicioPanel({
 
           <div className="flex min-w-0 flex-col gap-[18px]">
             <Caja>
-              <EncabezadoBloque titulo="Últimas actividades" enlace={{ href: "/panel/agente", texto: "Resumen del agente" }} />
-              <Movimientos items={movimientos} />
+              <EncabezadoBloque titulo="La IA está trabajando" enlace={{ href: "/panel/agente", texto: "Resumen del agente" }}>
+                {agenteActivo ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-ok/15 px-2 py-0.5 font-mono text-[10px] tracking-wide text-ok uppercase">
+                    <span className="h-[5px] w-[5px] rounded-full bg-current" aria-hidden="true" />
+                    Activo
+                  </span>
+                ) : null}
+              </EncabezadoBloque>
+              <LineaDelTiempo eventos={linea} />
             </Caja>
 
             <Caja>

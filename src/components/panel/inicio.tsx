@@ -12,13 +12,17 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Icono, type NombreIcono } from "@/components/panel/iconos";
+import { colones } from "@/components/panel/ui";
 import type {
   ActividadWhatsapp,
   CitaAgente,
   ConversacionAgente,
+  EventoLinea,
+  ImpactoMes,
   MovimientoAgente,
+  ResumenHoy,
 } from "@/lib/panel/agente";
-import { fechaCorta, relativa } from "@/lib/panel/agente-formato";
+import { fechaCorta, hora, relativa } from "@/lib/panel/agente-formato";
 import { cn } from "@/lib/utils";
 
 /* -------------------------------------------------------------------------
@@ -441,5 +445,189 @@ export function ProximasCitas({ citas }: { citas: CitaAgente[] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/* -------------------------------------------------------------------------
+   Resumen de tu negocio · Hoy
+   ------------------------------------------------------------------------- */
+
+export function ResumenDeHoy({ hoy, esperando }: { hoy: ResumenHoy; esperando: number }) {
+  const pctIA = hoy.conversaciones > 0 ? Math.round((hoy.atendidasIA / hoy.conversaciones) * 100) : null;
+  return (
+    <div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
+        <TarjetaKpi
+          icono="mensajes"
+          etiqueta="Conversaciones"
+          valor={hoy.conversaciones}
+          pie={{ texto: "Personas que escribieron hoy" }}
+          href="/panel/agente/conversaciones"
+        />
+        <TarjetaKpi
+          icono="automatizaciones"
+          etiqueta="Atendidas por IA"
+          valor={hoy.atendidasIA}
+          pie={{
+            texto: pctIA === null ? "Sin conversaciones todavía" : `${pctIA}% sin que hicieras nada`,
+            clase: pctIA ? "text-ok" : undefined,
+          }}
+          href="/panel/agente/conversaciones"
+        />
+        <TarjetaKpi
+          icono="pendientes"
+          etiqueta="Pasadas a humano"
+          valor={hoy.pasadasHumano}
+          pie={
+            esperando > 0
+              ? { texto: `${esperando} esperan tu respuesta`, clase: "text-warn" }
+              : { texto: "Una persona intervino" }
+          }
+          href="/panel/agente/conversaciones"
+          alerta={esperando > 0}
+        />
+        <TarjetaKpi
+          icono="calendario"
+          etiqueta="Citas agendadas"
+          valor={hoy.citasAgendadas}
+          pie={{ texto: "Creadas hoy" }}
+          href="/panel/agente/citas"
+        />
+        <TarjetaKpi
+          icono="clientes"
+          etiqueta="Contactos nuevos"
+          valor={hoy.contactosNuevos}
+          pie={{ texto: "Escriben por primera vez" }}
+          href="/panel/agente/contactos"
+        />
+        <TarjetaKpi
+          icono="camion"
+          etiqueta="Oportunidades"
+          valor={hoy.oportunidades}
+          pie={{ texto: "Preguntaron el precio, sin cita" }}
+          href="/panel/agente/contactos"
+        />
+      </div>
+      {hoy.incompleto ? (
+        <p className="mt-2 text-[11px] text-warn">
+          Hoy hay más de 1.000 mensajes: las cifras pueden quedar un poco cortas.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------
+   Impacto de Hoshizora · este mes
+   ------------------------------------------------------------------------- */
+
+function formatoHoras(minutos: number) {
+  if (minutos < 60) return `${minutos} min`;
+  const h = minutos / 60;
+  return `${h.toLocaleString("es-CR", { maximumFractionDigits: 1 })} h`;
+}
+
+function DatoImpacto({ etiqueta, valor, nota }: { etiqueta: string; valor: string; nota?: string }) {
+  return (
+    <div className="min-w-0 rounded-xl border border-line bg-surface px-3.5 py-3">
+      <p className="text-[11.5px] leading-tight text-ink-mute">{etiqueta}</p>
+      <p className="mt-1.5 truncate text-[20px] leading-none font-semibold tracking-[-0.02em] text-ink tabular-nums">
+        {valor}
+      </p>
+      {nota ? <p className="mt-1.5 text-[11px] leading-snug text-ink-faint">{nota}</p> : null}
+    </div>
+  );
+}
+
+export function ImpactoDelMes({ impacto, mes }: { impacto: ImpactoMes; mes: string }) {
+  return (
+    <section
+      aria-label="Impacto de Hoshizora este mes"
+      className="rounded-2xl border border-line bg-surface-2 p-4 sm:p-[18px]"
+    >
+      <EncabezadoBloque titulo={`Impacto de Hoshizora · ${mes}`} />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
+        <DatoImpacto etiqueta="Respuestas del agente" valor={impacto.respuestasAgente.toLocaleString("es-CR")} />
+        <DatoImpacto
+          etiqueta="Tiempo ahorrado (estimado)"
+          valor={`≈ ${formatoHoras(impacto.minutosAhorrados)}`}
+          nota={`Calculado a ${String(impacto.minPorRespuesta).replace(".", ",")} min por respuesta`}
+        />
+        <DatoImpacto etiqueta="Citas agendadas" valor={impacto.citasAgendadas.toLocaleString("es-CR")} />
+        <DatoImpacto etiqueta="Contactos nuevos" valor={impacto.contactosCapturados.toLocaleString("es-CR")} />
+        <DatoImpacto
+          etiqueta="Ingreso de citas cumplidas"
+          valor={colones(impacto.ventasCumplidas)}
+          nota={
+            impacto.citasCumplidas > 0
+              ? `${impacto.citasCumplidas} ${impacto.citasCumplidas === 1 ? "cita cumplida" : "citas cumplidas"}`
+              : "Marcá las citas como cumplidas para verlo"
+          }
+        />
+        <DatoImpacto etiqueta="En agenda por cumplir" valor={colones(impacto.enAgenda)} nota="Citas confirmadas que vienen" />
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------
+   La IA está trabajando — línea de tiempo
+   ------------------------------------------------------------------------- */
+
+const ICONO_EVENTO: Record<EventoLinea["tipo"], NombreIcono> = {
+  escribio: "mensajes",
+  ia: "automatizaciones",
+  humano: "cuenta",
+  cita: "calendario",
+  espera: "pendientes",
+};
+
+const CLASE_EVENTO: Record<EventoLinea["tipo"], string> = {
+  escribio: "bg-surface-3 text-ink-mute",
+  ia: "bg-[var(--panel-acento-fondo)] text-[color:var(--panel-acento-texto)]",
+  humano: "bg-ok/15 text-ok",
+  cita: "bg-[var(--panel-acento-fondo)] text-[color:var(--panel-acento-texto)]",
+  espera: "bg-warn/15 text-warn",
+};
+
+const DIA_CR = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Costa_Rica" });
+
+/** La hora exacta si fue hoy; "hace 3 h" / "ayer" si es más viejo. */
+function cuando(iso: string) {
+  const fue = DIA_CR.format(new Date(iso));
+  return fue === DIA_CR.format(new Date()) ? hora(iso) : relativa(iso);
+}
+
+export function LineaDelTiempo({ eventos }: { eventos: EventoLinea[] }) {
+  if (eventos.length === 0) {
+    return (
+      <p className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-[12.5px] text-ink-faint">
+        Cuando alguien te escriba, acá vas a ver en vivo qué hace tu agente: quién escribió, qué contestó y qué citas
+        agendó.
+      </p>
+    );
+  }
+  return (
+    <ol className="relative flex flex-col">
+      {eventos.map((e, i) => (
+        <li key={e.id} className="relative flex gap-3 pb-4 last:pb-0">
+          {i < eventos.length - 1 ? (
+            <span className="absolute top-8 bottom-0 left-[15px] w-px bg-line" aria-hidden="true" />
+          ) : null}
+          <span className={cn("relative grid h-8 w-8 flex-none place-items-center rounded-full", CLASE_EVENTO[e.tipo])}>
+            <Icono nombre={ICONO_EVENTO[e.tipo]} className="h-[14px] w-[14px]" />
+          </span>
+          <span className="min-w-0 flex-1 pt-px">
+            <span className="flex items-baseline justify-between gap-2">
+              <span className="text-[13px] font-medium text-ink">{e.titulo}</span>
+              <time className="flex-none font-mono text-[10.5px] whitespace-nowrap text-ink-faint" dateTime={e.cuandoIso}>
+                {cuando(e.cuandoIso)}
+              </time>
+            </span>
+            <span className="block truncate text-[12px] text-ink-mute">{e.detalle}</span>
+          </span>
+        </li>
+      ))}
+    </ol>
   );
 }

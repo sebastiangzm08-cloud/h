@@ -1426,6 +1426,318 @@ export async function getMovimientosAgente(limite = 6): Promise<MovimientoAgente
 }
 
 /* -------------------------------------------------------------------------
+   "Resumen de tu negocio · Hoy", "Impacto" y "La IA está trabajando"
+   (Fase 1.5 del rediseño, 2026-09-24 — idea del chat de ChatGPT que Sebastian
+   quiso aplicar; ver `NOTAS-CHATGPT-DASHBOARD.md`).
+
+   Todo sale de datos reales. Las DEFINICIONES son parte del producto y están
+   a la vista en la pantalla, para que nadie las tome por lo que no son:
+   - Conversaciones = personas distintas que escribieron HOY.
+   - Atendidas por IA = de esas, las que el agente contestó y ninguna persona
+     tuvo que intervenir. Pasadas a humano = una persona escribió hoy, o la
+     conversación quedó esperando a una persona.
+   - Oportunidades = personas que hoy preguntaron precio y todavía no
+     agendaron (no tienen cita en los últimos 60 días). Sale del texto de los
+     mensajes (regex, gratis y determinístico), no de un dato que el
+     workflow marque: `wa_contactos.estado` nunca se llena así.
+   - Horas ahorradas = ESTIMACIÓN: respuestas del agente × MIN_POR_RESPUESTA.
+   - Ventas = suma del monto de las citas marcadas como cumplidas.
+   ------------------------------------------------------------------------- */
+const MIN_POR_RESPUESTA = 1.5;
+const TOPE_FILAS_DIA = 1000;
+
+/** "2026-09-24T06:00:00.000Z": el primer instante de ese día en Costa Rica. */
+function inicioDiaCR(ms: number) {
+  return `${diaCR(ms)}T06:00:00.000Z`;
+}
+function inicioMesCR(ms: number) {
+  return `${diaCR(ms).slice(0, 7)}-01T06:00:00.000Z`;
+}
+
+export type ResumenHoy = {
+  conversaciones: number;
+  atendidasIA: number;
+  pasadasHumano: number;
+  citasAgendadas: number;
+  contactosNuevos: number;
+  oportunidades: number;
+  /** `true` si Supabase cortó en el tope de filas: las cifras de hoy podrían quedar cortas. */
+  incompleto: boolean;
+};
+
+const EJEMPLO_RESUMEN_HOY: ResumenHoy = {
+  conversaciones: 34,
+  atendidasIA: 27,
+  pasadasHumano: 7,
+  citasAgendadas: 8,
+  contactosNuevos: 12,
+  oportunidades: 5,
+  incompleto: false,
+};
+
+export async function getResumenHoy(): Promise<ResumenHoy> {
+  if (await enModoEjemplo()) return EJEMPLO_RESUMEN_HOY;
+
+  const vacio: ResumenHoy = {
+    conversaciones: 0,
+    atendidasIA: 0,
+    pasadasHumano: 0,
+    citasAgendadas: 0,
+    contactosNuevos: 0,
+    oportunidades: 0,
+    incompleto: false,
+  };
+  const id = await clienteId();
+  if (!id) return vacio;
+
+  const sb = await supabaseServidor();
+  const ahora = Date.now();
+  const desde = inicioDiaCR(ahora);
+  const hace60 = new Date(ahora - 60 * DIA_MS).toISOString();
+
+  const [mensajes, conversaciones, citasHoy, contactosHoy, citasRecientes] = await Promise.all([
+    sb
+      .from("wa_mensajes")
+      .select("conversacion_id, autor, texto, transcripcion")
+      .eq("cliente_id", id)
+      .in("autor", ["contacto", "agente", "humano"])
+      .gte("creado_en", desde)
+      .order("creado_en", { ascending: false })
+      .limit(TOPE_FILAS_DIA),
+    sb
+      .from("wa_conversaciones")
+      .select("id, contacto_id, estado")
+      .eq("cliente_id", id)
+      .gte("ultimo_en", desde)
+      .limit(TOPE_FILAS_DIA),
+    sb.from("wa_citas").select("id", { count: "exact", head: true }).eq("cliente_id", id).gte("creada_en", desde),
+    sb.from("wa_contactos").select("id", { count: "exact", head: true }).eq("cliente_id", id).gte("creado_en", desde),
+    sb
+      .from("wa_citas")
+      .select("contacto_id")
+      .eq("cliente_id", id)
+      .neq("estado", "cancelada")
+      .gte("creada_en", hace60)
+      .limit(TOPE_FILAS_DIA),
+  ]);
+
+  type FilaMsg = { conversacion_id: string; autor: string; texto: string | null; transcripcion: string | null };
+  const filas = (mensajes.data ?? []) as FilaMsg[];
+  const porConversacion = new Map<string, { contacto: boolean; agente: boolean; humano: boolean; precio: boolean }>();
+  for (const f of filas) {
+    const c = porConversacion.get(f.conversacion_id) ?? { contacto: false, agente: false, humano: false, precio: false };
+    if (f.autor === "contacto") {
+      c.contacto = true;
+      if (REGEX_PREGUNTA_PRECIO.test(f.texto || f.transcripcion || "")) c.precio = true;
+    } else if (f.autor === "agente") c.agente = true;
+    else if (f.autor === "humano") c.humano = true;
+    porConversacion.set(f.conversacion_id, c);
+  }
+
+  const infoConv = new Map(
+    ((conversaciones.data ?? []) as { id: string; contacto_id: string; estado: string }[]).map((c) => [c.id, c])
+  );
+  const conCita = new Set(((citasRecientes.data ?? []) as { contacto_id: string }[]).map((c) => c.contacto_id));
+
+  let total = 0;
+  let ia = 0;
+  let humano = 0;
+  let oportunidades = 0;
+  for (const [convId, c] of porConversacion) {
+    if (!c.contacto) continue; // solo cuentan las personas que ESCRIBIERON hoy
+    total += 1;
+    const info = infoConv.get(convId);
+    const pasoAHumano = c.humano || info?.estado === "espera" || info?.estado === "humano";
+    if (pasoAHumano) humano += 1;
+    else if (c.agente) ia += 1;
+    if (c.precio && info && !conCita.has(info.contacto_id)) oportunidades += 1;
+  }
+
+  return {
+    conversaciones: total,
+    atendidasIA: ia,
+    pasadasHumano: humano,
+    citasAgendadas: citasHoy.count ?? 0,
+    contactosNuevos: contactosHoy.count ?? 0,
+    oportunidades,
+    incompleto: filas.length >= TOPE_FILAS_DIA,
+  };
+}
+
+export type ImpactoMes = {
+  respuestasAgente: number;
+  minutosAhorrados: number;
+  citasAgendadas: number;
+  contactosCapturados: number;
+  /** ₡ de las citas marcadas como cumplidas este mes. */
+  ventasCumplidas: number;
+  citasCumplidas: number;
+  /** ₡ de las citas que siguen confirmadas hacia adelante. */
+  enAgenda: number;
+  /** Los supuestos, para mostrarlos tal cual en pantalla. */
+  minPorRespuesta: number;
+};
+
+const EJEMPLO_IMPACTO: ImpactoMes = {
+  respuestasAgente: 1420,
+  minutosAhorrados: 1420 * MIN_POR_RESPUESTA,
+  citasAgendadas: 96,
+  contactosCapturados: 88,
+  ventasCumplidas: 1_240_000,
+  citasCumplidas: 41,
+  enAgenda: 610_000,
+  minPorRespuesta: MIN_POR_RESPUESTA,
+};
+
+export async function getImpactoMes(): Promise<ImpactoMes> {
+  if (await enModoEjemplo()) return EJEMPLO_IMPACTO;
+
+  const id = await clienteId();
+  const base: ImpactoMes = {
+    respuestasAgente: 0,
+    minutosAhorrados: 0,
+    citasAgendadas: 0,
+    contactosCapturados: 0,
+    ventasCumplidas: 0,
+    citasCumplidas: 0,
+    enAgenda: 0,
+    minPorRespuesta: MIN_POR_RESPUESTA,
+  };
+  if (!id) return base;
+
+  const sb = await supabaseServidor();
+  const ahora = Date.now();
+  const mes = inicioMesCR(ahora);
+  const ahoraIso = new Date(ahora).toISOString();
+
+  const [respuestas, citasMes, contactosMes, cumplidas, futuras] = await Promise.all([
+    getMensajesAgenteMes(),
+    sb.from("wa_citas").select("id", { count: "exact", head: true }).eq("cliente_id", id).gte("creada_en", mes),
+    sb.from("wa_contactos").select("id", { count: "exact", head: true }).eq("cliente_id", id).gte("creado_en", mes),
+    sb
+      .from("wa_citas")
+      .select("monto")
+      .eq("cliente_id", id)
+      .eq("estado", "cumplida")
+      .gte("cuando", mes)
+      .lt("cuando", ahoraIso)
+      .limit(TOPE_FILAS_DIA),
+    sb
+      .from("wa_citas")
+      .select("monto")
+      .eq("cliente_id", id)
+      .in("estado", ["confirmada", "sin_confirmar"])
+      .gte("cuando", ahoraIso)
+      .limit(TOPE_FILAS_DIA),
+  ]);
+
+  const suma = (filas: { monto: number | null }[] | null) =>
+    (filas ?? []).reduce((s, f) => s + (f.monto ?? 0), 0);
+  const filasCumplidas = (cumplidas.data ?? []) as { monto: number | null }[];
+
+  return {
+    respuestasAgente: respuestas,
+    minutosAhorrados: Math.round(respuestas * MIN_POR_RESPUESTA),
+    citasAgendadas: citasMes.count ?? 0,
+    contactosCapturados: contactosMes.count ?? 0,
+    ventasCumplidas: suma(filasCumplidas),
+    citasCumplidas: filasCumplidas.length,
+    enAgenda: suma((futuras.data ?? []) as { monto: number | null }[]),
+    minPorRespuesta: MIN_POR_RESPUESTA,
+  };
+}
+
+export type EventoLinea = {
+  id: string;
+  cuandoIso: string;
+  tipo: "escribio" | "ia" | "humano" | "cita" | "espera";
+  titulo: string;
+  detalle: string;
+};
+
+/**
+ * Lo último que pasó, en orden, para la línea de tiempo del Inicio: quién
+ * escribió, si contestó la IA o una persona (y qué consultó), citas nuevas y
+ * conversaciones que esperan a una persona. Los mensajes van recortados: es
+ * una pista de lo que pasó, no la conversación.
+ */
+export async function getLineaDelTiempo(limite = 8): Promise<EventoLinea[]> {
+  if (await enModoEjemplo()) {
+    const ej: EventoLinea[] = [
+      { id: "l1", cuandoIso: haceMin(2), tipo: "escribio", titulo: "Andrea Vargas escribió", detalle: "“¿Tienen disponibilidad mañana?”" },
+      { id: "l2", cuandoIso: haceMin(2), tipo: "ia", titulo: "La IA respondió", detalle: "Consultó agenda · Andrea Vargas" },
+      { id: "l3", cuandoIso: haceMin(4), tipo: "cita", titulo: "Cita agendada", detalle: "Limpieza dental · Andrea Vargas" },
+      { id: "l4", cuandoIso: haceMin(12), tipo: "espera", titulo: "Necesita a una persona", detalle: "Rodrigo Solís · pidió el precio de un puente" },
+      { id: "l5", cuandoIso: haceMin(40), tipo: "humano", titulo: "Respondiste vos", detalle: "Kimberly Mora" },
+    ];
+    return ej.slice(0, limite);
+  }
+
+  const id = await clienteId();
+  if (!id) return [];
+
+  const sb = await supabaseServidor();
+  const [mensajes, movimientos] = await Promise.all([
+    sb
+      .from("wa_mensajes")
+      .select("id, autor, texto, transcripcion, herramientas, creado_en, wa_conversaciones(wa_contactos(nombre, telefono))")
+      .eq("cliente_id", id)
+      .in("autor", ["contacto", "agente", "humano"])
+      .order("creado_en", { ascending: false })
+      .limit(limite * 2),
+    getMovimientosAgente(limite),
+  ]);
+
+  type FilaMensaje = {
+    id: string;
+    autor: string;
+    texto: string | null;
+    transcripcion: string | null;
+    herramientas: string[] | null;
+    creado_en: string;
+    wa_conversaciones: { wa_contactos: { nombre: string | null; telefono: string } | null } | null;
+  };
+  const NOMBRE_HERRAMIENTA: Record<string, string> = { precios: "precios", agenda: "agenda", servicios: "servicios" };
+
+  const eventos: EventoLinea[] = [];
+  for (const f of (mensajes.data ?? []) as unknown as FilaMensaje[]) {
+    const c = f.wa_conversaciones?.wa_contactos;
+    const nombre = c?.nombre?.trim() || c?.telefono || "Un contacto";
+    if (f.autor === "contacto") {
+      const texto = (f.texto || f.transcripcion || "").trim().replace(/\s+/g, " ");
+      eventos.push({
+        id: `m-${f.id}`,
+        cuandoIso: f.creado_en,
+        tipo: "escribio",
+        titulo: `${nombre} escribió`,
+        detalle: texto ? `“${texto.length > 70 ? texto.slice(0, 69) + "…" : texto}”` : "Nota de voz o archivo",
+      });
+    } else if (f.autor === "agente") {
+      const usadas = (f.herramientas ?? []).map((h) => NOMBRE_HERRAMIENTA[h] ?? h).filter(Boolean);
+      eventos.push({
+        id: `m-${f.id}`,
+        cuandoIso: f.creado_en,
+        tipo: "ia",
+        titulo: "La IA respondió",
+        detalle: [usadas.length ? `Consultó ${usadas.join(" · ")}` : "", nombre].filter(Boolean).join(" · "),
+      });
+    } else {
+      eventos.push({ id: `m-${f.id}`, cuandoIso: f.creado_en, tipo: "humano", titulo: "Respondiste vos", detalle: nombre });
+    }
+  }
+  /* Las citas y "necesita a una persona" ya vienen resueltas de movimientos;
+     los contactos nuevos no se repiten acá (ya aparece que escribieron). */
+  for (const m of movimientos) {
+    if (m.tipo === "contacto") continue;
+    eventos.push({ id: m.id, cuandoIso: m.cuandoIso, tipo: m.tipo === "cita" ? "cita" : "espera", titulo: m.titulo, detalle: m.detalle });
+  }
+
+  return eventos
+    .sort((a, b) => new Date(b.cuandoIso).getTime() - new Date(a.cuandoIso).getTime())
+    .slice(0, limite);
+}
+
+/* -------------------------------------------------------------------------
    Formato — vive acá para que todas las pantallas escriban la hora igual.
    ------------------------------------------------------------------------- */
 
