@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { paginaMeta } from "@/lib/seo/pagina-meta";
 import Link from "next/link";
 import { Info } from "@phosphor-icons/react/dist/ssr";
 import { PageHeader } from "@/components/page-header";
@@ -11,12 +12,11 @@ const tituloPlanes = `Planes y precios — ${site.nombre}`;
 const descripcionPlanes =
   "Planes mensuales de automatización, con precio cerrado y las automatizaciones incluidas en cada uno.";
 
-export const metadata: Metadata = {
-  title: tituloPlanes,
-  description: descripcionPlanes,
-  alternates: { canonical: "/planes" },
-  openGraph: { title: tituloPlanes, description: descripcionPlanes, url: "/planes" },
-};
+export const metadata: Metadata = paginaMeta({
+  titulo: tituloPlanes,
+  descripcion: descripcionPlanes,
+  ruta: "/planes",
+});
 
 const planesJsonLd = {
   "@context": "https://schema.org",

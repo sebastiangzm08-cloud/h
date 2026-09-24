@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
+import { paginaMeta } from "@/lib/seo/pagina-meta";
 import { LegalPage } from "@/components/legal-page";
 import { site } from "@/config/site";
 
-export const metadata: Metadata = {
-  title: `Privacidad — ${site.nombre}`,
-};
+export const metadata: Metadata = paginaMeta({
+  titulo: `Privacidad — ${site.nombre}`,
+  descripcion:
+    "Cómo Hoshizora trata los datos que nos compartís: qué guardamos, para qué, dónde y cómo pedir que los borremos.",
+  ruta: "/legal/privacidad",
+});
 
 export default function PrivacidadPage() {
   return (

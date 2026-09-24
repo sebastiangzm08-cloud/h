@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
+import { paginaMeta } from "@/lib/seo/pagina-meta";
 import { EnvelopeSimple, WhatsappLogo, MapPin } from "@phosphor-icons/react/dist/ssr";
 import { PageHeader } from "@/components/page-header";
 import { ContactForm } from "@/components/contact-form";
 import { Reveal } from "@/components/reveal";
 import { site, waLink } from "@/config/site";
 
-export const metadata: Metadata = {
-  title: `Contacto — ${site.nombre}`,
-  description: "Escribinos por correo, WhatsApp o dejanos un mensaje.",
-};
+export const metadata: Metadata = paginaMeta({
+  titulo: `Contacto — ${site.nombre}`,
+  descripcion: "Escribinos por correo, WhatsApp o dejanos un mensaje.",
+  ruta: "/contacto",
+});
 
 export default function ContactoPage() {
   return (

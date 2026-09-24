@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { paginaMeta } from "@/lib/seo/pagina-meta";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -11,11 +12,12 @@ import { Reveal } from "@/components/reveal";
 import { automatizaciones } from "@/lib/content";
 import { site } from "@/config/site";
 
-export const metadata: Metadata = {
-  title: `Qué automatizamos — ${site.nombre}`,
-  description:
+export const metadata: Metadata = paginaMeta({
+  titulo: `Qué automatizamos — ${site.nombre}`,
+  descripcion:
     "Las automatizaciones que Hoshizora tiene listas hoy: publicador de contenido, bot de WhatsApp y prospección de mercado. Una por plan.",
-};
+  ruta: "/que-automatizamos",
+});
 
 const iconos: Record<string, typeof ChatCircleDots> = {
   "publicador-de-contenido": MegaphoneSimple,

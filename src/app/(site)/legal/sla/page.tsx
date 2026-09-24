@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
+import { paginaMeta } from "@/lib/seo/pagina-meta";
 import { LegalPage } from "@/components/legal-page";
 import { site } from "@/config/site";
 
-export const metadata: Metadata = {
-  title: `Acuerdo de nivel de servicio — ${site.nombre}`,
-};
+export const metadata: Metadata = paginaMeta({
+  titulo: `Acuerdo de nivel de servicio — ${site.nombre}`,
+  descripcion:
+    "Los tiempos de respuesta, el monitoreo y las condiciones de soporte que Hoshizora se compromete a cumplir en cada plan.",
+  ruta: "/legal/sla",
+});
 
 export default function SlaPage() {
   return (

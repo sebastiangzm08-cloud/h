@@ -6,6 +6,7 @@ import "./globals.css";
 import { site } from "@/config/site";
 import { SCRIPT_APLICAR_TEMA } from "@/lib/panel/tema";
 import { JsonLd } from "@/components/seo/json-ld";
+import { DESCRIPCION_HOME, TITULO_HOME } from "@/lib/seo/pagina-meta";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,9 +20,8 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
-const titulo = `${site.nombre} — ${site.claim}`;
-const descripcion =
-  "Automatizamos los procesos de captación, atención, administración y operación de cualquier negocio que ya use tecnología, sin cambiar tus herramientas.";
+const titulo = TITULO_HOME;
+const descripcion = DESCRIPCION_HOME;
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -37,13 +37,9 @@ export const metadata: Metadata = {
     "agente de WhatsApp",
     "n8n Costa Rica",
   ],
-  alternates: {
-    canonical: "/",
-  },
   openGraph: {
     title: titulo,
     description: descripcion,
-    url: "/",
     siteName: site.nombre,
     locale: "es_CR",
     type: "website",

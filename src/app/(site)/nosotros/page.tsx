@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { paginaMeta } from "@/lib/seo/pagina-meta";
 import { Target, PlugsConnected, Handshake } from "@phosphor-icons/react/dist/ssr";
 import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
@@ -6,10 +7,11 @@ import { ConstellationMark } from "@/components/constellation";
 import { Button } from "@/components/ui/button";
 import { site } from "@/config/site";
 
-export const metadata: Metadata = {
-  title: `Nosotros — ${site.nombre}`,
-  description: "Quién está detrás de la agencia y cómo trabajamos.",
-};
+export const metadata: Metadata = paginaMeta({
+  titulo: `Nosotros — ${site.nombre}`,
+  descripcion: "Quién está detrás de la agencia y cómo trabajamos.",
+  ruta: "/nosotros",
+});
 
 const principios = [
   {

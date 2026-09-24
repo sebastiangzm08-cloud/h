@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -137,6 +138,11 @@ function resolverOrden(id: string): OrdenResuelta | null {
   }
   return null;
 }
+
+/* Página transaccional de un pedido puntual: nunca debe indexarse. */
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function OrdenPage({
   params,

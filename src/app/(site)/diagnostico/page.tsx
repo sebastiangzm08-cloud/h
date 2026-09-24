@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { paginaMeta } from "@/lib/seo/pagina-meta";
 import { WhatsappLogo } from "@phosphor-icons/react/dist/ssr";
 import { Reveal } from "@/components/reveal";
 import { DiagnosticoForm } from "@/components/diagnostico-form";
@@ -6,11 +7,12 @@ import { DiagnosticoPlanContext } from "@/components/diagnostico-plan-context";
 import { planes } from "@/lib/content";
 import { site, waLink } from "@/config/site";
 
-export const metadata: Metadata = {
-  title: `Diagnóstico gratuito — ${site.nombre}`,
-  description:
+export const metadata: Metadata = paginaMeta({
+  titulo: `Diagnóstico gratuito — ${site.nombre}`,
+  descripcion:
     "Media hora para encontrar los tres procesos que más plata te están costando y saber por dónde empezar.",
-};
+  ruta: "/diagnostico",
+});
 
 /* Lo que la persona SE LLEVA, no un cronómetro de la llamada. La versión
    anterior listaba "0 a 10 min / 10 a 22 min / 22 a 30 min" y se leía como

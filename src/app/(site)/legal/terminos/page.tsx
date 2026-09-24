@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
+import { paginaMeta } from "@/lib/seo/pagina-meta";
 import { LegalPage } from "@/components/legal-page";
 import { site } from "@/config/site";
 
-export const metadata: Metadata = {
-  title: `Términos de servicio — ${site.nombre}`,
-};
+export const metadata: Metadata = paginaMeta({
+  titulo: `Términos de servicio — ${site.nombre}`,
+  descripcion:
+    "Las condiciones del servicio de Hoshizora: qué incluye cada plan, cómo se paga, cómo se cancela y qué esperamos de cada parte.",
+  ruta: "/legal/terminos",
+});
 
 export default function TerminosPage() {
   return (

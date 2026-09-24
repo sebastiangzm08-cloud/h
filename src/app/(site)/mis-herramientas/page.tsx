@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
+import { paginaMeta } from "@/lib/seo/pagina-meta";
 import { PageHeader } from "@/components/page-header";
 import { AIAdvisor } from "@/components/ai-advisor";
 import { site } from "@/config/site";
 
-export const metadata: Metadata = {
-  title: `Qué puedo automatizar — ${site.nombre}`,
-  description:
+export const metadata: Metadata = paginaMeta({
+  titulo: `Qué puedo automatizar — ${site.nombre}`,
+  descripcion:
     "Contanos en una frase cómo funciona tu negocio y te decimos cuál de las automatizaciones te sirve y en qué plan entra.",
-};
+  ruta: "/mis-herramientas",
+});
 
 export default function MisHerramientasPage() {
   return (
