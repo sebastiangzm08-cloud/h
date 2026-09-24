@@ -374,6 +374,25 @@ html::-webkit-scrollbar-track {
   .breathe {
     animation: breathe 2.6s ease-in-out infinite;
   }
+
+  /* Traza el pentagrama de ConstellationMark de un solo trazo. Requiere
+     pathLength={100} en el <path> para que dashoffset funcione en "%"
+     sin calcular el largo real de la curva. */
+  .trazo-construye {
+    stroke-dasharray: 100;
+    animation: dibujar-trazo 1.1s cubic-bezier(0.65, 0, 0.35, 1) both;
+  }
+
+  /* Los nodos de ConstellationMark "prenden" cuando el trazo los alcanza.
+     transform-box: fill-box es necesario porque, sin él, un <circle> escala
+     desde el origen del viewBox (esquina superior izquierda del SVG) en vez
+     de desde su propio centro. */
+  .punto-construye {
+    transform-box: fill-box;
+    transform-origin: center;
+    opacity: 0;
+    animation: punto-aparece 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
 }
 
 @keyframes marquee {
@@ -394,6 +413,30 @@ html::-webkit-scrollbar-track {
   50% {
     opacity: 0.55;
     transform: scale(0.86);
+  }
+}
+
+@keyframes dibujar-trazo {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes punto-aparece {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.3);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 

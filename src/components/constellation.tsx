@@ -1,9 +1,36 @@
+import { cn } from "@/lib/utils";
+
+/** Vértices de la estrella en el orden en que la traza el path (pentagrama:
+    un pentágono conectando cada segundo vértice, como se dibuja una estrella
+    de un solo trazo). El índice es el orden de llegada, usado para escalonar
+    la animación de construcción de los nodos. */
+const puntos = [
+  { x: 16, y: 3, orden: 0 },
+  { x: 23.6, y: 26.5, orden: 1 },
+  { x: 3.6, y: 12, orden: 2 },
+  { x: 28.4, y: 12, orden: 3 },
+  { x: 8.4, y: 26.5, orden: 4 },
+];
+
+const DURACION_TRAZO = 1.1;
+
 /**
- * Motivo gráfico de marca: nodos conectados por líneas finas.
- * Reutilizado como logo, textura de fondo y diagramas de flujo de producto.
- * Puramente decorativo: aria-hidden.
+ * Motivo gráfico de marca: una estrella de cinco puntas dibujada como
+ * constelación (pentagrama de un solo trazo, con un nodo en cada punta).
+ * Reutilizado como logo, favicon e imágenes de preview. Puramente
+ * decorativo: aria-hidden.
+ *
+ * `animate`: la dibuja de un trazo y va "prendiendo" cada punta en el orden
+ * en que la línea la alcanza — pensado para un momento puntual (el logo al
+ * cargar la página, la ilustración del 404), no para verse en bucle.
  */
-export function ConstellationMark({ className }: { className?: string }) {
+export function ConstellationMark({
+  className,
+  animate = false,
+}: {
+  className?: string;
+  animate?: boolean;
+}) {
   return (
     <svg
       viewBox="0 0 32 32"
@@ -12,21 +39,32 @@ export function ConstellationMark({ className }: { className?: string }) {
       className={className}
     >
       <path
-        d="M6 24L15 9L26 13"
+        d="M16 3L23.6 26.5L3.6 12L28.4 12L8.4 26.5Z"
         stroke="currentColor"
-        strokeWidth="1.4"
+        strokeWidth="2.1"
+        strokeLinejoin="round"
         strokeLinecap="round"
+        pathLength={100}
+        className={cn(animate && "trazo-construye")}
+        style={
+          animate ? { animationDuration: `${DURACION_TRAZO}s` } : undefined
+        }
       />
-      <path
-        d="M15 9L21 22"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-      <circle cx="6" cy="24" r="2" fill="currentColor" />
-      <circle cx="15" cy="9" r="2.25" fill="currentColor" />
-      <circle cx="26" cy="13" r="1.75" fill="currentColor" />
-      <circle cx="21" cy="22" r="1.75" fill="currentColor" />
+      {puntos.map((p) => (
+        <circle
+          key={p.orden}
+          cx={p.x}
+          cy={p.y}
+          r="2.5"
+          fill="currentColor"
+          className={cn(animate && "punto-construye")}
+          style={
+            animate
+              ? { animationDelay: `${(p.orden / puntos.length) * DURACION_TRAZO}s` }
+              : undefined
+          }
+        />
+      ))}
     </svg>
   );
 }

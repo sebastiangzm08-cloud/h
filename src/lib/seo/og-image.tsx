@@ -29,21 +29,17 @@ export function renderOgImage() {
           style={{ marginBottom: 40 }}
         >
           <path
-            d="M6 24L15 9L26 13"
+            d="M16 3L23.6 26.5L3.6 12L28.4 12L8.4 26.5Z"
             stroke="#ffffff"
-            strokeWidth="1.6"
+            strokeWidth="2.1"
+            strokeLinejoin="round"
             strokeLinecap="round"
           />
-          <path
-            d="M15 9L21 22"
-            stroke="#ffffff"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-          />
-          <circle cx="6" cy="24" r="2.3" fill="#ffffff" />
-          <circle cx="15" cy="9" r="2.6" fill="#ffffff" />
-          <circle cx="26" cy="13" r="2" fill="#ffffff" />
-          <circle cx="21" cy="22" r="2" fill="#ffffff" />
+          <circle cx="16" cy="3" r="2.5" fill="#ffffff" />
+          <circle cx="23.6" cy="26.5" r="2.5" fill="#ffffff" />
+          <circle cx="3.6" cy="12" r="2.5" fill="#ffffff" />
+          <circle cx="28.4" cy="12" r="2.5" fill="#ffffff" />
+          <circle cx="8.4" cy="26.5" r="2.5" fill="#ffffff" />
         </svg>
         <div
           style={{

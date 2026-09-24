@@ -35,9 +35,9 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8">
         <div className="grid grid-cols-2 gap-10 sm:grid-cols-5">
           <div className="col-span-2">
-            <Link href="/" className="flex items-center gap-2.5">
-              <ConstellationMark className="h-6 w-6 text-ink" />
-              <span className="text-[0.95rem] font-semibold tracking-tight">
+            <Link href="/" className="flex items-center gap-3">
+              <ConstellationMark className="h-9 w-9 text-ink" />
+              <span className="text-[1.25rem] font-semibold tracking-tight">
                 {site.nombre}
               </span>
             </Link>

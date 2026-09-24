@@ -96,7 +96,7 @@ export function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
         <Link
           href="/"
-          className="flex items-center gap-2.5"
+          className="flex items-center gap-3"
           onClick={(e) => {
             if (pathname === "/") {
               e.preventDefault();
@@ -105,14 +105,15 @@ export function Navbar() {
           }}
         >
           <ConstellationMark
+            animate
             className={cn(
-              "h-6 w-6 transition-colors duration-300",
+              "h-9 w-9 transition-colors duration-300",
               enOscuro ? "text-noche-texto" : "text-ink"
             )}
           />
           <span
             className={cn(
-              "text-[0.95rem] font-semibold tracking-tight transition-colors duration-300",
+              "text-[1.25rem] font-semibold tracking-tight transition-colors duration-300",
               enOscuro ? "text-noche-texto" : "text-ink"
             )}
           >
