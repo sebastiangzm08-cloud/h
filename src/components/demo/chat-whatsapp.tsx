@@ -91,7 +91,7 @@ export function ChatWhatsapp({
     {
       id: "saludo",
       autor: "agente",
-      texto: `¡Hola! Soy el asistente de ${nombreNegocio}. ¿En qué te puedo ayudar?`,
+      texto: `¡Hola! Soy el asistente de ${nombreNegocio}. ¿En qué le puedo ayudar?`,
       hora: horaAhora(),
     },
   ]);
@@ -219,7 +219,7 @@ export function ChatWhatsapp({
             value={valor}
             onChange={(e) => setValor(e.target.value)}
             disabled={agotado}
-            placeholder={agotado ? "Esta demo ya terminó" : "Escribí un mensaje"}
+            placeholder={agotado ? "Esta demo ya terminó" : "Escriba un mensaje"}
             /* Sin esto, Chrome y los gestores de contraseñas (LastPass,
                1Password, Bitwarden...) confunden este campo con un login y le
                pegan encima su icono de "rellenar" — se ve como una manchita

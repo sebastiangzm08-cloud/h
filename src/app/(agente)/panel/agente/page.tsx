@@ -131,12 +131,16 @@ export default async function ResumenAgentePage() {
         >
           <div className="flex h-[112px] items-end gap-1.5 px-4 pt-5 pb-2">
             {resumen.porHora.map((p) => (
-              <div key={p.hora} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-                <div
-                  className="w-full max-w-[26px] rounded-t-[3px] border border-b-0 border-line-strong bg-surface-3"
-                  style={{ height: `${Math.max(3, (p.cantidad / pico) * 100)}%` }}
-                  title={`${p.cantidad} conversaciones`}
-                />
+              <div key={p.hora} className="flex h-full min-w-0 flex-1 flex-col items-center gap-1.5">
+                {/* El alto en % necesita un padre con alto definido: sin este
+                    contenedor flex-1 las barras quedaban siempre en 0. */}
+                <div className="flex w-full min-h-0 flex-1 items-end justify-center">
+                  <div
+                    className="w-full max-w-[26px] rounded-t-[3px] border border-b-0 border-line-strong bg-surface-3"
+                    style={{ height: `${Math.max(3, (p.cantidad / pico) * 100)}%` }}
+                    title={`${p.cantidad} conversaciones`}
+                  />
+                </div>
                 <span className="font-mono text-[9px] text-ink-faint">
                   {p.hora === 12 ? "12m" : p.hora > 12 ? `${p.hora - 12}p` : `${p.hora}a`}
                 </span>

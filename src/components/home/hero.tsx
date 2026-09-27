@@ -38,8 +38,8 @@ export function Hero() {
 
           <p className="mt-7 max-w-[48ch] text-[1.0625rem] leading-relaxed text-noche-texto/60">
             Si el negocio se para cuando vos parás, ese es el problema.
-            Automatizamos prospección, redes y trabajo repetitivo para que
-            siga vendiendo sin depender de vos.
+            Automatizamos con IA la prospección, las redes, WhatsApp y el
+            trabajo repetitivo, para que siga vendiendo sin depender de vos.
           </p>
 
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">

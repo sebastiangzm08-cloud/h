@@ -25,7 +25,7 @@ export default async function DemoPage({
       <PageHeader
         eyebrow="Demo"
         title="Esta demo ya no está disponible"
-        lead="Si esperabas ver algo acá, escribinos y te mandamos un enlace nuevo."
+        lead="Si esperaba ver algo aquí, escríbanos y le mandamos un enlace nuevo."
       >
         <div className="mt-8">
           <Button
@@ -46,18 +46,18 @@ export default async function DemoPage({
   const pasos = [
     {
       n: "1",
-      t: "Con tus precios y tu horario reales",
-      d: "Le pasamos lo que cobrás y cuándo atendés. Nunca inventa un número que no le dimos.",
+      t: "Con la información de su negocio",
+      d: "Servicios, horarios y datos de su negocio. Si le preguntan algo que no sabe, no lo inventa.",
     },
     {
       n: "2",
       t: "Responde en vivo, no un guion",
-      d: "Cada respuesta la genera la IA en el momento — probalo con lo que se te ocurra.",
+      d: "Cada respuesta se genera en el momento. Pruébelo con lo que le preguntaría un paciente o cliente.",
     },
     {
       n: "3",
-      t: "Así atendería tu WhatsApp real",
-      d: "Si te convence, lo activamos con tu número en pocos días.",
+      t: "Así atendería su WhatsApp real",
+      d: "Si le convence, lo dejamos funcionando con su número en pocos días.",
     },
   ];
 
@@ -66,7 +66,7 @@ export default async function DemoPage({
       <PageHeader
         eyebrow="Demo personalizada"
         title={`Así atendería el Agente de WhatsApp a ${demo.nombreNegocio}`}
-        lead="Escribile como si fueras un cliente tuyo. Las respuestas son reales, generadas en el momento con los datos que nos diste — no es un guion grabado."
+        lead="Escríbale como si fuera uno de sus pacientes o clientes. Las respuestas son reales, se generan en el momento con la información de su negocio. No es un guion grabado."
       >
         <Reveal delay={80}>
           <div className="mt-12 grid grid-cols-1 gap-8 border-t border-line pt-10 sm:grid-cols-3 sm:gap-6">
@@ -96,21 +96,21 @@ export default async function DemoPage({
           <Reveal delay={120}>
             <div className="mx-auto mt-14 max-w-[46ch] text-center">
               <h2 className="text-[1.375rem] font-semibold tracking-tight text-ink">
-                ¿Te gustó cómo respondió?
+                ¿Qué le pareció cómo respondió?
               </h2>
               <p className="mt-2.5 text-[0.9375rem] leading-relaxed text-ink-mute">
-                Esto puede estar atendiendo el WhatsApp real de tu negocio en pocos días.
+                Esto puede estar atendiendo el WhatsApp real de su negocio en pocos días.
               </p>
               <div className="mt-6 flex justify-center">
                 <Button href={waLink(mensajeCTA)} variant="primary" size="lg">
                   <WhatsappLogo size={17} weight="fill" />
-                  Quiero esto para mi negocio
+                  Lo quiero para mi negocio
                 </Button>
               </div>
               <p className="mt-8 text-[0.75rem] text-ink-faint">
                 Esta es una demostración de venta de Hoshizora. Las respuestas las genera una
-                inteligencia artificial a partir de la información que nos compartiste — no
-                queda ninguna cita ni dato real guardado acá.
+                inteligencia artificial con la información de su negocio. Aquí no se guarda
+                ninguna cita ni dato real.
               </p>
             </div>
           </Reveal>

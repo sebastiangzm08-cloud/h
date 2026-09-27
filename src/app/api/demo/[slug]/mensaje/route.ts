@@ -68,7 +68,7 @@ export async function POST(
       {
         ok: false,
         error:
-          "Esta demo llegó a su límite de mensajes de prueba. Escribinos y seguimos la conversación de verdad.",
+          "Esta demo llegó a su límite de mensajes de prueba. Escríbanos y seguimos la conversación de verdad.",
       },
       { status: 200 }
     );
@@ -83,7 +83,7 @@ export async function POST(
 
   const mensaje = (body.mensaje ?? "").trim();
   if (!mensaje) {
-    return NextResponse.json({ ok: false, error: "Escribí algo primero." }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "Escriba algo primero." }, { status: 400 });
   }
   if (mensaje.length > MAX_LARGO_MENSAJE) {
     return NextResponse.json(
@@ -117,7 +117,7 @@ export async function POST(
     const texto = respuesta.text?.trim();
     if (!texto) {
       return NextResponse.json(
-        { ok: false, error: "No se recibió respuesta. Probá de nuevo." },
+        { ok: false, error: "No se recibió respuesta. Pruebe de nuevo." },
         { status: 502 }
       );
     }

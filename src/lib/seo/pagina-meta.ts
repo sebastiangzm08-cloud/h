@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { site } from "@/config/site";
 
-export const TITULO_HOME = `${site.nombre} — ${site.claim}`;
+export const TITULO_HOME = `${site.nombre} | Automatización de procesos con IA para negocios`;
 export const DESCRIPCION_HOME =
-  "Automatizamos los procesos de captación, atención, administración y operación de cualquier negocio que ya use tecnología, sin cambiar tus herramientas.";
+  "Automatizamos WhatsApp, ventas, redes y administración de tu negocio con IA, sin cambiar tus herramientas. Agencia desde Costa Rica. Diagnóstico gratis.";
 
 /** Metadata completa de una página pública. Cada página tiene que declarar la
     suya: un `openGraph` o `alternates` definido en una página REEMPLAZA el del
