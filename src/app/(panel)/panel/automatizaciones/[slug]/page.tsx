@@ -31,6 +31,7 @@ import { leerConfigRedes } from "@/lib/panel/redes-config";
 import {
   getAsignacion,
   getAutomatizacion,
+  getCliente,
   getConexionBuffer,
   getPerfil,
   getPiezas,
@@ -39,6 +40,8 @@ import {
 } from "@/lib/panel/datos";
 import { imagekitConfigurado } from "@/lib/imagekit";
 import { nombrePlan, nombreProceso } from "@/lib/panel/tipos";
+import { VistaAgente } from "@/components/panel/vista-agente";
+import { getCifrasAgenteMes } from "@/lib/panel/agente";
 
 const NOMBRE_RED: Record<string, string> = {
   instagram: "Instagram",
@@ -76,7 +79,7 @@ function valorLegible(v: unknown): string {
 const volver = (
   <Link
     href="/panel/automatizaciones"
-    className="inline-flex items-center gap-1.5 text-[12px] text-ink-mute transition-colors hover:text-ink"
+    className="-my-2 inline-flex items-center gap-1.5 self-start py-2 text-[12px] text-ink-mute transition-colors hover:text-ink"
   >
     <Icono nombre="flecha" className="h-3 w-3 rotate-180" />
     Automatizaciones
@@ -130,6 +133,27 @@ export default async function DetalleAutomatizacion({ params }: Props) {
   /* ---- Camino 1: contratada ---- */
   const { automatizacion: aut, estado, resumen, limites, config, precioMensual } =
     asignacion;
+
+  /* El Agente de WhatsApp: vista general + flujo + accesos (Fase 2). Sus
+     pantallas de trabajo ya viven en la barra; acá no se duplican. */
+  if (aut.slug === "agente-whatsapp") {
+    const [cifras, cliente] = await Promise.all([getCifrasAgenteMes(), getCliente()]);
+    return (
+      <>
+        {volver}
+        <PageHead titulo={aut.nombre} sub={nombreProceso[aut.proceso]}>
+          <Pill tono={estado === "activa" ? "ok" : "warn"}>
+            {estado === "activa" ? "Activo" : "En pausa"}
+          </Pill>
+        </PageHead>
+        <VistaAgente
+          activo={estado === "activa"}
+          suspendido={cliente.estado === "pausado" || cliente.estado === "moroso"}
+          cifras={cifras}
+        />
+      </>
+    );
+  }
   const esRedes = aut.slug === "redes-sociales";
   const [uso, perfil, piezas, usoAut, bufferConn] = await Promise.all([
     getUsoDiario(asignacion.id),

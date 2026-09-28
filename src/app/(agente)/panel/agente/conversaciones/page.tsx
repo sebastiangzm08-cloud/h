@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Vacio, Tag, EstadoPill } from "@/components/panel/agente-ui";
 import { Icono } from "@/components/panel/iconos";
 import { Redactar } from "@/components/panel/agente-redactar";
+import { ControlConversacion } from "@/components/panel/agente-control-chat";
+import { getAsignacion } from "@/lib/panel/datos";
 import {
   enModoEjemplo,
   getContactos,
@@ -44,11 +46,13 @@ export default async function ConversacionesPage({
   const { c, f } = await searchParams;
   const filtro: Filtro = (FILTROS.find((x) => x.clave === f)?.clave ?? "todas") as Filtro;
 
-  const [todas, contactos, ejemplo] = await Promise.all([
+  const [todas, contactos, ejemplo, asignacionAgente] = await Promise.all([
     getConversaciones(),
     getContactos(),
     enModoEjemplo(),
+    getAsignacion("agente-whatsapp"),
   ]);
+  const agentePausado = asignacionAgente?.estado === "pausada";
 
   const lista = filtro === "todas" ? todas : todas.filter((x) => x.estado === filtro);
   const abierta = lista.find((x) => x.id === c) ?? lista[0] ?? null;
@@ -172,10 +176,11 @@ export default async function ConversacionesPage({
                 </span>
                 <div className="min-w-0">
                   <h2 className="truncate text-sm font-medium text-ink">{abierta.nombre}</h2>
-                  <p className="font-mono text-[11px] text-ink-faint">
+                  <p className="truncate font-mono text-[11px] text-ink-faint">
                     {abierta.telefono} · WhatsApp
                   </p>
                 </div>
+                <ControlConversacion conversacion={abierta} agentePausado={agentePausado} />
               </div>
 
               {/* flex-col-reverse + arreglo invertido: el truco de siempre

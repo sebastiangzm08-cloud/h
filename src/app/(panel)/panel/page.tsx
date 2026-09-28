@@ -31,6 +31,7 @@ import {
   comparar,
 } from "@/components/panel/inicio";
 import { Icono } from "@/components/panel/iconos";
+import { InterruptorAgente } from "@/components/panel/interruptor-agente";
 import { PrimerosPasos } from "@/components/panel/primeros-pasos";
 import { TarjetaContratada, TarjetaSumar } from "@/components/panel/tarjeta-automatizacion";
 import { Caja, CajaHead, Chip, Medidor } from "@/components/panel/ui";
@@ -47,6 +48,7 @@ import { leerConfigAgente } from "@/lib/panel/agente-config";
 import {
   getActividad,
   getAsignaciones,
+  getCliente,
   getMedidores,
   getPendientes,
   getPerfil,
@@ -78,11 +80,12 @@ export default async function InicioPanel({
   const { rango: rangoParam } = await searchParams;
   const rango: 7 | 14 | 30 = rangoParam === "14" ? 14 : rangoParam === "30" ? 30 : 7;
 
-  const [perfil, asignaciones, pendientes, primerosPasos] = await Promise.all([
+  const [perfil, asignaciones, pendientes, primerosPasos, cliente] = await Promise.all([
     getPerfil(),
     getAsignaciones(),
     getPendientes(),
     getPrimerosPasos(),
+    getCliente(),
   ]);
 
   const agente = asignaciones.find((a) => a.automatizacion.slug === SLUG_AGENTE) ?? null;
@@ -138,10 +141,33 @@ export default async function InicioPanel({
         : "Tus automatizaciones están en pausa.";
 
   const agenteActivo = agente?.estado === "activa";
+  const suspendido = cliente.estado === "pausado" || cliente.estado === "moroso";
   const onboardingAgentePendiente = agente ? !leerConfigAgente(agente.config).onboardingCompleto : false;
 
   return (
     <>
+      {/* ---------- Agente en pausa (interruptor de Automatizaciones) ----------
+          Arriba de todo: si el agente no está contestando, es lo primero que
+          tiene que ver el dueño. */}
+      {agente && !agenteActivo ? (
+        <section
+          role="status"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-warn/30 bg-warn/[0.07] px-4 py-3 sm:px-5"
+        >
+          <p className="min-w-0 flex-1 text-[13px] leading-snug text-ink">
+            <b className="font-semibold text-warn">Tu Agente de WhatsApp está en pausa.</b>{" "}
+            <span className="text-ink-mute">
+              No está contestando: los mensajes llegan a{" "}
+              <Link href="/panel/agente/conversaciones?f=espera" className="underline underline-offset-2 hover:text-ink">
+                Conversaciones
+              </Link>{" "}
+              para que los contestés vos.
+            </span>
+          </p>
+          <InterruptorAgente activo={false} suspendido={suspendido} />
+        </section>
+      ) : null}
+
       {/* ---------- Cabecera ---------- */}
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-stretch">
         <div className="flex min-w-0 flex-col justify-center gap-3">

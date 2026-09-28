@@ -24,21 +24,17 @@ const ICONOS: Record<string, NombreIcono> = {
   "prospeccion-clientes": "actividad",
 };
 
-function iconoDe(slug: string): NombreIcono {
+export function iconoAutomatizacion(slug: string): NombreIcono {
   return ICONOS[slug] ?? "automatizaciones";
 }
 
 /**
- * A dónde lleva la tarjeta. Casi todas abren su ficha con pestañas, pero el
- * Agente de WhatsApp abre un ENTORNO propio (bandeja, contactos, citas): se
- * opera todos los días, no se configura y ya. Ver `panel/agente/layout.tsx`.
+ * A dónde lleva la tarjeta: la ficha de la automatización. La del Agente de
+ * WhatsApp es una vista general (cifras del mes, cómo trabaja y accesos
+ * directos a Conversaciones, Agenda, Conocimiento…), Fase 2 del rediseño.
  */
-const ENTORNOS: Record<string, string> = {
-  "agente-whatsapp": "/panel/agente",
-};
-
-function destinoDe(slug: string) {
-  return ENTORNOS[slug] ?? `/panel/automatizaciones/${slug}`;
+export function destinoAutomatizacion(slug: string) {
+  return `/panel/automatizaciones/${slug}`;
 }
 
 const cajaBase =
@@ -48,14 +44,14 @@ export function TarjetaContratada({ asignacion }: { asignacion: Asignacion }) {
   const { automatizacion: aut, estado, resumen } = asignacion;
   return (
     <Link
-      href={destinoDe(aut.slug)}
+      href={destinoAutomatizacion(aut.slug)}
       className={cn(
         cajaBase,
         "border-line bg-surface-2 hover:-translate-y-0.5 hover:border-line-strong"
       )}
     >
       <span className="grid h-8 w-8 place-items-center rounded-[9px] bg-surface-3 text-ink-soft shadow-[inset_0_0_0_1px_rgba(255,255,255,0.11)]">
-        <Icono nombre={iconoDe(aut.slug)} className="h-4 w-4" />
+        <Icono nombre={iconoAutomatizacion(aut.slug)} className="h-4 w-4" />
       </span>
       <h3 className="text-[13.5px] font-semibold text-ink">{aut.nombre}</h3>
       <Pill tono={estado === "activa" ? "ok" : "idle"}>
@@ -85,7 +81,7 @@ export function TarjetaCatalogo({
       )}
     >
       <span className="grid h-8 w-8 place-items-center rounded-[9px] text-ink-soft shadow-[inset_0_0_0_1px_rgba(255,255,255,0.11)]">
-        <Icono nombre={iconoDe(aut.slug)} className="h-4 w-4" />
+        <Icono nombre={iconoAutomatizacion(aut.slug)} className="h-4 w-4" />
       </span>
       <h3 className="text-[13.5px] font-semibold text-ink">{aut.nombre}</h3>
       {/* El plan, no el nivel. "Growth" le dice algo al cliente; "N3" no.

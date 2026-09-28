@@ -978,7 +978,10 @@ export async function reagendarCita(
    Cómo responde / Cómo agenda
    ------------------------------------------------------------------------- */
 
-async function traerAsignacionAgente(sb: Awaited<ReturnType<typeof supabaseServidor>>, clienteId: string) {
+async function traerAsignacionAgente(
+  sb: Awaited<ReturnType<typeof supabaseServidor>> | ReturnType<typeof supabaseAdmin>,
+  clienteId: string
+) {
   const { data } = await sb
     .from("asignaciones")
     .select("id, config, catalogo_automatizaciones(slug)")
@@ -988,6 +991,74 @@ async function traerAsignacionAgente(sb: Awaited<ReturnType<typeof supabaseServi
     (r) => (r.catalogo_automatizaciones as { slug?: string } | null)?.slug === "agente-whatsapp"
   );
   return fila ? { id: fila.id as string, config: (fila.config ?? {}) as Record<string, unknown> } : null;
+}
+
+/* -------------------------------------------------------------------------
+   Pausar / reactivar el agente COMPLETO (interruptor de Automatizaciones)
+
+   Pausado = `asignaciones.estado = 'pausada'`. El workflow de n8n lo lee
+   después del buffer (nodo "⏸️ ¿Agente en pausa?", 2026-09-27): no contesta,
+   el mensaje igual se guarda y la conversación queda "esperando a una
+   persona" para que el equipo la vea. Distinto de "Tomar el control", que
+   pausa UNA conversación.
+
+   Si el servicio lo suspendió Hoshizora (`clientes.estado` pausado/moroso,
+   ver `suspenderCliente` en admin-acciones), el cliente NO puede
+   reactivarlo desde acá: se le dice que nos escriba.
+   ------------------------------------------------------------------------- */
+async function fijarPausaAgente(form: FormData, pausar: boolean): Promise<ResultadoAccion> {
+  const auth = await exigirCliente(form);
+  if (!auth.ok) return auth;
+
+  const admin = supabaseAdmin();
+  const asig = await traerAsignacionAgente(admin, auth.clienteId);
+  if (!asig) return { ok: false, error: "No tenés el Agente de WhatsApp contratado." };
+
+  if (!pausar) {
+    const { data: cli } = await admin
+      .from("clientes")
+      .select("estado")
+      .eq("id", auth.clienteId)
+      .maybeSingle();
+    if (cli && (cli.estado === "pausado" || cli.estado === "moroso")) {
+      return {
+        ok: false,
+        error: "Tu servicio está suspendido. Escribinos por WhatsApp y lo reactivamos.",
+      };
+    }
+  }
+
+  const { error } = await admin
+    .from("asignaciones")
+    .update({ estado: pausar ? "pausada" : "activa" })
+    .eq("id", asig.id)
+    .eq("cliente_id", auth.clienteId);
+  if (error) return { ok: false, error: "No se pudo cambiar el estado del agente." };
+
+  revalidarAgente();
+  revalidatePath("/panel");
+  revalidatePath("/panel/automatizaciones");
+  revalidatePath("/panel/automatizaciones/agente-whatsapp");
+  return {
+    ok: true,
+    mensaje: pausar
+      ? "Agente en pausa. Los mensajes siguen llegando a Conversaciones para que los contestés vos."
+      : "Agente activo otra vez. Contesta desde el próximo mensaje.",
+  };
+}
+
+export async function pausarAgente(
+  _prev: ResultadoAccion | null,
+  form: FormData
+): Promise<ResultadoAccion> {
+  return fijarPausaAgente(form, true);
+}
+
+export async function reactivarAgente(
+  _prev: ResultadoAccion | null,
+  form: FormData
+): Promise<ResultadoAccion> {
+  return fijarPausaAgente(form, false);
 }
 
 export async function guardarConfigAgente(

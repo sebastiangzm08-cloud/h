@@ -25,6 +25,8 @@ import {
   guardarOnboardingAgente,
   guardarPerfilWhatsapp,
   marcarCitaCumplida,
+  pausarAgente,
+  reactivarAgente,
   reagendarCita,
   subirFotoWhatsapp,
   tomarControl,
@@ -61,6 +63,8 @@ const ACCIONES: Record<string, FnAccion> = {
   alternarConocimiento,
   crearRecordatorio,
   cancelarRecordatorio,
+  pausarAgente,
+  reactivarAgente,
 };
 
 export const dynamic = "force-dynamic";

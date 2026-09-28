@@ -1744,3 +1744,40 @@ export async function getLineaDelTiempo(limite = 8): Promise<EventoLinea[]> {
 /* Reexportadas desde `agente-formato.ts` (sin imports de servidor) para no
    romper a quien ya hacía `import { hora } from "@/lib/panel/agente"". */
 export { hora, relativa, fechaCorta, VERTICALES_WHATSAPP, type PerfilWhatsapp } from "./agente-formato";
+
+/* -------------------------------------------------------------------------
+   Cifras del MES del Agente (tarjeta de Automatizaciones y su vista general,
+   Fase 2 del rediseño, 2026-09-27). Todo con cuentas exactas (head count),
+   nunca bajando filas: PostgREST corta a 1.000.
+   - conversaciones: con actividad este mes (ultimo_en desde el día 1, hora CR)
+   - respuestas: mensajes que mandó el agente este mes
+   - citas: citas creadas este mes (por el agente o a mano)
+   - esperando: conversaciones que ahora mismo esperan a una persona
+   ------------------------------------------------------------------------- */
+export type CifrasAgenteMes = {
+  conversaciones: number;
+  respuestas: number;
+  citas: number;
+  esperando: number;
+};
+
+export async function getCifrasAgenteMes(): Promise<CifrasAgenteMes> {
+  if (await enModoEjemplo()) return { conversaciones: 342, respuestas: 1180, citas: 48, esperando: 2 };
+  const id = await clienteId();
+  if (!id) return { conversaciones: 0, respuestas: 0, citas: 0, esperando: 0 };
+
+  const sb = await supabaseServidor();
+  const mes = inicioMesCR(Date.now());
+  const [conv, resp, citas, espera] = await Promise.all([
+    sb.from("wa_conversaciones").select("id", { count: "exact", head: true }).eq("cliente_id", id).gte("ultimo_en", mes),
+    sb.from("wa_mensajes").select("id", { count: "exact", head: true }).eq("cliente_id", id).eq("autor", "agente").gte("creado_en", mes),
+    sb.from("wa_citas").select("id", { count: "exact", head: true }).eq("cliente_id", id).gte("creada_en", mes),
+    sb.from("wa_conversaciones").select("id", { count: "exact", head: true }).eq("cliente_id", id).eq("estado", "espera"),
+  ]);
+  return {
+    conversaciones: conv.count ?? 0,
+    respuestas: resp.count ?? 0,
+    citas: citas.count ?? 0,
+    esperando: espera.count ?? 0,
+  };
+}
