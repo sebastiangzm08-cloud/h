@@ -86,7 +86,11 @@ function navCliente({ redes, agente }: ModulosCliente): Grupo[] {
       { href: "/panel/agente/conversaciones", label: "Conversaciones", icono: "mensajes", tour: "conversaciones" },
       { href: "/panel/agente/correo", label: "Correo", icono: "correo", tour: "correo" },
       { href: "/panel/agente/contactos", label: "Clientes", icono: "clientes", tour: "contactos" },
-      { href: "/panel/agente/citas", label: "Agenda", icono: "calendario", tour: "citas" }
+      { href: "/panel/agente/citas", label: "Agenda", icono: "calendario", tour: "citas" },
+      /* "¿Cuánto me deja y dónde se me escapa gente?": embudo, ventas,
+         oportunidades y recuperación. Va pegado a Agenda porque se nutre de
+         las citas que se marcan como cumplidas. */
+      { href: "/panel/agente/resultados", label: "Resultados", icono: "reporte" }
     );
   }
   principal.push(

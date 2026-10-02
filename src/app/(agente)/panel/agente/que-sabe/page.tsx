@@ -1,108 +1,104 @@
-import { Cabecera, Cuerpo, Bloque, AvisoEjemplo, Vacio } from "@/components/panel/agente-ui";
-import { colones } from "@/components/panel/ui";
-import { Icono } from "@/components/panel/iconos";
-import {
-  AccionesConocimiento,
-  FormaAgregarConocimiento,
-} from "@/components/panel/agente-conocimiento-form";
-import { enModoEjemplo, getConocimiento, type ItemConocimiento } from "@/lib/panel/agente";
-import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { Cabecera, Cuerpo, AvisoEjemplo } from "@/components/panel/agente-ui";
+import { SeccionConocimiento } from "@/components/panel/conocimiento/seccion-conocimiento";
+import { enModoEjemplo, getConocimiento } from "@/lib/panel/agente";
 
-function FilaConocimiento({
-  k,
-  v,
-  item,
-}: {
-  k: React.ReactNode;
-  v: React.ReactNode;
-  item: ItemConocimiento;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex items-center justify-between gap-4 border-line px-4 py-2.5 [&+&]:border-t",
-        !item.activo && "opacity-45"
-      )}
-    >
-      <span className="min-w-0 flex-1 truncate text-[13px] text-ink-soft">{k}</span>
-      <span className="flex-none font-mono text-[13px] text-ink tabular-nums">{v}</span>
-      <AccionesConocimiento id={item.id} activo={item.activo} />
-    </div>
-  );
-}
+/* ==========================================================================
+   Conocimiento: lo único que el agente sabe contestar.
 
-export default async function QueSabePage() {
+   Tres listas — servicios con precio, datos del negocio y reglas de lo que
+   nunca debe decir — y cada una se edita en su lugar: agregar, apagar sin
+   perder, borrar con confirmación. El agente usa lo que se guarda acá desde
+   la siguiente conversación.
+   ========================================================================== */
+export default async function ConocimientoPage() {
   const [items, ejemplo] = await Promise.all([getConocimiento(), enModoEjemplo()]);
 
   const servicios = items.filter((i) => i.tipo === "servicio");
   const datos = items.filter((i) => i.tipo === "dato");
   const reglas = items.filter((i) => i.tipo === "regla");
 
+  const atajos = [
+    { href: "#servicios", texto: "Servicios", n: servicios.length },
+    { href: "#datos", texto: "Datos", n: datos.length },
+    { href: "#reglas", texto: "Reglas", n: reglas.length },
+  ];
+
   return (
     <>
       <Cabecera
         eyebrow="El agente"
-        titulo="Qué sabe"
+        titulo="Conocimiento"
         descripcion="El agente contesta únicamente con lo que está en esta pantalla. Si algo no está acá, no lo inventa: te lo pregunta a vos."
       />
       <AvisoEjemplo visible={ejemplo} />
 
-      <Cuerpo className="flex flex-col gap-4">
-        <Bloque
-          titulo="Servicios y precios"
-          sub={`${servicios.length} cargados`}
-        >
-          {servicios.length === 0 ? (
-            <Vacio>Todavía no hay servicios cargados. Sin esto el agente no puede dar precios.</Vacio>
-          ) : (
-            servicios.map((s) => (
-              <FilaConocimiento
-                key={s.id}
-                item={s}
-                k={
-                  <>
-                    {s.clave}
-                    {s.duracionMin ? (
-                      <span className="ml-2 text-ink-faint">{s.duracionMin} min</span>
-                    ) : null}
-                  </>
-                }
-                v={s.monto === 0 ? "Gratis" : s.monto != null ? colones(s.monto) : "A consultar"}
-              />
-            ))
-          )}
-          <FormaAgregarConocimiento tipo="servicio" />
-        </Bloque>
+      <Cuerpo className="flex flex-col gap-[18px]">
+        {/* Atajos para saltar entre las tres listas en el celular. En pantalla
+            ancha las tres caben a la vista y sobran. */}
+        <nav aria-label="Secciones de Conocimiento" className="-mt-1 flex flex-wrap gap-2 lg:hidden">
+          {atajos.map((a) => (
+            <a
+              key={a.href}
+              href={a.href}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-surface-2 px-4 text-[13px] text-ink-soft transition-colors hover:border-line-strong hover:text-ink"
+            >
+              {a.texto}
+              <span className="font-mono text-[11px] text-ink-mute tabular-nums">{a.n}</span>
+            </a>
+          ))}
+        </nav>
 
-        <Bloque titulo="Horario y datos del negocio" sub="Con esto agenda y responde lo básico">
-          {datos.length === 0 ? (
-            <Vacio>Falta cargar horario y dirección.</Vacio>
-          ) : (
-            datos.map((d) => <FilaConocimiento key={d.id} item={d} k={d.clave} v={d.valor || "—"} />)
-          )}
-          <FormaAgregarConocimiento tipo="dato" />
-        </Bloque>
+        <div className="grid items-start gap-[18px] lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+          <SeccionConocimiento
+            id="servicios"
+            tipo="servicio"
+            eyebrow="Catálogo"
+            titulo="Servicios y precios"
+            descripcion="Lo que ofrecés y cuánto cuesta. Con esto el agente da precios y agenda las citas."
+            icono="catalogo"
+            vacioTitulo="Todavía no cargaste servicios"
+            vacioTexto="Sin servicios el agente no puede dar precios ni agendar. Empezá con los 3 a 5 que más te piden."
+            items={servicios}
+          />
 
-        <Bloque titulo="Qué nunca decir" sub="Límites duros: el agente no los cruza">
-          {reglas.length === 0 ? (
-            <Vacio>No hay reglas cargadas todavía.</Vacio>
-          ) : (
-            reglas.map((r) => (
-              <FilaConocimiento
-                key={r.id}
-                item={r}
-                k={
-                  <span className="flex items-start gap-2.5">
-                    <Icono nombre="flecha" className="mt-0.5 h-3.5 w-3.5 flex-none rotate-45 text-bad" />
-                    {r.clave}
-                  </span>
-                }
-                v=""
-              />
-            ))
-          )}
-          <FormaAgregarConocimiento tipo="regla" />
-        </Bloque>
+          <div className="flex min-w-0 flex-col gap-[18px]">
+            <SeccionConocimiento
+              id="datos"
+              tipo="dato"
+              eyebrow="Negocio"
+              titulo="Horario y datos del negocio"
+              descripcion={
+                <>
+                  Dirección, formas de pago y lo básico que la gente pregunta. El horario con el que agenda se ajusta en{" "}
+                  <Link
+                    href="/panel/agente/como-responde#horario"
+                    className="text-ink-mute underline underline-offset-2 hover:text-ink"
+                  >
+                    Configuración
+                  </Link>
+                  .
+                </>
+              }
+              icono="negocio"
+              vacioTitulo="Faltan los datos básicos"
+              vacioTexto="Cargá la dirección y las formas de pago para que el agente las pueda dar."
+              items={datos}
+            />
+
+            <SeccionConocimiento
+              id="reglas"
+              tipo="regla"
+              eyebrow="Límites"
+              titulo="Qué nunca decir"
+              descripcion="Límites duros: el agente no los cruza."
+              icono="pendientes"
+              vacioTitulo="No hay reglas cargadas"
+              vacioTexto="Ej.: «No dar diagnósticos» o «No prometer resultados»."
+              items={reglas}
+            />
+          </div>
+        </div>
       </Cuerpo>
     </>
   );

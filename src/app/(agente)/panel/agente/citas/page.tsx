@@ -1,17 +1,32 @@
-import { Cabecera, Cuerpo, AvisoEjemplo, Vacio, EstadoPill } from "@/components/panel/agente-ui";
-import { AccionesCita } from "@/components/panel/agente-cita-acciones";
+import Link from "next/link";
+import { armarAgenda } from "@/components/panel/agenda/armar";
+import { FilaCita } from "@/components/panel/agenda/fila-cita";
+import { SemanaProxima } from "@/components/panel/agenda/semana";
 import { BotonAgendarCita } from "@/components/panel/agente-cita-form";
-import { colones } from "@/components/panel/ui";
-import { enModoEjemplo, getCitas, getContactos, getConocimiento, fechaCorta } from "@/lib/panel/agente";
+import {
+  AvisoDatosEjemplo,
+  BOTON,
+  BOTON_BASE,
+  EncabezadoPantalla,
+  EstadoVacio,
+  PaginaPanel,
+  ResumenCifras,
+} from "@/components/panel/clientes/piezas";
+import { enModoEjemplo, getCitas, getContactos, getConocimiento } from "@/lib/panel/agente";
+import { cn } from "@/lib/utils";
 
-const ESTADOS = {
-  confirmada: { texto: "Confirmada", tono: "agendado" as const },
-  sin_confirmar: { texto: "Sin confirmar", tono: "neutro" as const },
-  cancelada: { texto: "Cancelada", tono: "perdido" as const },
-  cumplida: { texto: "Cumplida", tono: "cliente" as const },
-};
+/* ==========================================================================
+   Agenda (antes "Citas") — Fase 4a del rediseño.
 
-export default async function CitasPage() {
+   Responde una pregunta: ¿qué tengo esta semana? Arriba, las cifras y la
+   franja de los próximos 7 días; abajo, las citas agrupadas por día. Cada
+   día con citas es una sección a la que salta la franja.
+
+   Regla de Sebastian: todo lo que hace el bot se puede hacer también a mano.
+   Por eso están "Agendar cita", "Reagendar", "Marcar cumplida" y "Cancelar".
+   Los datos son los mismos de siempre (`getCitas`: de ayer en adelante).
+   ========================================================================== */
+export default async function AgendaPage() {
   const [citas, contactos, conocimiento, ejemplo] = await Promise.all([
     getCitas(),
     getContactos(),
@@ -24,68 +39,81 @@ export default async function CitasPage() {
     .map((c) => ({ clave: c.clave, monto: c.monto, duracionMin: c.duracionMin }));
   const contactosOpciones = contactos.map((c) => ({ id: c.id, nombre: c.nombre, telefono: c.telefono }));
 
-  return (
-    <>
-      <Cabecera
-        eyebrow="Operación"
-        titulo="Citas"
-        descripcion="Lo que el agente agendó por su cuenta. Cuando cambiés o cancelés una, él le avisa al paciente por WhatsApp."
-      />
-      <AvisoEjemplo visible={ejemplo} />
+  const agenda = armarAgenda(citas);
 
-      <Cuerpo>
+  return (
+    <PaginaPanel>
+      <EncabezadoPantalla
+        titulo="Agenda"
+        descripcion="Las citas que agendó tu agente y las que sumás a mano. Si cambiás o cancelás una, el agente le avisa al paciente por WhatsApp."
+      >
         {servicios.length > 0 ? (
-          <BotonAgendarCita contactos={contactosOpciones} servicios={servicios} />
-        ) : null}
-        <div className="overflow-hidden rounded-xl border border-line bg-surface">
-          {citas.length === 0 ? (
-            <Vacio>Todavía no hay citas. Las agenda el agente cuando alguien le pide una.</Vacio>
-          ) : (
-            <div className="scroll-fino overflow-x-auto">
-              <table className="w-full min-w-[720px] border-collapse text-[13px]">
-                <thead>
-                  <tr>
-                    {["Cuándo", "Paciente", "Servicio", "Monto", "Estado", "Recordatorio", ""].map((h) => (
-                      <th
-                        key={h}
-                        className="border-b border-line bg-surface-2 px-4 py-2.5 text-left font-mono text-[10px] font-normal tracking-[0.1em] whitespace-nowrap text-ink-faint uppercase"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {citas.map((c) => {
-                    const e = ESTADOS[c.estado] ?? ESTADOS.sin_confirmar;
-                    return (
-                      <tr key={c.id} className="border-b border-line last:border-b-0 hover:bg-surface-2">
-                        <td className="px-4 py-3 font-mono text-xs whitespace-nowrap text-ink tabular-nums">
-                          {fechaCorta(c.cuando)}
-                        </td>
-                        <td className="px-4 py-3 font-medium text-ink">{c.nombre}</td>
-                        <td className="px-4 py-3 text-ink-mute">{c.servicio || "—"}</td>
-                        <td className="px-4 py-3 font-mono text-xs text-ink-mute tabular-nums">
-                          {c.monto ? colones(c.monto) : "Gratis"}
-                        </td>
-                        <td className="px-4 py-3">
-                          <EstadoPill tono={e.tono}>{e.texto}</EstadoPill>
-                        </td>
-                        <td className="px-4 py-3 font-mono text-xs text-ink-faint">
-                          {c.recordatorioEn ? fechaCorta(c.recordatorioEn) : "—"}
-                        </td>
-                        <td className="px-4 py-3">
-                          <AccionesCita citaId={c.id} estado={c.estado} />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </Cuerpo>
-    </>
+          <BotonAgendarCita contactos={contactosOpciones} servicios={servicios} className="w-full sm:w-auto" />
+        ) : (
+          <Link
+            href="/panel/agente/que-sabe"
+            className={cn(BOTON_BASE, BOTON.secundario, "min-h-11 rounded-xl px-4 text-[13.5px] sm:min-h-10")}
+          >
+            Cargá tus servicios para agendar a mano
+          </Link>
+        )}
+      </EncabezadoPantalla>
+
+      <AvisoDatosEjemplo visible={ejemplo} />
+
+      {citas.length === 0 ? (
+        <EstadoVacio titulo="Todavía no hay citas">
+          Las agenda el agente cuando alguien se las pide por WhatsApp. También podés agendar una a mano con el
+          botón de arriba.
+        </EstadoVacio>
+      ) : (
+        <>
+          <ResumenCifras
+            etiqueta="Resumen de la agenda"
+            className="grid-cols-3"
+            cifras={[
+              { valor: String(agenda.citasHoy), etiqueta: "Citas hoy" },
+              { valor: String(agenda.proximos7), etiqueta: "Próximos 7 días" },
+              {
+                valor: String(agenda.sinConfirmar),
+                etiqueta: "Sin confirmar",
+                alerta: agenda.sinConfirmar > 0,
+              },
+            ]}
+          />
+
+          <SemanaProxima dias={agenda.semana} />
+
+          {agenda.dias.map((dia) => (
+            <section
+              key={dia.clave}
+              id={`dia-${dia.clave}`}
+              aria-labelledby={`titulo-${dia.clave}`}
+              className="scroll-mt-4"
+            >
+              <div className="mb-3 flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
+                <h2 id={`titulo-${dia.clave}`} className="text-[16px] font-semibold tracking-tight text-ink">
+                  {dia.titulo}
+                </h2>
+                <span className="text-[12.5px] text-ink-faint">{dia.detalle}</span>
+                <span className="ml-auto font-mono text-[11px] text-ink-faint tabular-nums">
+                  {dia.citas.length} {dia.citas.length === 1 ? "cita" : "citas"}
+                </span>
+              </div>
+
+              <ul className="flex flex-col gap-3 md:grid md:grid-cols-2 xl:flex xl:flex-col xl:gap-0 xl:overflow-hidden xl:rounded-2xl xl:border xl:border-line xl:bg-surface-2">
+                {dia.citas.map((cita, i) => (
+                  <FilaCita key={cita.id} cita={cita} indice={i} />
+                ))}
+              </ul>
+            </section>
+          ))}
+
+          <p className="text-[11.5px] leading-snug text-ink-faint">
+            Acá aparecen las citas de ayer en adelante.
+          </p>
+        </>
+      )}
+    </PaginaPanel>
   );
 }

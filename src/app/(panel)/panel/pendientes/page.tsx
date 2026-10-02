@@ -8,20 +8,23 @@
    `actividad`; el cliente se entera entrando.
    ========================================================================== */
 import Link from "next/link";
-import { Caja, Eyebrow, PageHead } from "@/components/panel/ui";
+import { BTN_SECUNDARIO_CHICO } from "@/components/panel/configuracion/estilos";
+import { EstadoVacio, Seccion } from "@/components/panel/configuracion/seccion";
 import { Icono } from "@/components/panel/iconos";
+import { PageHead } from "@/components/panel/ui";
 import { getPendientes } from "@/lib/panel/datos";
 import type { Pendiente } from "@/lib/panel/tipos";
+import { cn } from "@/lib/utils";
 
 const ORDEN = ["urgente", "atencion", "info"] as const;
 
 const META: Record<
   Pendiente["gravedad"],
-  { titulo: string; punto: string; texto: string }
+  { titulo: string; descripcion: string; punto: string }
 > = {
-  urgente: { titulo: "Urgente", punto: "bg-bad", texto: "text-bad" },
-  atencion: { titulo: "Requiere atención", punto: "bg-warn", texto: "text-warn" },
-  info: { titulo: "Para cuando puedas", punto: "bg-ink-faint", texto: "text-ink-mute" },
+  urgente: { titulo: "Urgente", descripcion: "Lo primero que hay que resolver.", punto: "bg-bad" },
+  atencion: { titulo: "Requiere atención", descripcion: "Después de lo urgente.", punto: "bg-warn" },
+  info: { titulo: "Para cuando puedas", descripcion: "Sin apuro.", punto: "bg-ink-faint" },
 };
 
 export default async function PendientesPage() {
@@ -40,50 +43,42 @@ export default async function PendientesPage() {
       />
 
       {pendientes.length === 0 ? (
-        <Caja className="text-center">
-          <p className="py-6 text-[13px] text-ink-faint">
-            Nada pendiente. Todo tuyo está al día.
-          </p>
-        </Caja>
+        <EstadoVacio icono="pendientes" titulo="Nada pendiente">
+          Todo lo tuyo está al día.
+        </EstadoVacio>
       ) : (
         porGravedad.map(({ g, items }) => (
-          <section key={g}>
-            <div className="mb-3 flex items-center gap-2">
-              <span className={`h-[7px] w-[7px] rounded-full ${META[g].punto}`} />
-              <Eyebrow>{META[g].titulo}</Eyebrow>
-              <span className="font-mono text-[10.5px] text-ink-faint">
-                {items.length}
+          <Seccion
+            key={g}
+            id={`gravedad-${g}`}
+            titulo={
+              <span className="inline-flex items-center gap-2.5">
+                <span className={cn("h-[7px] w-[7px] flex-none rounded-full", META[g].punto)} aria-hidden="true" />
+                {META[g].titulo}
+                <span className="font-mono text-[11px] font-normal text-ink-mute tabular-nums">{items.length}</span>
               </span>
-            </div>
-            <Caja plano>
-              <ul className="flex flex-col">
-                {items.map((p, i) => (
-                  <li
-                    key={p.id}
-                    className={
-                      i === items.length - 1
-                        ? "flex items-start gap-3 px-1.5 py-3"
-                        : "flex items-start gap-3 border-b border-line px-1.5 py-3"
-                    }
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] text-ink-soft">{p.titulo}</p>
-                      <p className="mt-0.5 text-[11.5px] text-ink-faint">
-                        {p.detalle}
-                      </p>
-                    </div>
-                    <Link
-                      href={p.accion.href}
-                      className="inline-flex flex-none items-center gap-1.5 rounded-full border border-line-strong px-3 py-1 text-[11.5px] text-ink transition-colors hover:bg-surface-2"
-                    >
-                      {p.accion.texto}
-                      <Icono nombre="flecha" className="h-3 w-3" />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </Caja>
-          </section>
+            }
+            descripcion={META[g].descripcion}
+            sinRelleno
+          >
+            <ul className="divide-y divide-line border-t border-line">
+              {items.map((p) => (
+                <li
+                  key={p.id}
+                  className="flex flex-col gap-2.5 px-4 py-3.5 sm:flex-row sm:items-center sm:gap-4 sm:px-[18px]"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] leading-snug font-medium break-words text-ink-soft">{p.titulo}</p>
+                    <p className="mt-0.5 text-[12px] leading-snug break-words text-ink-mute">{p.detalle}</p>
+                  </div>
+                  <Link href={p.accion.href} className={cn(BTN_SECUNDARIO_CHICO, "w-full sm:w-auto")}>
+                    {p.accion.texto}
+                    <Icono nombre="flecha" className="h-3 w-3" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Seccion>
         ))
       )}
     </>

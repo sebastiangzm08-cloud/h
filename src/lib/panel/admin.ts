@@ -74,7 +74,10 @@ export type ResumenAdmin = {
 
 export type EjecucionAdmin = {
   id: string;
+  /** "sep 2026": solo mes y año, para resúmenes. */
   cuando: string;
+  /** Momento exacto (ISO) para mostrar fecha y hora reales en el log. */
+  cuandoIso: string;
   cliente: string;
   accion: string;
   duracionMs: number | null;
@@ -93,6 +96,15 @@ function fechaCorta(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
   return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/** Inicio del día de hoy en Costa Rica (UTC-6, sin horario de verano), no en la
+    hora del servidor: así "hoy" empieza a la medianoche tica y no a las 6 p. m. */
+function inicioDiaCR(): Date {
+  const MS_6H = 6 * 3_600_000;
+  const cr = new Date(Date.now() - MS_6H);
+  cr.setUTCHours(0, 0, 0, 0);
+  return new Date(cr.getTime() + MS_6H);
 }
 
 /** Solo por si alguien llega a una pantalla admin sin ser admin: lista vacía. */
@@ -201,7 +213,14 @@ export type FichaCliente = {
     creadoEn: string;
   }[];
   conexiones: { servicio: string; estado: string; referencia: string | null }[];
-  actividad: { id: string; cuando: string; descripcion: string; resultado: string }[];
+  actividad: {
+    id: string;
+    cuando: string;
+    /** Momento exacto (ISO), para mostrarlo en relativo ("hace 2 h"). */
+    cuandoIso: string;
+    descripcion: string;
+    resultado: string;
+  }[];
   onboarding: Onboarding;
   /** Solo para el Agente de WhatsApp; `null` si esa automatización no está asignada. */
   asignacionAgenteId: string | null;
@@ -317,6 +336,7 @@ export async function getFichaCliente(id: string): Promise<FichaCliente | null> 
     actividad: (actividad.data ?? []).map((x) => ({
       id: x.id,
       cuando: mesAnio(x.creada_en),
+      cuandoIso: x.creada_en,
       descripcion: x.descripcion,
       resultado: x.resultado,
     })),
@@ -331,14 +351,20 @@ export async function getFichaCliente(id: string): Promise<FichaCliente | null> 
 /* -------------------------------------------------------------------------
    Resumen del Inicio admin — mezcla real (clientes) + ejemplo (actividad)
    ------------------------------------------------------------------------- */
-export async function getResumenAdmin(): Promise<ResumenAdmin> {
+export async function getResumenAdmin(
+  /** Si la pantalla ya leyó la lista de clientes, la pasa para no repetir
+      sus tres consultas. Sin esto lee la suya, como siempre. */
+  clientesPrevios?: ClienteAdmin[]
+): Promise<ResumenAdmin> {
+  if (!(await soyAdmin())) {
+    return { clientesActivos: 0, clientesPrueba: 0, ingresoMensual: 0, accionesHoy: 0, erroresHoy: 0, enCola: 0 };
+  }
   const [clientes, supabase] = await Promise.all([
-    getClientesAdmin(),
+    clientesPrevios ?? getClientesAdmin(),
     supabaseServidor(),
   ]);
 
-  const inicioHoy = new Date();
-  inicioHoy.setHours(0, 0, 0, 0);
+  const inicioHoy = inicioDiaCR();
 
   const [acciones, errores, cola] = await Promise.all([
     supabase
@@ -359,7 +385,10 @@ export async function getResumenAdmin(): Promise<ResumenAdmin> {
   return {
     clientesActivos: clientes.filter((c) => c.estado === "activo").length,
     clientesPrueba: clientes.filter((c) => c.estado === "prueba").length,
-    ingresoMensual: clientes.reduce((s, c) => s + c.ingresoMensual, 0),
+    /* Solo clientes ACTIVOS: los que están en prueba todavía no pagan. */
+    ingresoMensual: clientes
+      .filter((c) => c.estado === "activo")
+      .reduce((s, c) => s + c.ingresoMensual, 0),
     accionesHoy: acciones.count ?? 0,
     erroresHoy: errores.count ?? 0,
     enCola: cola.count ?? 0,
@@ -379,8 +408,7 @@ export async function getContadoresAdmin(): Promise<{
     return { clientes: 0, mensajes: 0, erroresHoy: 0, pagosVencidos: 0 };
 
   const supabase = await supabaseServidor();
-  const inicioHoy = new Date();
-  inicioHoy.setHours(0, 0, 0, 0);
+  const inicioHoy = inicioDiaCR();
 
   const [clientes, mensajes, errores, vencidos] = await Promise.all([
     supabase.from("clientes").select("id", { count: "exact", head: true }),
@@ -535,6 +563,7 @@ export async function getEjecucionesAdmin(
     return {
       id: e.id,
       cuando: mesAnio(e.creada_en),
+      cuandoIso: e.creada_en,
       cliente: cli?.nombre_negocio ?? "—",
       accion: e.accion,
       duracionMs: e.duracion_ms ?? null,
@@ -573,6 +602,7 @@ export async function getConsultasAdmin(): Promise<Consulta[]> {
       asunto: m.asunto,
       estado: estadoConsultaAdmin(m.estado),
       cuando: mesAnio(m.creado_en),
+      creadaEn: m.creado_en,
       ultimaDe: ultimoAutor(
         m.mensajes_lineas as { autor?: string; creado_en?: string }[]
       ),
@@ -610,6 +640,7 @@ export async function getConsultaAdmin(
     asunto: data.asunto,
     estado: estadoConsultaAdmin(data.estado),
     cuando: mesAnio(data.creado_en),
+    creadaEn: data.creado_en,
     ultimaDe: ultimoAutor(crudas),
     cliente: cli?.nombre_negocio ?? "—",
     lineas: [...crudas]

@@ -130,7 +130,7 @@ function humaniza(clave: string): string {
    TRES, no nueve. El agente de WhatsApp es todo en uno: atiende, vende y
    agenda. Reportes, facturas, cobros, pedidos y personal quedaron fuera.
    ------------------------------------------------------------------------- */
-const CATALOGO: Automatizacion[] = [
+const CATALOGO_COMPLETO: Automatizacion[] = [
   {
     id: "aut-redes",
     slug: "redes-sociales",
@@ -186,6 +186,12 @@ const CATALOGO: Automatizacion[] = [
     plazo: "1 a 2 semanas",
   },
 ];
+
+/* Redes sociales está apagada en el panel por decisión de Sebastian
+   (2026-10-02): hoy el producto es el Agente de WhatsApp. Para volver a
+   mostrarla, vaciá este arreglo. No se borró ningún dato ni flujo. */
+const OCULTAS_EN_PANEL = ["redes-sociales"];
+const CATALOGO = CATALOGO_COMPLETO.filter((a) => !OCULTAS_EN_PANEL.includes(a.slug));
 
 function autPorSlug(slug: string | null | undefined): Automatizacion | undefined {
   return CATALOGO.find((a) => a.slug === slug);
@@ -893,7 +899,7 @@ export async function getPrimerosPasos(): Promise<{
 
   const tieneRedes = (asigs.data ?? []).some((a) => {
     const cat = a.catalogo_automatizaciones as { slug?: string } | null;
-    return cat?.slug === "redes-sociales";
+    return cat?.slug === "redes-sociales" && !OCULTAS_EN_PANEL.includes("redes-sociales");
   });
 
   /* "Completá el perfil de tu negocio" arma el prompt de POSTS — le sirve

@@ -339,7 +339,7 @@ const ESTADO_CONVERSACION: Record<ConversacionAgente["estado"], { texto: string;
 };
 
 function iniciales(nombre: string) {
-  const partes = nombre.trim().split(/\s+/).filter(Boolean);
+  const partes = nombre.trim().split(/\s+/).filter((x) => /^\p{L}/u.test(x));
   const texto = (partes[0]?.[0] ?? "?") + (partes[1]?.[0] ?? "");
   return texto.toUpperCase();
 }

@@ -6,51 +6,42 @@
    ========================================================================== */
 import { useAccionAdmin } from "@/components/panel/usar-accion-admin";
 import { CampoToken } from "@/components/panel/campo-token";
-import { cn } from "@/lib/utils";
+import { Caja, CajaHead } from "@/components/panel/ui";
+import { BTN_PRIMARIO, CAMPO, ETIQUETA, MensajeAccion } from "@/components/admin/admin-ui";
+import { useEnvio } from "@/components/admin/usar-envio";
 
 export function GenerarCobros({ periodoActual }: { periodoActual: string }) {
   const [estado, ejecutar, pendiente] = useAccionAdmin("generarCobrosDelMes");
+  /* El periodo vuelve a su valor de siempre (el mes corriente) al terminar. */
+  const envio = useEnvio(estado, ejecutar);
 
   return (
-    <form
-      action={ejecutar}
-      className="flex flex-wrap items-end gap-2.5 rounded-2xl border border-line bg-surface-2 p-4"
-    >
-      <CampoToken />
-      <label className="flex flex-col gap-1">
-        <span className="text-[10.5px] font-medium tracking-wide text-ink-mute uppercase">
-          Periodo a generar
-        </span>
-        <input
-          name="periodo"
-          defaultValue={periodoActual}
-          required
-          className="h-9 w-44 rounded-lg border border-line bg-surface-3 px-2.5 text-[12.5px] text-ink transition-colors focus:border-line-strong focus:outline-none"
-        />
-      </label>
-      <button
-        type="submit"
-        disabled={pendiente}
-        className="inline-flex h-9 items-center rounded-full bg-ink px-4 text-[12px] font-medium text-paper transition-colors hover:bg-ink-soft disabled:opacity-50"
-      >
-        {pendiente ? "Generando…" : "Generar cobros del mes"}
-      </button>
-      <p className="w-full text-[11px] text-ink-faint">
-        Un cobro <span className="text-ink-mute">pendiente</span> por cada
-        cliente activo con automatizaciones, por la suma de sus tarifas. No
-        duplica: salta a quien ya tenga el de ese periodo.
-      </p>
-      {estado ? (
-        <p
-          role={estado.ok ? "status" : "alert"}
-          className={cn(
-            "w-full rounded-lg px-3 py-2 text-[12px]",
-            estado.ok ? "bg-ok/10 text-ok" : "bg-bad/10 text-bad"
-          )}
-        >
-          {estado.ok ? estado.mensaje : estado.error}
+    <Caja>
+      <CajaHead eyebrow="Cada mes" titulo="Generar los cobros del mes" />
+      <form {...envio} className="flex flex-col gap-3">
+        <CampoToken />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <label className="flex min-w-0 flex-col gap-1.5 sm:w-64">
+            <span className={ETIQUETA}>Periodo a generar</span>
+            <input
+              name="periodo"
+              defaultValue={periodoActual}
+              required
+              autoComplete="off"
+              className={CAMPO}
+            />
+          </label>
+          <button type="submit" disabled={pendiente} className={BTN_PRIMARIO}>
+            {pendiente ? "Generando…" : "Generar cobros del mes"}
+          </button>
+        </div>
+        <p className="text-[12px] leading-snug text-ink-faint">
+          Un cobro <span className="text-ink-mute">pendiente</span> por cada cliente activo con
+          automatizaciones, por la suma de sus tarifas. No duplica: salta a quien ya tenga el de ese
+          periodo.
         </p>
-      ) : null}
-    </form>
+        <MensajeAccion estado={estado} />
+      </form>
+    </Caja>
   );
 }

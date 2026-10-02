@@ -280,6 +280,8 @@ export type Consulta = {
   ultimaDe: "cliente" | "hoshizora" | null;
   /** Solo en el listado del admin. */
   cliente?: string;
+  /** Momento exacto de apertura (ISO). Solo lo llena el lado del admin. */
+  creadaEn?: string;
 };
 
 export type HiloConsulta = Consulta & { lineas: LineaConsulta[] };

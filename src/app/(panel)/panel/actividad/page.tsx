@@ -3,9 +3,11 @@
    automatizaciones juntas. En el Inicio van los últimos movimientos; acá
    está el registro completo.
    ========================================================================== */
-import { Caja, Eyebrow, PageHead, Pill } from "@/components/panel/ui";
+import { EstadoVacio, Seccion } from "@/components/panel/configuracion/seccion";
+import { PageHead, Pill } from "@/components/panel/ui";
 import { getActividad } from "@/lib/panel/datos";
 import type { ResultadoActividad } from "@/lib/panel/tipos";
+import { cn } from "@/lib/utils";
 
 const TONO: Record<ResultadoActividad, "ok" | "warn" | "bad" | "idle"> = {
   ok: "ok",
@@ -21,6 +23,14 @@ const ETIQUETA: Record<ResultadoActividad, string> = {
   error: "Error",
 };
 
+/** El punto de la línea: gris si salió bien, del color del problema si no. */
+const PUNTO: Record<ResultadoActividad, string> = {
+  ok: "bg-ink-faint",
+  atencion: "bg-warn",
+  aviso: "bg-warn",
+  error: "bg-bad",
+};
+
 export default async function ActividadPage() {
   const filas = await getActividad(100);
 
@@ -28,51 +38,49 @@ export default async function ActividadPage() {
     <>
       <PageHead
         titulo="Actividad"
-        sub={`${filas.length} movimientos`}
+        sub={filas.length >= 100 ? "Últimos 100 movimientos" : `${filas.length} movimientos`}
         descripcion="Todo lo que el sistema hizo por vos, de todas tus automatizaciones."
       />
 
       {filas.length === 0 ? (
-        <Caja className="text-center">
-          <p className="py-6 text-[13px] text-ink-faint">
-            Todavía no hay movimientos.
-          </p>
-        </Caja>
+        <EstadoVacio icono="actividad" titulo="Todavía no hay movimientos">
+          Cuando tus automatizaciones empiecen a trabajar, cada cosa que hagan queda anotada acá.
+        </EstadoVacio>
       ) : (
-        <Caja>
-          <div className="mb-3">
-            <Eyebrow>Registro</Eyebrow>
-          </div>
-          <ul className="flex flex-col">
-            {filas.map((a, i) => (
+        <Seccion
+          id="registro"
+          eyebrow="Registro"
+          titulo="Lo último que pasó"
+          descripcion={filas.length >= 100 ? "Los 100 más recientes, del más nuevo al más viejo." : "Del más nuevo al más viejo."}
+          sinRelleno
+        >
+          <ol className="divide-y divide-line border-t border-line">
+            {filas.map((a) => (
               <li
                 key={a.id}
-                className={
-                  i === filas.length - 1
-                    ? "flex items-start gap-3 py-3"
-                    : "flex items-start gap-3 border-b border-line py-3"
-                }
+                className="flex items-start gap-3 px-4 py-3 sm:gap-4 sm:px-[18px]"
               >
-                <time className="w-[92px] flex-none pt-0.5 font-mono text-[10.5px] text-ink-faint">
-                  {a.cuando}
-                </time>
                 <span
-                  className="mt-1.5 h-[7px] w-[7px] flex-none rounded-full bg-ink-soft ring-[3px] ring-white/6"
                   aria-hidden="true"
+                  className={cn("mt-[7px] h-[7px] w-[7px] flex-none rounded-full ring-[3px] ring-ink/10", PUNTO[a.resultado])}
                 />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[12.5px] text-ink-soft">
-                    <span className="font-medium">{a.automatizacion}</span> —{" "}
-                    {a.descripcion}
+                {/* Celular: la hora arriba y el texto debajo. En pantalla ancha,
+                    hora a la izquierda en su columna. */}
+                <div className="min-w-0 flex-1 sm:flex sm:items-baseline sm:gap-4">
+                  <time className="block flex-none font-mono text-[10.5px] text-ink-mute sm:w-[110px]">{a.cuando}</time>
+                  <p className="mt-0.5 min-w-0 text-[12.5px] leading-snug break-words text-ink-soft sm:mt-0 sm:flex-1">
+                    <span className="font-medium text-ink">{a.automatizacion}</span> — {a.descripcion}
                   </p>
                 </div>
                 {a.resultado !== "ok" ? (
-                  <Pill tono={TONO[a.resultado]}>{ETIQUETA[a.resultado]}</Pill>
+                  <span className="flex-none pt-px">
+                    <Pill tono={TONO[a.resultado]}>{ETIQUETA[a.resultado]}</Pill>
+                  </span>
                 ) : null}
               </li>
             ))}
-          </ul>
-        </Caja>
+          </ol>
+        </Seccion>
       )}
     </>
   );

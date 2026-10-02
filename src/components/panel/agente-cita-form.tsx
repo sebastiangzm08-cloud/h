@@ -1,20 +1,30 @@
 "use client";
 
 /* ==========================================================================
-   Agendar una cita A MANO — mismo patrón que `agente-recordatorio-form.tsx`
-   (botón chico que se abre en un formulario). Dos entradas, un solo
-   formulario compartido: desde una fila de Contactos (el contacto ya se
-   sabe) o desde arriba de Citas (hay que elegirlo). El servidor valida
-   horario/anticipación y reserva con la MISMA función que usa el bot — acá
-   solo se junta la info y se manda.
+   Agendar una cita A MANO. Regla de Sebastian: todo lo que hace el bot, se
+   puede hacer también a mano. Dos entradas, mismo formulario de fondo:
+   desde una fila de Clientes (el contacto ya se sabe) o desde arriba de
+   Agenda (hay que elegirlo, o escribir un número nuevo).
+
+   El servidor valida horario, anticipación y cupo, y reserva con la MISMA
+   función que usa el bot (`wa_reservar_cita`) — acá solo se junta la info y
+   se manda. Desde la Fase 4a los formularios viven dentro de una hoja modal
+   (`HojaModal`): quien la abre decide cuándo montarla, y cada apertura es un
+   formulario nuevo, sin el mensaje de éxito de la vez anterior.
    ========================================================================== */
 import { useState } from "react";
 import { CampoToken } from "@/components/panel/campo-token";
+import {
+  BotonesFormulario,
+  CLASE_INPUT,
+  Campo,
+  enviarSinBorrar,
+  MensajeResultado,
+} from "@/components/panel/clientes/formulario";
+import { HojaModal } from "@/components/panel/clientes/hoja-modal";
+import { BOTON, BOTON_BASE } from "@/components/panel/clientes/piezas";
 import { useAccionAgente } from "@/components/panel/usar-accion-agente";
-
-const campo =
-  "w-full rounded-lg border border-line-strong bg-surface-2 px-3 py-2 text-[13px] text-ink " +
-  "placeholder:text-ink-faint outline-none transition-colors focus:border-ink-faint";
+import { cn } from "@/lib/utils";
 
 export type ServicioOpcion = { clave: string; monto: number | null; duracionMin: number | null };
 export type ContactoOpcion = { id: string; nombre: string; telefono: string };
@@ -30,9 +40,8 @@ function textoServicio(s: ServicioOpcion) {
 function CamposComunes({ servicios }: { servicios: ServicioOpcion[] }) {
   return (
     <>
-      <label className="flex flex-col gap-1.5">
-        <span className="text-[11px] text-ink-faint">Servicio</span>
-        <select autoComplete="off" name="servicio" required defaultValue="" className={campo}>
+      <Campo etiqueta="Servicio">
+        <select autoComplete="off" name="servicio" required defaultValue="" className={CLASE_INPUT}>
           <option value="" disabled>
             Elegir…
           </option>
@@ -42,115 +51,49 @@ function CamposComunes({ servicios }: { servicios: ServicioOpcion[] }) {
             </option>
           ))}
         </select>
-      </label>
-      <div className="grid grid-cols-2 gap-2.5">
-        <label className="flex flex-col gap-1">
-          <span className="text-[11px] text-ink-faint">Fecha</span>
-          <input autoComplete="off" type="date" name="fecha" required className={campo} />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-[11px] text-ink-faint">Hora</span>
-          <input autoComplete="off" type="time" name="hora" required step={900} className={campo} />
-        </label>
+      </Campo>
+      <div className="grid grid-cols-2 gap-3">
+        <Campo etiqueta="Fecha">
+          <input autoComplete="off" type="date" name="fecha" required className={CLASE_INPUT} />
+        </Campo>
+        <Campo etiqueta="Hora">
+          <input autoComplete="off" type="time" name="hora" required step={900} className={CLASE_INPUT} />
+        </Campo>
       </div>
     </>
   );
 }
 
-function Resultado({ estado }: { estado: { ok: boolean; error?: string; mensaje?: string } | null }) {
-  if (!estado) return null;
-  if (!estado.ok) return <p className="text-[12px] text-bad">{estado.error}</p>;
-  return <p className="text-[12px] text-ok">{estado.mensaje}</p>;
-}
-
-function FormularioCitaContacto({
+/** Desde una fila de Clientes: el contacto ya está fijo, solo falta el resto. */
+export function FormularioCitaContacto({
   contactoId,
-  nombre,
   servicios,
   onCerrar,
 }: {
   contactoId: string;
-  nombre: string;
   servicios: ServicioOpcion[];
   onCerrar: () => void;
 }) {
   const [estado, agendar, agendando] = useAccionAgente("agendarCitaManual");
 
   return (
-    <form action={agendar} className="flex flex-col gap-2.5 rounded-xl border border-line bg-surface-2/40 p-3">
+    <form onSubmit={enviarSinBorrar(agendar)} className="flex flex-col gap-3.5">
       <input type="hidden" name="contactoId" value={contactoId} />
       <CampoToken />
-      <p className="text-[11.5px] text-ink-faint">
-        Cita para <span className="text-ink-soft">{nombre}</span>.
-      </p>
       <CamposComunes servicios={servicios} />
-      <Resultado estado={estado} />
-      <div className="flex gap-2">
-        {estado?.ok ? null : (
-          <button
-            type="submit"
-            disabled={agendando}
-            className="rounded-lg bg-ink px-3.5 py-2 text-[13px] font-medium text-paper transition-colors hover:bg-ink-soft disabled:pointer-events-none disabled:opacity-40"
-          >
-            {agendando ? "Agendando…" : "Agendar"}
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={onCerrar}
-          className="rounded-lg border border-line-strong px-3.5 py-2 text-[13px] text-ink-mute transition-colors hover:bg-surface-2"
-        >
-          {estado?.ok ? "Cerrar" : "Cancelar"}
-        </button>
-      </div>
+      <MensajeResultado estado={estado} />
+      <BotonesFormulario
+        ok={Boolean(estado?.ok)}
+        pendiente={agendando}
+        textoEnviar="Agendar"
+        textoPendiente="Agendando…"
+        onCerrar={onCerrar}
+      />
     </form>
   );
 }
 
-/** Desde una fila de Contactos: el contacto ya está fijo, solo falta el resto. */
-export function FormaAgendarCitaContacto({
-  contactoId,
-  nombre,
-  servicios,
-}: {
-  contactoId: string;
-  nombre: string;
-  servicios: ServicioOpcion[];
-}) {
-  const [abierto, setAbierto] = useState(false);
-  /* Cambia cada vez que se abre — fuerza a React a MONTAR un formulario
-     nuevo (con su propio `useAccionAgente` recién nacido) en vez de reusar
-     el que se quedó con el resultado de la última vez. Sin esto, cerrar
-     después de agendar y volver a abrir se queda pegado en el mensaje de
-     éxito anterior, sin dejar mandar una cita nueva. */
-  const [vuelta, setVuelta] = useState(0);
-
-  if (!abierto) {
-    return (
-      <button
-        type="button"
-        onClick={() => {
-          setVuelta((v) => v + 1);
-          setAbierto(true);
-        }}
-        className="rounded-md border border-line-strong px-2 py-1 text-[11px] text-ink-mute transition-colors hover:bg-surface-2"
-      >
-        Agendar cita
-      </button>
-    );
-  }
-
-  return (
-    <FormularioCitaContacto
-      key={vuelta}
-      contactoId={contactoId}
-      nombre={nombre}
-      servicios={servicios}
-      onCerrar={() => setAbierto(false)}
-    />
-  );
-}
-
+/** Desde arriba de Agenda: hay que elegir el contacto también. */
 function FormularioCitaNueva({
   contactos,
   servicios,
@@ -164,55 +107,53 @@ function FormularioCitaNueva({
   const [esNuevo, setEsNuevo] = useState(false);
 
   return (
-    <form
-      action={agendar}
-      className="mb-4 flex flex-col gap-2.5 rounded-xl border border-line bg-surface-2/40 p-4"
-    >
+    <form onSubmit={enviarSinBorrar(agendar)} className="flex flex-col gap-3.5">
       <CampoToken />
-      <p className="text-[12.5px] font-medium text-ink-soft">Agendar cita nueva</p>
 
-      <div className="flex gap-1.5">
-        <button
-          type="button"
-          onClick={() => setEsNuevo(false)}
-          className={`rounded-md border px-2.5 py-1 text-[11.5px] transition-colors ${
-            esNuevo ? "border-line-strong text-ink-mute hover:bg-surface-2" : "border-ink bg-ink text-paper"
-          }`}
-        >
-          Ya escribió antes
-        </button>
-        <button
-          type="button"
-          onClick={() => setEsNuevo(true)}
-          className={`rounded-md border px-2.5 py-1 text-[11.5px] transition-colors ${
-            esNuevo ? "border-ink bg-ink text-paper" : "border-line-strong text-ink-mute hover:bg-surface-2"
-          }`}
-        >
-          Número nuevo
-        </button>
+      <div
+        role="group"
+        aria-label="De quién es la cita"
+        className="grid grid-cols-2 gap-1 rounded-xl border border-line bg-surface-2 p-1"
+      >
+        {[
+          { nuevo: false, texto: "Ya escribió antes" },
+          { nuevo: true, texto: "Número nuevo" },
+        ].map((op) => (
+          <button
+            key={op.texto}
+            type="button"
+            aria-pressed={esNuevo === op.nuevo}
+            onClick={() => setEsNuevo(op.nuevo)}
+            className={cn(
+              "min-h-10 rounded-lg px-2 text-[13px] font-medium transition-colors",
+              esNuevo === op.nuevo ? "bg-ink text-paper" : "text-ink-mute hover:text-ink"
+            )}
+          >
+            {op.texto}
+          </button>
+        ))}
       </div>
 
       {esNuevo ? (
-        <div className="grid grid-cols-2 gap-2.5">
-          <label className="flex flex-col gap-1">
-            <span className="text-[11px] text-ink-faint">Número de WhatsApp</span>
-            <input autoComplete="off"
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Campo etiqueta="Número de WhatsApp" ayuda="Con código de país, ej. 50688881234">
+            <input
+              autoComplete="off"
               type="tel"
+              inputMode="tel"
               name="telefonoNuevo"
               required
-              placeholder="Con código de país, ej. 50688881234"
-              className={campo}
+              placeholder="50688881234"
+              className={CLASE_INPUT}
             />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-[11px] text-ink-faint">Nombre (opcional)</span>
-            <input autoComplete="off" type="text" name="nombreNuevo" placeholder="Quién es" className={campo} />
-          </label>
+          </Campo>
+          <Campo etiqueta="Nombre (opcional)">
+            <input autoComplete="off" type="text" name="nombreNuevo" placeholder="Quién es" className={CLASE_INPUT} />
+          </Campo>
         </div>
       ) : (
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[11px] text-ink-faint">Contacto</span>
-          <select autoComplete="off" name="contactoId" required defaultValue="" className={campo}>
+        <Campo etiqueta="Contacto">
+          <select autoComplete="off" name="contactoId" required defaultValue="" className={CLASE_INPUT}>
             <option value="" disabled>
               Elegir…
             </option>
@@ -222,67 +163,57 @@ function FormularioCitaNueva({
               </option>
             ))}
           </select>
-        </label>
+        </Campo>
       )}
 
       <CamposComunes servicios={servicios} />
-      <Resultado estado={estado} />
-      <div className="flex gap-2">
-        {estado?.ok ? null : (
-          <button
-            type="submit"
-            disabled={agendando}
-            className="rounded-lg bg-ink px-3.5 py-2 text-[13px] font-medium text-paper transition-colors hover:bg-ink-soft disabled:pointer-events-none disabled:opacity-40"
-          >
-            {agendando ? "Agendando…" : "Agendar"}
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={onCerrar}
-          className="rounded-lg border border-line-strong px-3.5 py-2 text-[13px] text-ink-mute transition-colors hover:bg-surface-2"
-        >
-          {estado?.ok ? "Cerrar" : "Cancelar"}
-        </button>
-      </div>
+      <MensajeResultado estado={estado} />
+      <BotonesFormulario
+        ok={Boolean(estado?.ok)}
+        pendiente={agendando}
+        textoEnviar="Agendar"
+        textoPendiente="Agendando…"
+        onCerrar={onCerrar}
+      />
     </form>
   );
 }
 
-/** Desde arriba de Citas: hay que elegir el contacto también. */
+/** El botón "+ Agendar cita" de arriba de Agenda; abre la hoja con el formulario. */
 export function BotonAgendarCita({
   contactos,
   servicios,
+  className,
 }: {
   contactos: ContactoOpcion[];
   servicios: ServicioOpcion[];
+  className?: string;
 }) {
   const [abierto, setAbierto] = useState(false);
-  const [vuelta, setVuelta] = useState(0);
-
-  if (!abierto) {
-    return (
-      <div className="mb-4">
-        <button
-          type="button"
-          onClick={() => {
-            setVuelta((v) => v + 1);
-            setAbierto(true);
-          }}
-          className="rounded-lg bg-ink px-3.5 py-2 text-[13px] font-medium text-paper transition-colors hover:bg-ink-soft"
-        >
-          + Agendar cita
-        </button>
-      </div>
-    );
-  }
 
   return (
-    <FormularioCitaNueva
-      key={vuelta}
-      contactos={contactos}
-      servicios={servicios}
-      onCerrar={() => setAbierto(false)}
-    />
+    <>
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        onClick={() => setAbierto(true)}
+        className={cn(BOTON_BASE, BOTON.primario, "min-h-11 rounded-xl px-4 text-[13.5px] sm:min-h-10", className)}
+      >
+        <span aria-hidden="true" className="text-[17px] leading-none">
+          +
+        </span>
+        Agendar cita
+      </button>
+
+      {abierto ? (
+        <HojaModal
+          titulo="Agendar cita nueva"
+          descripcion="Se revisan el horario y los cupos igual que cuando agenda el agente."
+          onCerrar={() => setAbierto(false)}
+        >
+          <FormularioCitaNueva contactos={contactos} servicios={servicios} onCerrar={() => setAbierto(false)} />
+        </HojaModal>
+      ) : null}
+    </>
   );
 }

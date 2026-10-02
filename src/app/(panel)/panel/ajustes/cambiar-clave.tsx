@@ -8,17 +8,16 @@
    exigimos 8 y que se repita bien.
    ========================================================================== */
 import { useState, type FormEvent } from "react";
+import { Campo, MensajeEstado } from "@/components/panel/configuracion/controles";
+import { BTN_PRIMARIO, CAMPO } from "@/components/panel/configuracion/estilos";
+import { Spinner } from "@/components/panel/configuracion/iconos-extra";
 import { supabaseNavegador } from "@/lib/supabase/navegador";
 import { cn } from "@/lib/utils";
-
-const campo =
-  "h-11 rounded-xl border border-line bg-surface-2 px-3.5 text-[14px] text-ink " +
-  "placeholder:text-ink-faint transition-colors focus:border-line-strong " +
-  "focus:bg-surface-3 focus:outline-none";
 
 export function CambiarClave() {
   const [clave, setClave] = useState("");
   const [repetir, setRepetir] = useState("");
+  const [ver, setVer] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [ok, setOk] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,8 +37,14 @@ export function CambiarClave() {
     }
 
     setCargando(true);
-    const { error } = await supabaseNavegador().auth.updateUser({ password: clave });
-    setCargando(false);
+    let error: { message: string } | null = null;
+    try {
+      ({ error } = await supabaseNavegador().auth.updateUser({ password: clave }));
+    } catch {
+      error = { message: "red" };
+    } finally {
+      setCargando(false);
+    }
 
     if (error) {
       const m = error.message.toLowerCase();
@@ -58,53 +63,62 @@ export function CambiarClave() {
     setRepetir("");
   }
 
+  const tipo = ver ? "text" : "password";
+
   return (
     <form onSubmit={guardar} className="flex max-w-sm flex-col gap-3.5" noValidate>
-      <label className="flex flex-col gap-1.5">
-        <span className="text-[11.5px] font-medium text-ink-mute">Nueva contraseña</span>
+      <Campo etiqueta="Nueva contraseña">
         <input
-          type="password"
+          type={tipo}
           autoComplete="new-password"
           value={clave}
           onChange={(e) => setClave(e.target.value)}
           placeholder="Al menos 8 caracteres"
-          className={campo}
+          disabled={cargando}
+          className={CAMPO}
         />
-      </label>
+      </Campo>
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-[11.5px] font-medium text-ink-mute">Repetila</span>
+      <Campo etiqueta="Repetila">
         <input
-          type="password"
+          type={tipo}
           autoComplete="new-password"
           value={repetir}
           onChange={(e) => setRepetir(e.target.value)}
           placeholder="La misma otra vez"
-          className={campo}
+          disabled={cargando}
+          className={CAMPO}
         />
+      </Campo>
+
+      {/* Casilla de verdad: se opera con teclado y el lector de pantalla la
+          anuncia. 44 px de alto en toda la fila. */}
+      <label className="flex min-h-11 cursor-pointer items-center gap-3 text-[13px] text-ink-mute">
+        <input
+          type="checkbox"
+          checked={ver}
+          onChange={(e) => setVer(e.target.checked)}
+          className="h-5 w-5 flex-none accent-[color:var(--panel-acento)]"
+        />
+        Mostrar las contraseñas
       </label>
 
-      {error ? (
-        <p role="alert" className="rounded-lg bg-bad/10 px-3 py-2.5 text-[12.5px] text-bad">
-          {error}
-        </p>
-      ) : null}
-      {ok ? (
-        <p role="status" className="rounded-lg bg-ok/10 px-3 py-2.5 text-[12.5px] text-ok">
-          Listo, contraseña cambiada.
-        </p>
-      ) : null}
+      {error ? <MensajeEstado ok={false}>{error}</MensajeEstado> : null}
+      {ok ? <MensajeEstado ok>Listo, contraseña cambiada.</MensajeEstado> : null}
 
       <button
         type="submit"
         disabled={cargando || !clave || !repetir}
-        className={cn(
-          "mt-1 inline-flex h-11 items-center justify-center gap-2 self-start rounded-full bg-ink px-6 text-[13.5px] font-medium text-paper",
-          "transition-all duration-200 ease-out hover:bg-ink-soft active:scale-[0.98]",
-          "disabled:pointer-events-none disabled:opacity-50"
-        )}
+        className={cn(BTN_PRIMARIO, "w-full self-start sm:w-auto")}
       >
-        {cargando ? "Guardando…" : "Cambiar contraseña"}
+        {cargando ? (
+          <>
+            <Spinner className="h-4 w-4" />
+            Guardando…
+          </>
+        ) : (
+          "Cambiar contraseña"
+        )}
       </button>
     </form>
   );

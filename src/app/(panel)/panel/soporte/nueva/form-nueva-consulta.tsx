@@ -1,13 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState } from "react";
+import { Campo, MensajeEstado } from "@/components/panel/configuracion/controles";
+import { BTN_PRIMARIO, CAMPO } from "@/components/panel/configuracion/estilos";
+import { Spinner } from "@/components/panel/configuracion/iconos-extra";
 import { crearConsulta, type ResultadoConsulta } from "@/lib/panel/soporte-acciones";
 import { cn } from "@/lib/utils";
-
-const campo =
-  "w-full rounded-xl border border-line bg-surface-2 px-3.5 py-2.5 text-[13.5px] text-ink " +
-  "placeholder:text-ink-faint transition-colors focus:border-line-strong " +
-  "focus:bg-surface-3 focus:outline-none";
 
 export function FormNuevaConsulta() {
   const [estado, accion, pendiente] = useActionState<
@@ -15,45 +13,53 @@ export function FormNuevaConsulta() {
     FormData
   >(crearConsulta, null);
 
+  /* `onSubmit` y no `action`: con `action`, React 19 vacía el formulario al
+     enviarlo y, si el envío fallaba, se perdía la consulta que la persona
+     acababa de escribir. Es la misma acción del servidor de siempre. */
+  function enviar(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const datos = new FormData(e.currentTarget);
+    startTransition(() => {
+      accion(datos);
+    });
+  }
+
   return (
-    <form action={accion} className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1.5">
-        <span className="text-[11.5px] font-medium text-ink-mute">Asunto</span>
+    <form onSubmit={enviar} className="flex flex-col gap-4">
+      <Campo etiqueta="Asunto">
         <input
           name="asunto"
           required
           maxLength={120}
+          autoComplete="off"
+          disabled={pendiente}
           placeholder="Ej.: no me aparece una automatización"
-          className={cn(campo, "h-11")}
+          className={CAMPO}
         />
-      </label>
+      </Campo>
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-[11.5px] font-medium text-ink-mute">Contanos qué pasa</span>
+      <Campo etiqueta="Contanos qué pasa">
         <textarea
           name="texto"
           required
-          rows={5}
+          rows={6}
+          disabled={pendiente}
           placeholder="Todo el detalle que puedas: qué esperabas, qué viste, desde cuándo…"
-          className={cn(campo, "resize-none")}
+          className={cn(CAMPO, "resize-y")}
         />
-      </label>
+      </Campo>
 
-      {estado && !estado.ok ? (
-        <p role="alert" className="rounded-lg bg-bad/10 px-3.5 py-3 text-[12.5px] text-bad">
-          {estado.error}
-        </p>
-      ) : null}
+      {estado && !estado.ok ? <MensajeEstado ok={false}>{estado.error}</MensajeEstado> : null}
 
-      <button
-        type="submit"
-        disabled={pendiente}
-        className={cn(
-          "inline-flex h-11 items-center justify-center self-start rounded-full bg-ink px-6 text-[13.5px] font-medium text-paper",
-          "transition-colors hover:bg-ink-soft disabled:pointer-events-none disabled:opacity-50"
+      <button type="submit" disabled={pendiente} className={cn(BTN_PRIMARIO, "w-full sm:w-auto sm:self-start")}>
+        {pendiente ? (
+          <>
+            <Spinner className="h-4 w-4" />
+            Enviando…
+          </>
+        ) : (
+          "Enviar consulta"
         )}
-      >
-        {pendiente ? "Enviando…" : "Enviar consulta"}
       </button>
     </form>
   );

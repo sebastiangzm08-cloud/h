@@ -1,0 +1,170 @@
+/* ==========================================================================
+   Estilos propios de la pantalla Conversaciones (Fase 3, 2026-09-30).
+
+   Vive en su propio archivo, importado desde `hoja.tsx`, para no tocar
+   `globals.css` (que comparten el sitio y el resto del panel).
+
+   La HOJA es un <dialog> nativo abierto con `showModal()`: el navegador se
+   encarga del foco, de tapar el resto con `inert` y de la tecla Escape. Acá
+   solo se le da forma:
+   - celular: hoja inferior pegada abajo, con asa, esquinas redondeadas
+     arriba, alto máximo en `dvh` y desplazamiento interno;
+   - desde 768 px: tarjeta centrada.
+   `--hoja-bajo` y `--hoja-alto` los pone `hoja.tsx` con `visualViewport`
+   para que el teclado virtual (iOS y Android) no tape la hoja.
+   ========================================================================== */
+
+dialog.hoja {
+  position: fixed;
+  inset: auto 0 var(--hoja-bajo, 0px) 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  width: 100%;
+  max-width: none;
+  max-height: min(88dvh, calc(var(--hoja-alto, 100dvh) - 12px));
+  background: transparent;
+  color: inherit;
+  overflow: visible;
+}
+
+dialog.hoja[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+dialog.hoja::backdrop {
+  background: rgb(0 0 0 / 0.58);
+}
+
+@keyframes hoja-sube {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes hoja-baja {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes hoja-centro-entra {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes hoja-centro-sale {
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+}
+
+@keyframes velo-entra {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes velo-sale {
+  to {
+    opacity: 0;
+  }
+}
+
+dialog.hoja[open] .hoja-caja {
+  animation: hoja-sube 280ms cubic-bezier(0.32, 0.72, 0, 1) backwards;
+}
+
+dialog.hoja[open]::backdrop {
+  animation: velo-entra 200ms ease-out backwards;
+}
+
+dialog.hoja[data-saliendo] .hoja-caja {
+  animation: hoja-baja 190ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+dialog.hoja[data-saliendo]::backdrop {
+  animation: velo-sale 190ms ease-in both;
+}
+
+@media (min-width: 768px) {
+  dialog.hoja {
+    inset: 0;
+    margin: auto;
+    width: min(460px, calc(100vw - 32px));
+    height: fit-content;
+    max-height: min(82dvh, 680px);
+  }
+
+  dialog.hoja[open] .hoja-caja {
+    animation: hoja-centro-entra 220ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  dialog.hoja[data-saliendo] .hoja-caja {
+    animation: hoja-centro-sale 150ms ease-in both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dialog.hoja[open] .hoja-caja,
+  dialog.hoja[open]::backdrop,
+  dialog.hoja[data-saliendo] .hoja-caja,
+  dialog.hoja[data-saliendo]::backdrop {
+    animation: none;
+  }
+}
+
+/* Fila con desplazamiento horizontal sin barra visible (acciones rápidas,
+   filtros). El dedo la recorre igual. */
+.sin-barra {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.sin-barra::-webkit-scrollbar {
+  display: none;
+}
+
+/* Destello corto de la caja de escribir cuando una acción rápida le pone
+   texto: confirma que el texto entró aunque la hoja se esté cerrando. */
+@keyframes caja-destello {
+  0% {
+    box-shadow: 0 0 0 0 var(--panel-acento-borde, rgba(124, 92, 255, 0.34));
+    border-color: var(--panel-acento, #7c5cff);
+  }
+  100% {
+    box-shadow: 0 0 0 6px rgba(124, 92, 255, 0);
+  }
+}
+.caja-destello {
+  animation: caja-destello 650ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .caja-destello {
+    animation: none;
+  }
+}
+
+/* Celular con un chat abierto: el chat usa TODA la pantalla. Se esconde la
+   barra de arriba del armazón (buscador, campana, cuenta) sin tocar
+   shell.tsx: la página marca su sección con data-chat-movil. Para salir está
+   el botón "Chats" del encabezado del chat, que vuelve a la lista (y la
+   lista sí lleva la barra). */
+@media (max-width: 767px) {
+  .panel-scope:has([data-chat-movil]) > div > header {
+    display: none;
+  }
+}

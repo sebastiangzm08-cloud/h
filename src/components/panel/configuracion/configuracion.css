@@ -1,0 +1,34 @@
+/* ==========================================================================
+   Controles de formulario de Conocimiento y Configuración (Fase 4b).
+
+   Sin esto, el selector de hora y las flechas de los campos numéricos se
+   dibujan con el esquema del navegador (claro) aunque el panel esté en
+   oscuro, y el ícono del reloj queda negro sobre negro. Solo se aplica a
+   los campos que llevan la clase `campo-hoshi`, no a todo el panel.
+   ========================================================================== */
+.panel-scope .campo-hoshi {
+  color-scheme: dark;
+}
+
+.panel-scope[data-tema="claro"] .campo-hoshi {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: light) {
+  .panel-scope[data-tema="automatico"] .campo-hoshi {
+    color-scheme: light;
+  }
+}
+
+/* Para envolver un componente COMPARTIDO que no se puede tocar desde acá (el
+   cuadro de respuesta de Soporte lo usa también la administración): en
+   celular sube sus campos a 16 px (si no, iOS hace zoom al enfocar) y sus
+   botones a 44 px de alto. En pantallas anchas no cambia nada. */
+@media (max-width: 639px) {
+  .campos-celular :is(input, textarea, select) {
+    font-size: 16px;
+  }
+  .campos-celular button {
+    min-height: 44px;
+  }
+}

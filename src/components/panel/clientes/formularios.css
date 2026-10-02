@@ -1,0 +1,24 @@
+/* ==========================================================================
+   Campos de formulario de Clientes, Agenda y Correo (Fase 4a del rediseño).
+
+   `color-scheme` le dice al navegador con qué tema pintar lo que dibuja él
+   solo: el ícono del calendario de `type="date"`, la lista desplegable de un
+   `<select>`, la ruedita de `type="time"`. Sin esto, en el tema oscuro el
+   ícono del calendario sale negro sobre negro y no se ve.
+
+   Va en una clase propia (`campo-panel`) y NO en `.panel-scope`, para no
+   cambiarle el aspecto a pantallas que no son estas.
+   ========================================================================== */
+.panel-scope .campo-panel {
+  color-scheme: dark;
+}
+
+.panel-scope[data-tema="claro"] .campo-panel {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: light) {
+  .panel-scope[data-tema="automatico"] .campo-panel {
+    color-scheme: light;
+  }
+}

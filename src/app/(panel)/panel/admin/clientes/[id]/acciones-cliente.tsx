@@ -7,34 +7,96 @@
    Todas pasan por `useAccionAdmin(nombre)` — un POST normal a
    `/api/admin/<nombre>`, no un Server Action. Ver el porqué en el
    comentario grande de `admin-acciones.ts`.
+
+   Rediseño 2026-09-30: SOLO presentación. Cada acción llama a la misma ruta
+   con los mismos campos que antes. Lo que cambia:
+   - campos de 44 px y 16 px en celular, botones de 44 px;
+   - lo que antes eran enlaces subrayados chiquitos ahora son botones;
+   - "Editar datos" y "Cambiar el precio" ya no se cierran al enviar: si la
+     acción falla, el formulario sigue abierto con el error (antes se
+     cerraban y el error nunca se veía);
+   - suspender pide una confirmación (apaga todo lo del cliente).
    ========================================================================== */
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { ResultadoAccion } from "@/lib/panel/admin-acciones";
 import { useAccionAdmin } from "@/components/panel/usar-accion-admin";
 import { CampoMonto } from "@/components/panel/campo-monto";
 import { CampoToken } from "@/components/panel/campo-token";
 import { DIAS_HORARIO, type ConfigAgenda } from "@/lib/panel/agente-config";
+import {
+  BTN_CHICO_PRIMARIO,
+  BTN_CHICO_SECUNDARIO,
+  BTN_PELIGRO,
+  BTN_PELIGRO_SOLIDO,
+  BTN_PRIMARIO,
+  BTN_TEXTO,
+  CAMPO,
+  ETIQUETA,
+  MensajeAccion,
+  Selector,
+} from "@/components/admin/admin-ui";
+import { useDesplegable } from "@/components/admin/usar-desplegable";
+import { useEnvio } from "@/components/admin/usar-envio";
+import { Icono, type NombreIcono } from "@/components/panel/iconos";
 import { cn } from "@/lib/utils";
 
-const campo =
-  "h-8 w-28 rounded-lg border border-line bg-surface-2 px-2.5 text-[12.5px] text-ink " +
-  "transition-colors focus:border-line-strong focus:bg-surface-3 focus:outline-none";
-
-function Mensaje({ estado }: { estado: ResultadoAccion | null }) {
-  if (!estado) return null;
+/** Botón que abre un panel de la ficha. */
+function BotonAbrir({
+  onClick,
+  icono,
+  children,
+}: {
+  onClick: () => void;
+  icono?: NombreIcono;
+  children: ReactNode;
+}) {
   return (
-    <p
-      role={estado.ok ? "status" : "alert"}
-      className={cn(
-        "mt-2 rounded-lg px-3 py-2 text-[12px]",
-        estado.ok ? "bg-ok/10 text-ok" : "bg-bad/10 text-bad"
-      )}
-    >
-      {estado.ok ? estado.mensaje : estado.error}
-    </p>
+    <button type="button" onClick={onClick} className={BTN_CHICO_SECUNDARIO}>
+      {icono ? <Icono nombre={icono} className="h-4 w-4" /> : null}
+      {children}
+    </button>
   );
 }
+
+/** Cabecera de un panel que se despliega: título y "Cerrar". */
+function CabeceraPanel({ titulo, onCerrar }: { titulo: string; onCerrar: () => void }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <h3 className="text-[13.5px] font-semibold tracking-tight text-ink">{titulo}</h3>
+      <button type="button" onClick={onCerrar} className={cn(BTN_TEXTO, "-mr-2.5")}>
+        Cerrar
+      </button>
+    </div>
+  );
+}
+
+const PANEL = "flex w-full flex-col gap-3.5 rounded-xl border border-line bg-surface p-3.5 sm:p-4";
+
+/** Campo con su etiqueta arriba. */
+function Etiquetado({
+  etiqueta,
+  ayuda,
+  children,
+  className,
+}: {
+  etiqueta: string;
+  ayuda?: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <label className={cn("flex min-w-0 flex-col gap-1.5", className)}>
+      <span className={ETIQUETA}>{etiqueta}</span>
+      {children}
+      {ayuda ? <span className="text-[11.5px] leading-snug text-ink-faint">{ayuda}</span> : null}
+    </label>
+  );
+}
+
+/* -------------------------------------------------------------------------
+   Servicio
+   ------------------------------------------------------------------------- */
 
 export function BotonServicio({
   clienteId,
@@ -51,7 +113,13 @@ export function BotonServicio({
   const [estado, ejecutar, pendiente] = useAccionAdmin(
     suspendido || enPrueba ? "reactivarCliente" : "suspenderCliente"
   );
+  /* `base` guarda el resultado que había al pedir la confirmación: la caja se
+     queda visible ("Suspendiendo…") hasta que llega uno NUEVO. */
+  const [confirmando, setConfirmando] = useState(false);
+  const [base, setBase] = useState<ResultadoAccion | null>(null);
+  const verConfirmacion = confirmando && estado === base;
 
+  const reactiva = suspendido || enPrueba;
   const texto = enPrueba
     ? "Activar cliente"
     : suspendido
@@ -59,25 +127,53 @@ export function BotonServicio({
       : "Suspender servicio";
 
   return (
-    <form action={ejecutar}>
+    <form action={ejecutar} className="flex flex-col gap-3">
       <CampoToken />
       <input type="hidden" name="clienteId" value={clienteId} />
-      <button
-        type="submit"
-        disabled={pendiente}
-        className={cn(
-          "inline-flex h-10 items-center justify-center rounded-full px-5 text-[12.5px] font-medium transition-colors disabled:opacity-50",
-          suspendido || enPrueba
-            ? "bg-ink text-paper hover:bg-ink-soft"
-            : "border border-bad/40 text-bad hover:bg-bad/10"
-        )}
-      >
-        {pendiente ? "…" : texto}
-      </button>
-      <Mensaje estado={estado} />
+
+      {reactiva ? (
+        <button type="submit" disabled={pendiente} className={cn(BTN_PRIMARIO, "self-start")}>
+          {pendiente ? "Un momento…" : texto}
+        </button>
+      ) : verConfirmacion ? (
+        <div
+          role="alertdialog"
+          aria-label="Confirmar la suspensión del servicio"
+          className="flex flex-col gap-3 rounded-xl border border-bad/30 bg-bad/[0.07] p-3.5"
+        >
+          <p className="text-[12.5px] leading-snug text-ink-soft">
+            Se pausan <b className="font-medium text-ink">todas</b> sus automatizaciones y deja de publicarse
+            y de contestar. Lo podés reactivar cuando quieras.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="submit" disabled={pendiente} className={BTN_PELIGRO_SOLIDO}>
+              {pendiente ? "Suspendiendo…" : "Sí, suspender"}
+            </button>
+            <button type="button" onClick={() => setConfirmando(false)} className={BTN_TEXTO}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setBase(estado);
+            setConfirmando(true);
+          }}
+          className={cn(BTN_PELIGRO, "self-start")}
+        >
+          {texto}
+        </button>
+      )}
+      <MensajeAccion estado={estado} />
     </form>
   );
 }
+
+/* -------------------------------------------------------------------------
+   Cobros
+   ------------------------------------------------------------------------- */
 
 export function BotonPago({
   clienteId,
@@ -89,18 +185,15 @@ export function BotonPago({
   const [estado, ejecutar, pendiente] = useAccionAdmin("marcarCobroPagado");
 
   return (
-    <form action={ejecutar} className="inline">
+    <form action={ejecutar} className="flex flex-col items-stretch gap-2 sm:items-end">
       <CampoToken />
       <input type="hidden" name="clienteId" value={clienteId} />
       <input type="hidden" name="cobroId" value={cobroId} />
-      <button
-        type="submit"
-        disabled={pendiente}
-        className="inline-flex h-8 items-center rounded-full border border-line-strong px-3 text-[11.5px] text-ink transition-colors hover:bg-surface-2 disabled:opacity-50"
-      >
-        {pendiente ? "…" : "Marcar pagado"}
+      <button type="submit" disabled={pendiente} className={BTN_CHICO_SECUNDARIO}>
+        <Icono nombre="facturacion" className="h-4 w-4" />
+        {pendiente ? "Guardando…" : "Marcar pagado"}
       </button>
-      <Mensaje estado={estado} />
+      {estado && !estado.ok ? <MensajeAccion estado={estado} className="max-w-[300px]" /> : null}
     </form>
   );
 }
@@ -116,48 +209,53 @@ export function PrecioAsignacion({
   precio: number;
 }) {
   const [estado, ejecutar, pendiente] = useAccionAdmin("cambiarPrecioAsignacion");
-  const [editando, setEditando] = useState(false);
+  const panel = useDesplegable(estado);
+  const envio = useEnvio(estado, ejecutar, { limpiarSiOk: false });
 
-  if (!editando) {
+  if (!panel.visible) {
     return (
       <button
         type="button"
-        onClick={() => setEditando(true)}
-        className="font-mono text-[12px] text-ink-soft underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink"
+        onClick={panel.abrir}
+        className="group inline-flex h-11 flex-none items-center gap-2 rounded-lg px-2.5 font-mono text-[12.5px] text-ink-soft transition-colors hover:bg-surface-3 hover:text-ink sm:h-9"
         title="Cambiar el precio"
+        aria-label={`Cambiar el precio, hoy ₡${precio.toLocaleString("es-CR")} al mes`}
       >
         ₡{precio.toLocaleString("es-CR")}/mes
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          className="h-3.5 w-3.5 text-ink-faint transition-colors group-hover:text-ink-mute"
+        >
+          <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z" />
+        </svg>
       </button>
     );
   }
 
   return (
-    <form
-      action={(fd) => {
-        ejecutar(fd);
-        setEditando(false);
-      }}
-      className="flex items-center gap-1.5"
-    >
+    <form {...envio} className="flex min-w-0 flex-col gap-2">
       <CampoToken />
       <input type="hidden" name="clienteId" value={clienteId} />
       <input type="hidden" name="asignacionId" value={asignacionId} />
-      <CampoMonto name="precio" defaultValue={precio} autoFocus className={campo} />
-      <button
-        type="submit"
-        disabled={pendiente}
-        className="inline-flex h-8 items-center rounded-lg bg-ink px-3 text-[11.5px] font-medium text-paper transition-colors hover:bg-ink-soft disabled:opacity-50"
-      >
-        Guardar
-      </button>
-      <button
-        type="button"
-        onClick={() => setEditando(false)}
-        className="text-[11.5px] text-ink-faint hover:text-ink-mute"
-      >
-        Cancelar
-      </button>
-      <Mensaje estado={estado} />
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="block w-36">
+          <span className="sr-only">Precio mensual en colones</span>
+          <CampoMonto name="precio" defaultValue={precio} autoFocus className={CAMPO} />
+        </label>
+        <button type="submit" disabled={pendiente} className={BTN_CHICO_PRIMARIO}>
+          {pendiente ? "Guardando…" : "Guardar"}
+        </button>
+        <button type="button" onClick={panel.cerrar} className={BTN_TEXTO}>
+          Cancelar
+        </button>
+      </div>
+      <MensajeAccion estado={estado && !estado.ok ? estado : null} />
     </form>
   );
 }
@@ -171,45 +269,43 @@ export function AgregarCobro({
   montoSugerido: number;
 }) {
   const [estado, ejecutar, pendiente] = useAccionAdmin("crearCobro");
+  const envio = useEnvio(estado, ejecutar);
 
   return (
-    <form action={ejecutar} className="flex flex-wrap items-end gap-2.5">
+    <form {...envio} className="flex flex-col gap-3">
       <CampoToken />
       <input type="hidden" name="clienteId" value={clienteId} />
-      <label className="flex flex-col gap-1">
-        <span className="text-[10.5px] font-medium text-ink-mute uppercase">
-          Periodo
-        </span>
-        <input
-          name="periodo"
-          placeholder="Octubre 2026"
-          required
-          className={cn(campo, "w-36")}
-        />
-      </label>
-      <label className="flex flex-col gap-1">
-        <span className="text-[10.5px] font-medium text-ink-mute uppercase">
-          Monto (₡)
-        </span>
-        <CampoMonto
-          name="monto"
-          defaultValue={montoSugerido || undefined}
-          placeholder="30.000"
-          required
-          className={campo}
-        />
-      </label>
-      <button
-        type="submit"
-        disabled={pendiente}
-        className="inline-flex h-8 items-center rounded-full bg-ink px-4 text-[12px] font-medium text-paper transition-colors hover:bg-ink-soft disabled:opacity-50"
-      >
-        {pendiente ? "…" : "Crear cobro"}
-      </button>
-      <Mensaje estado={estado} />
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+        <Etiquetado etiqueta="Periodo">
+          <input
+            name="periodo"
+            placeholder="Octubre 2026"
+            required
+            autoComplete="off"
+            className={CAMPO}
+          />
+        </Etiquetado>
+        <Etiquetado etiqueta="Monto (₡)">
+          <CampoMonto
+            name="monto"
+            defaultValue={montoSugerido || undefined}
+            placeholder="30.000"
+            required
+            className={CAMPO}
+          />
+        </Etiquetado>
+        <button type="submit" disabled={pendiente} className={BTN_PRIMARIO}>
+          {pendiente ? "Creando…" : "Crear cobro"}
+        </button>
+      </div>
+      <MensajeAccion estado={estado} />
     </form>
   );
 }
+
+/* -------------------------------------------------------------------------
+   Datos y acceso
+   ------------------------------------------------------------------------- */
 
 /** Editar los datos básicos del cliente, en un panel que se despliega. */
 export function EditarDatosCliente({
@@ -226,81 +322,56 @@ export function EditarDatosCliente({
   };
 }) {
   const [estado, ejecutar, pendiente] = useAccionAdmin("editarCliente");
-  const [abierto, setAbierto] = useState(false);
+  const panel = useDesplegable(estado);
+  const envio = useEnvio(estado, ejecutar, { limpiarSiOk: false });
 
-  if (!abierto) {
+  if (!panel.visible) {
     return (
-      <button
-        type="button"
-        onClick={() => setAbierto(true)}
-        className="text-[12px] text-ink-mute underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink"
-      >
-        Editar datos
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <BotonAbrir onClick={panel.abrir} icono="ajustes">
+          Editar datos
+        </BotonAbrir>
+        {panel.guardado ? <MensajeAccion estado={estado} className="py-2" /> : null}
+      </div>
     );
   }
 
-  const lbl = "flex flex-col gap-1 text-[11px] font-medium text-ink-mute uppercase";
-  const inp =
-    "h-9 rounded-lg border border-line bg-surface-2 px-2.5 text-[12.5px] normal-case text-ink " +
-    "transition-colors focus:border-line-strong focus:bg-surface-3 focus:outline-none";
-
   return (
-    <form
-      action={(fd) => {
-        ejecutar(fd);
-        setAbierto(false);
-      }}
-      className="mt-3 flex flex-col gap-3 rounded-xl border border-line bg-surface-2 p-3.5"
-    >
+    <form {...envio} className={PANEL}>
       <CampoToken />
       <input type="hidden" name="clienteId" value={clienteId} />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className={lbl}>
-          Negocio
-          <input name="nombreNegocio" defaultValue={datos.nombreNegocio} required className={inp} />
-        </label>
-        <label className={lbl}>
-          Persona
-          <input name="personaContacto" defaultValue={datos.personaContacto} className={inp} />
-        </label>
-        <label className={lbl}>
-          WhatsApp
-          <input name="whatsapp" defaultValue={datos.whatsapp} className={inp} />
-        </label>
-        <label className={lbl}>
-          Rubro
-          <input name="rubro" defaultValue={datos.rubro} className={inp} />
-        </label>
-        <label className={lbl}>
-          Plan
-          <select name="plan" defaultValue={datos.plan} className={cn(inp, "appearance-none")}>
+      <CabeceraPanel titulo="Editar datos del cliente" onCerrar={panel.cerrar} />
+      <div className="grid gap-3.5 sm:grid-cols-2">
+        <Etiquetado etiqueta="Negocio">
+          <input name="nombreNegocio" defaultValue={datos.nombreNegocio} required className={CAMPO} />
+        </Etiquetado>
+        <Etiquetado etiqueta="Persona de contacto">
+          <input name="personaContacto" defaultValue={datos.personaContacto} className={CAMPO} />
+        </Etiquetado>
+        <Etiquetado etiqueta="WhatsApp">
+          <input name="whatsapp" defaultValue={datos.whatsapp} inputMode="tel" className={CAMPO} />
+        </Etiquetado>
+        <Etiquetado etiqueta="Rubro">
+          <input name="rubro" defaultValue={datos.rubro} className={CAMPO} />
+        </Etiquetado>
+        <Etiquetado etiqueta="Plan">
+          <Selector name="plan" defaultValue={datos.plan}>
             <option>Básico</option>
             <option>Growth</option>
             <option>Scale</option>
-          </select>
-        </label>
+          </Selector>
+        </Etiquetado>
       </div>
-      <p className="text-[10.5px] text-ink-faint normal-case">
-        El correo de acceso se cambia aparte.
-      </p>
-      <div className="flex items-center gap-2">
-        <button
-          type="submit"
-          disabled={pendiente}
-          className="inline-flex h-9 items-center rounded-full bg-ink px-4 text-[12px] font-medium text-paper transition-colors hover:bg-ink-soft disabled:opacity-50"
-        >
-          Guardar
+      <p className="text-[11.5px] text-ink-faint">El correo de acceso se cambia aparte, en «Acceso».</p>
+      <MensajeAccion estado={estado && !estado.ok ? estado : null} />
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="submit" disabled={pendiente} className={BTN_PRIMARIO}>
+          {pendiente ? "Guardando…" : "Guardar cambios"}
         </button>
-        <button
-          type="button"
-          onClick={() => setAbierto(false)}
-          className="text-[11.5px] text-ink-faint hover:text-ink-mute"
-        >
+        <button type="button" onClick={panel.cerrar} className={BTN_TEXTO}>
           Cancelar
         </button>
       </div>
-      <Mensaje estado={estado} />
     </form>
   );
 }
@@ -318,87 +389,75 @@ export function AccesoCliente({
   const [abierto, setAbierto] = useState(false);
   const [rClave, aClave, pClave] = useAccionAdmin("resetearClaveCliente");
   const [rCorreo, aCorreo, pCorreo] = useAccionAdmin("cambiarCorreoAcceso");
+  /* La contraseña nueva se queda en el campo: hay que copiarla y pasársela al cliente. */
+  const envioClave = useEnvio(rClave, aClave, { limpiarSiOk: false });
+  const envioCorreo = useEnvio(rCorreo, aCorreo, { limpiarSiOk: false });
 
   if (!abierto) {
     return (
-      <button
-        type="button"
-        onClick={() => setAbierto(true)}
-        className="text-[12px] text-ink-mute underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink"
-      >
+      <BotonAbrir onClick={() => setAbierto(true)} icono="cuenta">
         Acceso
-      </button>
+      </BotonAbrir>
     );
   }
 
-  const lbl = "flex flex-col gap-1 text-[11px] font-medium text-ink-mute uppercase";
-  const inp =
-    "h-9 rounded-lg border border-line bg-surface-2 px-2.5 text-[12.5px] normal-case text-ink " +
-    "transition-colors focus:border-line-strong focus:bg-surface-3 focus:outline-none";
-  const btn =
-    "inline-flex h-9 items-center rounded-full bg-ink px-4 text-[12px] font-medium text-paper " +
-    "transition-colors hover:bg-ink-soft disabled:opacity-50";
-
   return (
-    <div className="mt-3 flex flex-col gap-4 rounded-xl border border-line bg-surface-2 p-3.5">
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium tracking-wide text-ink-mute uppercase">
-          Acceso del cliente
-        </span>
-        <button
-          type="button"
-          onClick={() => setAbierto(false)}
-          className="text-[11.5px] text-ink-faint hover:text-ink-mute"
-        >
-          Cerrar
-        </button>
-      </div>
+    <div className={PANEL}>
+      <CabeceraPanel titulo="Acceso del cliente" onCerrar={() => setAbierto(false)} />
 
-      <form action={aClave} className="flex flex-wrap items-end gap-2.5">
+      <form {...envioClave} className="flex flex-col gap-2.5">
         <CampoToken />
         <input type="hidden" name="clienteId" value={clienteId} />
-        <label className={lbl}>
-          Nueva contraseña
-          <input
-            name="clave"
-            type="text"
-            minLength={8}
-            required
-            placeholder="mínimo 8"
-            className={cn(inp, "w-44")}
-          />
-        </label>
-        <button type="submit" disabled={pClave} className={btn}>
-          {pClave ? "…" : "Cambiar contraseña"}
-        </button>
-        <Mensaje estado={rClave} />
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end">
+          <Etiquetado etiqueta="Nueva contraseña" className="sm:w-60">
+            <input
+              name="clave"
+              type="text"
+              minLength={8}
+              required
+              autoComplete="off"
+              placeholder="Mínimo 8 caracteres"
+              className={CAMPO}
+            />
+          </Etiquetado>
+          <button type="submit" disabled={pClave} className={BTN_CHICO_PRIMARIO}>
+            {pClave ? "Cambiando…" : "Cambiar contraseña"}
+          </button>
+        </div>
+        <MensajeAccion estado={rClave} />
       </form>
 
-      <form action={aCorreo} className="flex flex-wrap items-end gap-2.5 border-t border-line pt-3.5">
+      <form {...envioCorreo} className="flex flex-col gap-2.5 border-t border-line pt-3.5">
         <CampoToken />
         <input type="hidden" name="clienteId" value={clienteId} />
-        <label className={lbl}>
-          Correo de acceso
-          <input
-            name="correo"
-            type="email"
-            defaultValue={correoActual}
-            required
-            className={cn(inp, "w-60")}
-          />
-        </label>
-        <button type="submit" disabled={pCorreo} className={btn}>
-          {pCorreo ? "…" : "Cambiar correo"}
-        </button>
-        <Mensaje estado={rCorreo} />
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end">
+          <Etiquetado etiqueta="Correo de acceso" className="sm:w-72">
+            <input
+              name="correo"
+              type="email"
+              defaultValue={correoActual}
+              required
+              autoComplete="off"
+              className={CAMPO}
+            />
+          </Etiquetado>
+          <button type="submit" disabled={pCorreo} className={BTN_CHICO_PRIMARIO}>
+            {pCorreo ? "Cambiando…" : "Cambiar correo"}
+          </button>
+        </div>
+        <MensajeAccion estado={rCorreo} />
       </form>
 
-      <p className="text-[10.5px] text-ink-faint normal-case">
+      <p className="text-[11.5px] text-ink-faint">
         La contraseña no queda guardada: copiala y pasásela al cliente al toque.
       </p>
     </div>
   );
 }
+
+/* -------------------------------------------------------------------------
+   Conexiones
+   ------------------------------------------------------------------------- */
 
 /** Conectar (o reconectar) el WhatsApp del cliente: pega el phone_number_id
     y el token permanente que salieron de generar el Usuario del Sistema en
@@ -407,78 +466,53 @@ export function AccesoCliente({
 export function ConectarWhatsapp({ clienteId }: { clienteId: string }) {
   const [estado, ejecutar, pendiente] = useAccionAdmin("conectarWhatsapp");
   const [abierto, setAbierto] = useState(false);
+  const envio = useEnvio(estado, ejecutar);
 
   if (!abierto) {
     return (
-      <button
-        type="button"
-        onClick={() => setAbierto(true)}
-        className="text-[12px] text-ink-mute underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink"
-      >
+      <BotonAbrir onClick={() => setAbierto(true)} icono="conexiones">
         Conectar WhatsApp
-      </button>
+      </BotonAbrir>
     );
   }
 
-  const lbl = "flex flex-col gap-1 text-[11px] font-medium text-ink-mute uppercase";
-  const inp =
-    "h-9 rounded-lg border border-line bg-surface-2 px-2.5 text-[12.5px] normal-case text-ink " +
-    "transition-colors focus:border-line-strong focus:bg-surface-3 focus:outline-none";
-
   return (
-    <form
-      action={ejecutar}
-      className="mt-3 flex flex-col gap-3 rounded-xl border border-line bg-surface-2 p-3.5"
-    >
+    <form {...envio} className={PANEL}>
       <CampoToken />
       <input type="hidden" name="clienteId" value={clienteId} />
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium tracking-wide text-ink-mute uppercase">
-          Conectar WhatsApp
-        </span>
-        <button
-          type="button"
-          onClick={() => setAbierto(false)}
-          className="text-[11.5px] text-ink-faint hover:text-ink-mute"
-        >
-          Cerrar
-        </button>
-      </div>
-      <p className="text-[11.5px] text-ink-faint normal-case">
-        Salen de crear el Usuario del Sistema en el Business Manager del
-        cliente: asignale el activo de WhatsApp y generá el token permanente
-        con los permisos <code>whatsapp_business_messaging</code> y{" "}
-        <code>whatsapp_business_management</code>.
+      <CabeceraPanel titulo="Conectar WhatsApp" onCerrar={() => setAbierto(false)} />
+      <p className="text-[12.5px] leading-snug text-ink-faint">
+        Salen de crear el Usuario del Sistema en el Business Manager del cliente: asignale el activo de
+        WhatsApp y generá el token permanente con los permisos{" "}
+        <code className="rounded bg-surface-3 px-1 py-px font-mono text-[11px]">whatsapp_business_messaging</code> y{" "}
+        <code className="rounded bg-surface-3 px-1 py-px font-mono text-[11px]">whatsapp_business_management</code>.
       </p>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className={lbl}>
-          Phone Number ID
-          <input name="phoneNumberId" required placeholder="1316882374848089" className={inp} />
-        </label>
-        <label className={lbl}>
-          Endpoint (opcional)
-          <input name="endpoint" placeholder="https://graph.facebook.com/v21.0" className={inp} />
-        </label>
+      <div className="grid gap-3.5 sm:grid-cols-2">
+        <Etiquetado etiqueta="Phone Number ID *">
+          <input name="phoneNumberId" required placeholder="1316882374848089" inputMode="numeric" className={CAMPO} />
+        </Etiquetado>
+        <Etiquetado etiqueta="Endpoint (opcional)">
+          <input name="endpoint" placeholder="https://graph.facebook.com/v21.0" inputMode="url" className={CAMPO} />
+        </Etiquetado>
       </div>
-      <label className={lbl}>
-        Token permanente
-        <input name="token" type="password" required autoComplete="off" className={inp} />
-      </label>
-      <label className={lbl}>
-        WABA ID (WhatsApp Business Account){" "}
-        <span className="text-ink-faint normal-case">— opcional, pero sin esto no se puede armar la plantilla de recordatorios</span>
-        <input name="wabaId" placeholder="102938475610234" className={inp} />
-      </label>
-      <div className="flex items-center gap-2">
-        <button
-          type="submit"
-          disabled={pendiente}
-          className="inline-flex h-9 items-center rounded-full bg-ink px-4 text-[12px] font-medium text-paper transition-colors hover:bg-ink-soft disabled:opacity-50"
-        >
+      <Etiquetado etiqueta="Token permanente *">
+        <input name="token" type="password" required autoComplete="off" className={CAMPO} />
+      </Etiquetado>
+      <Etiquetado
+        etiqueta="WABA ID (WhatsApp Business Account)"
+        ayuda="Opcional, pero sin esto no se puede armar la plantilla de recordatorios."
+      >
+        <input name="wabaId" placeholder="102938475610234" inputMode="numeric" className={CAMPO} />
+      </Etiquetado>
+      <MensajeAccion estado={estado} />
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="submit" disabled={pendiente} className={BTN_PRIMARIO}>
           {pendiente ? "Comprobando con Meta…" : "Conectar"}
         </button>
+        <button type="button" onClick={() => setAbierto(false)} className={BTN_TEXTO}>
+          Cancelar
+        </button>
       </div>
-      <Mensaje estado={estado} />
     </form>
   );
 }
@@ -493,14 +527,11 @@ export function ReenviarPlantillaRecordatorio({ clienteId }: { clienteId: string
     <form action={ejecutar} className="flex flex-col gap-2">
       <CampoToken />
       <input type="hidden" name="clienteId" value={clienteId} />
-      <button
-        type="submit"
-        disabled={pendiente}
-        className="self-start text-[12px] text-ink-mute underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink disabled:opacity-50"
-      >
+      <button type="submit" disabled={pendiente} className={BTN_CHICO_SECUNDARIO}>
+        <Icono nombre="calendario" className="h-4 w-4" />
         {pendiente ? "Mandando a Meta…" : "Reenviar plantillas de recordatorio"}
       </button>
-      <Mensaje estado={estado} />
+      {estado ? <MensajeAccion estado={estado} className="basis-full" /> : null}
     </form>
   );
 }
@@ -512,93 +543,65 @@ export function ReenviarPlantillaRecordatorio({ clienteId }: { clienteId: string
 export function ConectarCorreo({ clienteId }: { clienteId: string }) {
   const [estado, ejecutar, pendiente] = useAccionAdmin("conectarCorreo");
   const [abierto, setAbierto] = useState(false);
+  const envio = useEnvio(estado, ejecutar);
 
   if (!abierto) {
     return (
-      <button
-        type="button"
-        onClick={() => setAbierto(true)}
-        className="text-[12px] text-ink-mute underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink"
-      >
+      <BotonAbrir onClick={() => setAbierto(true)} icono="correo">
         Conectar correo
-      </button>
+      </BotonAbrir>
     );
   }
 
-  const lbl = "flex flex-col gap-1 text-[11px] font-medium text-ink-mute uppercase";
-  const inp =
-    "h-9 rounded-lg border border-line bg-surface-2 px-2.5 text-[12.5px] normal-case text-ink " +
-    "transition-colors focus:border-line-strong focus:bg-surface-3 focus:outline-none";
-
   return (
-    <form
-      action={ejecutar}
-      className="mt-3 flex flex-col gap-3 rounded-xl border border-line bg-surface-2 p-3.5"
-    >
+    <form {...envio} className={PANEL}>
       <CampoToken />
       <input type="hidden" name="clienteId" value={clienteId} />
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium tracking-wide text-ink-mute uppercase">
-          Conectar correo
-        </span>
-        <button
-          type="button"
-          onClick={() => setAbierto(false)}
-          className="text-[11.5px] text-ink-faint hover:text-ink-mute"
-        >
-          Cerrar
-        </button>
-      </div>
-      <p className="text-[11.5px] text-ink-faint normal-case">
-        Una casilla NUEVA y dedicada para este cliente (ej. un Gmail), con
-        una contraseña de aplicación — nunca tu propio correo ni uno
-        compartido entre clientes.
+      <CabeceraPanel titulo="Conectar correo" onCerrar={() => setAbierto(false)} />
+      <p className="text-[12.5px] leading-snug text-ink-faint">
+        Una casilla NUEVA y dedicada para este cliente (ej. un Gmail), con una contraseña de aplicación:
+        nunca tu propio correo ni uno compartido entre clientes.
       </p>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className={lbl}>
-          Correo
-          <input name="correo" type="email" required placeholder="citas.clinica@gmail.com" className={inp} />
-        </label>
-        <label className={lbl}>
-          Nombre del remitente
-          <input name="nombreRemitente" placeholder="Clínica Dental Aurora" className={inp} />
-        </label>
+      <div className="grid gap-3.5 sm:grid-cols-2">
+        <Etiquetado etiqueta="Correo *">
+          <input name="correo" type="email" required placeholder="citas.clinica@gmail.com" className={CAMPO} />
+        </Etiquetado>
+        <Etiquetado etiqueta="Nombre del remitente">
+          <input name="nombreRemitente" placeholder="Clínica Dental Aurora" className={CAMPO} />
+        </Etiquetado>
       </div>
-      <label className={lbl}>
-        Contraseña de aplicación
-        <input name="claveApp" type="password" required autoComplete="off" className={inp} />
-      </label>
-      <details className="text-[11.5px] text-ink-faint normal-case">
-        <summary className="cursor-pointer select-none">Otro proveedor (no Gmail)</summary>
-        <div className="mt-2 grid gap-2.5 sm:grid-cols-2">
-          <label className={lbl}>
-            Servidor IMAP
-            <input name="imapHost" defaultValue="imap.gmail.com" className={inp} />
-          </label>
-          <label className={lbl}>
-            Puerto IMAP
-            <input name="imapPort" type="number" defaultValue={993} className={inp} />
-          </label>
-          <label className={lbl}>
-            Servidor SMTP
-            <input name="smtpHost" defaultValue="smtp.gmail.com" className={inp} />
-          </label>
-          <label className={lbl}>
-            Puerto SMTP
-            <input name="smtpPort" type="number" defaultValue={465} className={inp} />
-          </label>
+      <Etiquetado etiqueta="Contraseña de aplicación *">
+        <input name="claveApp" type="password" required autoComplete="off" className={CAMPO} />
+      </Etiquetado>
+      <details className="group rounded-xl border border-line px-3.5 text-[12.5px] text-ink-mute">
+        <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-2 select-none">
+          Otro proveedor (no Gmail)
+          <Icono nombre="flecha" className="h-3 w-3 transition-transform group-open:rotate-90" />
+        </summary>
+        <div className="grid gap-3.5 pt-1 pb-3.5 sm:grid-cols-2">
+          <Etiquetado etiqueta="Servidor IMAP">
+            <input name="imapHost" defaultValue="imap.gmail.com" className={CAMPO} />
+          </Etiquetado>
+          <Etiquetado etiqueta="Puerto IMAP">
+            <input name="imapPort" type="number" defaultValue={993} className={CAMPO} />
+          </Etiquetado>
+          <Etiquetado etiqueta="Servidor SMTP">
+            <input name="smtpHost" defaultValue="smtp.gmail.com" className={CAMPO} />
+          </Etiquetado>
+          <Etiquetado etiqueta="Puerto SMTP">
+            <input name="smtpPort" type="number" defaultValue={465} className={CAMPO} />
+          </Etiquetado>
         </div>
       </details>
-      <div className="flex items-center gap-2">
-        <button
-          type="submit"
-          disabled={pendiente}
-          className="inline-flex h-9 items-center rounded-full bg-ink px-4 text-[12px] font-medium text-paper transition-colors hover:bg-ink-soft disabled:opacity-50"
-        >
+      <MensajeAccion estado={estado} />
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="submit" disabled={pendiente} className={BTN_PRIMARIO}>
           {pendiente ? "Comprobando…" : "Conectar"}
         </button>
+        <button type="button" onClick={() => setAbierto(false)} className={BTN_TEXTO}>
+          Cancelar
+        </button>
       </div>
-      <Mensaje estado={estado} />
     </form>
   );
 }
@@ -619,119 +622,109 @@ export function FormaAgendaAdmin({
 }) {
   const [estado, ejecutar, pendiente] = useAccionAdmin("sembrarAgenda");
   const [abierto, setAbierto] = useState(false);
+  const envio = useEnvio(estado, ejecutar, { limpiarSiOk: false });
   const [cerrados, setCerrados] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(DIAS_HORARIO.map(({ clave }) => [clave, !horario[clave]?.length]))
   );
 
-  const inp =
-    "h-9 rounded-lg border border-line bg-surface-2 px-2.5 text-[12.5px] normal-case text-ink " +
-    "transition-colors focus:border-line-strong focus:bg-surface-3 focus:outline-none";
-
   if (!abierto) {
     return (
-      <button
-        type="button"
-        onClick={() => setAbierto(true)}
-        className="text-[12px] text-ink-mute underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink"
-      >
+      <BotonAbrir onClick={() => setAbierto(true)} icono="calendario">
         Sembrar agenda y horario
-      </button>
+      </BotonAbrir>
     );
   }
 
   return (
-    <form
-      action={ejecutar}
-      className="mt-3 flex flex-col gap-3.5 rounded-xl border border-line bg-surface-2 p-3.5"
-    >
+    <form {...envio} className={PANEL}>
       <CampoToken />
       <input type="hidden" name="clienteId" value={clienteId} />
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium tracking-wide text-ink-mute uppercase">
-          Agenda y horario
-        </span>
-        <button
-          type="button"
-          onClick={() => setAbierto(false)}
-          className="text-[11.5px] text-ink-faint hover:text-ink-mute"
-        >
-          Cerrar
-        </button>
-      </div>
+      <CabeceraPanel titulo="Agenda y horario" onCerrar={() => setAbierto(false)} />
 
-      <label className="flex cursor-pointer items-center gap-2 text-[12px] text-ink-soft normal-case">
-        <input type="checkbox" name="activa" defaultChecked={agenda.activa} className="h-3.5 w-3.5 accent-ink" />
-        Agenda solo (si se apaga, toma el dato y avisa que alguien confirma)
+      <label className="flex min-h-11 cursor-pointer items-center gap-3 text-[13px] text-ink-soft">
+        <input
+          type="checkbox"
+          name="activa"
+          defaultChecked={agenda.activa}
+          className="h-5 w-5 flex-none accent-[var(--panel-acento,#7c5cff)]"
+        />
+        Agenda sola (si se apaga, toma el dato y avisa que alguien confirma)
       </label>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <label className="flex flex-col gap-1 text-[11px] font-medium text-ink-mute uppercase">
-          Capacidad
-          <input type="number" name="capacidad" min={1} max={20} defaultValue={agenda.capacidad} className={cn(inp, "normal-case")} />
-        </label>
-        <label className="flex flex-col gap-1 text-[11px] font-medium text-ink-mute uppercase">
-          Colchón (min)
-          <input type="number" name="colchonMin" min={0} max={120} defaultValue={agenda.colchonMin} className={cn(inp, "normal-case")} />
-        </label>
-        <label className="flex flex-col gap-1 text-[11px] font-medium text-ink-mute uppercase">
-          Anticipación (min)
-          <input type="number" name="anticipacionMin" min={0} max={1440} defaultValue={agenda.anticipacionMin} className={cn(inp, "normal-case")} />
-        </label>
-        <label className="flex flex-col gap-1 text-[11px] font-medium text-ink-mute uppercase">
-          Días adelante
-          <input type="number" name="maximoDiasAdelante" min={1} max={90} defaultValue={agenda.maximoDiasAdelante} className={cn(inp, "normal-case")} />
-        </label>
+        <Etiquetado etiqueta="Capacidad">
+          <input type="number" name="capacidad" min={1} max={20} defaultValue={agenda.capacidad} inputMode="numeric" className={CAMPO} />
+        </Etiquetado>
+        <Etiquetado etiqueta="Colchón (min)">
+          <input type="number" name="colchonMin" min={0} max={120} defaultValue={agenda.colchonMin} inputMode="numeric" className={CAMPO} />
+        </Etiquetado>
+        <Etiquetado etiqueta="Anticipación (min)">
+          <input type="number" name="anticipacionMin" min={0} max={1440} defaultValue={agenda.anticipacionMin} inputMode="numeric" className={CAMPO} />
+        </Etiquetado>
+        <Etiquetado etiqueta="Días adelante">
+          <input type="number" name="maximoDiasAdelante" min={1} max={90} defaultValue={agenda.maximoDiasAdelante} inputMode="numeric" className={CAMPO} />
+        </Etiquetado>
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col divide-y divide-line rounded-xl border border-line px-3.5">
         {DIAS_HORARIO.map(({ clave, texto }) => {
           const bloque = horario[clave]?.[0];
           const cerrado = cerrados[clave];
           return (
-            <div key={clave} className="flex items-center gap-2 normal-case">
-              <label className="flex w-24 flex-none items-center gap-1.5 text-[12px] text-ink-soft">
+            <div key={clave} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 sm:flex-nowrap">
+              <label className="flex min-h-11 w-full flex-none cursor-pointer items-center gap-3 text-[13px] text-ink-soft sm:w-32">
                 <input
                   type="checkbox"
                   checked={!cerrado}
                   onChange={(e) => setCerrados((c) => ({ ...c, [clave]: !e.target.checked }))}
-                  className="h-3.5 w-3.5 accent-ink"
+                  className="h-5 w-5 flex-none accent-[var(--panel-acento,#7c5cff)]"
                 />
                 {texto}
+                {cerrado ? <span className="text-[11.5px] text-ink-faint">cerrado</span> : null}
               </label>
-              <input
-                type="time"
-                name={`ini_${clave}`}
-                defaultValue={bloque?.[0] ?? "08:00"}
-                disabled={cerrado}
-                className={cn(inp, "max-w-[110px] disabled:opacity-40")}
-              />
-              <span className="text-ink-faint">–</span>
-              <input
-                type="time"
-                name={`fin_${clave}`}
-                defaultValue={bloque?.[1] ?? "17:00"}
-                disabled={cerrado}
-                className={cn(inp, "max-w-[110px] disabled:opacity-40")}
-              />
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <input
+                  type="time"
+                  name={`ini_${clave}`}
+                  defaultValue={bloque?.[0] ?? "08:00"}
+                  disabled={cerrado}
+                  aria-label={`${texto}: abre`}
+                  className={cn(CAMPO, "sm:max-w-[140px]")}
+                />
+                <span className="text-ink-faint" aria-hidden="true">
+                  –
+                </span>
+                <input
+                  type="time"
+                  name={`fin_${clave}`}
+                  defaultValue={bloque?.[1] ?? "17:00"}
+                  disabled={cerrado}
+                  aria-label={`${texto}: cierra`}
+                  className={cn(CAMPO, "sm:max-w-[140px]")}
+                />
+              </div>
               <input type="hidden" name={`cerrado_${clave}`} value={cerrado ? "on" : ""} />
             </div>
           );
         })}
       </div>
 
-      <div className="flex items-center gap-2">
-        <button
-          type="submit"
-          disabled={pendiente}
-          className="inline-flex h-9 items-center rounded-full bg-ink px-4 text-[12px] font-medium text-paper transition-colors hover:bg-ink-soft disabled:opacity-50"
-        >
-          {pendiente ? "Guardando…" : "Guardar"}
+      <MensajeAccion estado={estado} />
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="submit" disabled={pendiente} className={BTN_PRIMARIO}>
+          {pendiente ? "Guardando…" : "Guardar agenda"}
+        </button>
+        <button type="button" onClick={() => setAbierto(false)} className={BTN_TEXTO}>
+          Cancelar
         </button>
       </div>
-      <Mensaje estado={estado} />
     </form>
   );
 }
+
+/* -------------------------------------------------------------------------
+   Zona de peligro
+   ------------------------------------------------------------------------- */
 
 /** Zona de peligro: eliminar el cliente para siempre. Pide escribir el
     nombre del negocio antes de habilitar el botón.
@@ -750,6 +743,7 @@ export function EliminarCliente({
   const [estado, ejecutar, pendiente] = useAccionAdmin("eliminarCliente");
   const [abierto, setAbierto] = useState(false);
   const [texto, setTexto] = useState("");
+  const envio = useEnvio(estado, ejecutar, { limpiarSiOk: false });
 
   useEffect(() => {
     if (estado?.ok) {
@@ -760,11 +754,19 @@ export function EliminarCliente({
 
   if (!abierto) {
     return (
-      <button
-        type="button"
-        onClick={() => setAbierto(true)}
-        className="text-[12px] text-bad underline decoration-bad/40 underline-offset-2 transition-colors hover:decoration-bad"
-      >
+      <button type="button" onClick={() => setAbierto(true)} className={BTN_PELIGRO}>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          className="h-4 w-4"
+        >
+          <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" />
+        </svg>
         Eliminar este cliente
       </button>
     );
@@ -774,34 +776,28 @@ export function EliminarCliente({
 
   return (
     <form
-      action={ejecutar}
-      className="flex flex-col gap-3 rounded-xl border border-bad/30 bg-bad/5 p-3.5"
+      {...envio}
+      className="flex flex-col gap-3.5 rounded-xl border border-bad/30 bg-bad/[0.06] p-3.5 sm:p-4"
     >
       <CampoToken />
       <input type="hidden" name="clienteId" value={clienteId} />
-      <p className="text-[12.5px] text-bad">
-        Se borra para siempre: la ficha, las automatizaciones, las piezas en
-        cola, la actividad, los cobros, las conexiones, las consultas y la(s)
-        cuenta(s) de acceso. El log técnico de ejecuciones se conserva sin
-        cliente. Esto no se puede deshacer.
+      <p className="text-[12.5px] leading-snug text-ink-soft">
+        <b className="font-medium text-bad">Se borra para siempre:</b> la ficha, las automatizaciones, las
+        piezas en cola, la actividad, los cobros, las conexiones, las consultas y la(s) cuenta(s) de
+        acceso. El log técnico de ejecuciones se conserva sin cliente. Esto no se puede deshacer.
       </p>
-      <label className="flex flex-col gap-1 text-[11px] font-medium text-ink-mute uppercase">
-        Escribí el nombre del negocio para confirmar
+      <Etiquetado etiqueta="Escribí el nombre del negocio para confirmar">
         <input
           name="confirmacion"
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
           placeholder={nombreNegocio}
           autoComplete="off"
-          className="h-9 rounded-lg border border-line bg-surface-2 px-2.5 text-[12.5px] normal-case text-ink transition-colors focus:border-line-strong focus:bg-surface-3 focus:outline-none"
+          className={CAMPO}
         />
-      </label>
-      <div className="flex items-center gap-2">
-        <button
-          type="submit"
-          disabled={pendiente || !coincide}
-          className="inline-flex h-9 items-center rounded-full bg-bad px-4 text-[12px] font-medium text-paper transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-40"
-        >
+      </Etiquetado>
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="submit" disabled={pendiente || !coincide} className={BTN_PELIGRO_SOLIDO}>
           {pendiente ? "Eliminando…" : "Eliminar definitivamente"}
         </button>
         <button
@@ -810,16 +806,13 @@ export function EliminarCliente({
             setAbierto(false);
             setTexto("");
           }}
-          className="text-[11.5px] text-ink-faint hover:text-ink-mute"
+          className={BTN_TEXTO}
         >
           Cancelar
         </button>
       </div>
-      {estado && !estado.ok ? (
-        <p role="alert" className="text-[12px] text-bad">
-          {estado.error}
-        </p>
-      ) : null}
+      {estado && !estado.ok ? <MensajeAccion estado={estado} /> : null}
     </form>
   );
 }
+

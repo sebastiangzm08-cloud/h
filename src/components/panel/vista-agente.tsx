@@ -28,7 +28,7 @@ const ACCESOS: { href: string; icono: NombreIcono; titulo: string; detalle: stri
   { href: "/panel/agente/contactos", icono: "clientes", titulo: "Clientes", detalle: "Quién te escribió" },
   { href: "/panel/agente/que-sabe", icono: "documento", titulo: "Conocimiento", detalle: "Servicios, precios y reglas" },
   { href: "/panel/agente/correcciones", icono: "pendientes", titulo: "Lo que no supo", detalle: "Contestalo una vez" },
-  { href: "/panel/agente/como-responde", icono: "ajustes", titulo: "Cómo responde", detalle: "Tono, trato y agenda" },
+  { href: "/panel/agente/como-responde", icono: "ajustes", titulo: "Configuración", detalle: "Tono, trato y agenda" },
   { href: "/panel/agente/uso", icono: "actividad", titulo: "Uso y límites", detalle: "Respuestas del mes" },
   { href: "/panel/agente/conexion", icono: "conexiones", titulo: "Conexión de WhatsApp", detalle: "Estado del número" },
 ];

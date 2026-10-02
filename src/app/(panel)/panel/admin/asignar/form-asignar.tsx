@@ -3,15 +3,30 @@
 /* ==========================================================================
    Asignar una automatización a un cliente.
 
-   Llama al Server Action `asignarAutomatizacion`, que resuelve el slug
-   contra el catálogo de la base y crea la fila en `asignaciones`. El precio
-   se prellena con el del catálogo, pero se puede ajustar — y para las que
-   se cotizan (Prospección) arranca vacío.
+   Llama a `asignarAutomatizacion` (un POST normal a `/api/admin/…`), que
+   resuelve el slug contra el catálogo de la base y crea la fila en
+   `asignaciones`. El precio se prellena con el del catálogo, pero se puede
+   ajustar — y para las que se cotizan (Prospección) arranca vacío.
+
+   Rediseño 2026-09-30: mismos campos y mismo envío. Cambian la jerarquía, el
+   mensaje de resultado (con enlace a la ficha del cliente) y los campos, que
+   miden 44 px y 16 px en celular.
    ========================================================================== */
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useAccionAdmin } from "@/components/panel/usar-accion-admin";
 import { CampoMonto } from "@/components/panel/campo-monto";
 import { CampoToken } from "@/components/panel/campo-token";
+import { colones } from "@/components/panel/ui";
+import {
+  BTN_PRIMARIO,
+  BTN_SECUNDARIO,
+  CAMPO,
+  ETIQUETA,
+  MensajeAccion,
+  Selector,
+} from "@/components/admin/admin-ui";
+import { useEnvio } from "@/components/admin/usar-envio";
 import { cn } from "@/lib/utils";
 
 type OpcionCliente = { id: string; nombre: string };
@@ -21,10 +36,6 @@ type OpcionAut = {
   plan: string;
   precio: number | null;
 };
-
-const campo =
-  "h-11 w-full rounded-xl border border-line bg-surface-2 px-3.5 text-[14px] text-ink " +
-  "transition-colors focus:border-line-strong focus:bg-surface-3 focus:outline-none";
 
 export function FormAsignar({
   clientes,
@@ -36,7 +47,11 @@ export function FormAsignar({
   clienteInicial?: string;
 }) {
   const [estado, accion, pendiente] = useAccionAdmin("asignarAutomatizacion");
+  const envio = useEnvio(estado, accion, { limpiarSiOk: false });
 
+  const [clienteId, setClienteId] = useState(
+    clientes.some((c) => c.id === clienteInicial) ? (clienteInicial as string) : (clientes[0]?.id ?? "")
+  );
   const [slug, setSlug] = useState(automatizaciones[0]?.slug ?? "");
   const autSel = useMemo(
     () => automatizaciones.find((a) => a.slug === slug),
@@ -45,86 +60,67 @@ export function FormAsignar({
 
   if (clientes.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-line-strong bg-white/[0.03] px-5 py-8 text-center text-[13px] text-ink-faint">
+      <p className="rounded-xl border border-dashed border-line-strong px-5 py-8 text-center text-[13px] text-ink-faint">
         No hay clientes todavía. Dá de alta uno primero.
       </p>
     );
   }
 
   return (
-    <form action={accion} className="flex flex-col gap-5">
+    <form {...envio} className="flex flex-col gap-5">
       <CampoToken />
-      <fieldset className="flex flex-col gap-4" disabled={pendiente}>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[11.5px] font-medium text-ink-mute">Cliente</span>
-          <select
-            name="clienteId"
-            defaultValue={clienteInicial ?? clientes[0]?.id}
-            className={cn(campo, "appearance-none")}
-          >
+      <fieldset className="flex min-w-0 flex-col gap-4">
+        <label className="flex min-w-0 flex-col gap-1.5">
+          <span className={ETIQUETA}>Cliente</span>
+          <Selector name="clienteId" value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
             {clientes.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.nombre}
               </option>
             ))}
-          </select>
+          </Selector>
         </label>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[11.5px] font-medium text-ink-mute">Automatización</span>
-          <select
-            name="slug"
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            className={cn(campo, "appearance-none")}
-          >
+        <label className="flex min-w-0 flex-col gap-1.5">
+          <span className={ETIQUETA}>Automatización</span>
+          <Selector name="slug" value={slug} onChange={(e) => setSlug(e.target.value)}>
             {automatizaciones.map((a) => (
               <option key={a.slug} value={a.slug}>
                 {a.nombre} — Plan {a.plan}
               </option>
             ))}
-          </select>
+          </Selector>
         </label>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[11.5px] font-medium text-ink-mute">
-            Precio mensual (₡){" "}
-            {autSel?.precio == null ? (
-              <span className="text-warn">· esta se cotiza</span>
-            ) : null}
-          </span>
+        <label className="flex min-w-0 flex-col gap-1.5">
+          <span className={ETIQUETA}>Precio mensual (₡)</span>
           <CampoMonto
             key={slug}
             name="precio"
             defaultValue={autSel?.precio ?? undefined}
             placeholder="Ej. 45.000"
-            className={campo}
+            className={CAMPO}
           />
+          <span className={cn("text-[11.5px] leading-snug", autSel?.precio == null ? "text-warn" : "text-ink-faint")}>
+            {autSel?.precio == null
+              ? "Esta se cotiza: no tiene precio de lista, ponele el que acordaron."
+              : `Precio de lista: ${colones(autSel.precio)}/mes. Cambialo si le hacés precio de fundador.`}
+          </span>
         </label>
       </fieldset>
 
-      {estado && !estado.ok ? (
-        <p role="alert" className="rounded-lg bg-bad/10 px-3.5 py-3 text-[12.5px] text-bad">
-          {estado.error}
-        </p>
-      ) : null}
-      {estado && estado.ok ? (
-        <p role="status" className="rounded-lg bg-ok/10 px-3.5 py-3 text-[12.5px] text-ok">
-          {estado.mensaje}
-        </p>
-      ) : null}
+      <MensajeAccion estado={estado} />
 
-      <button
-        type="submit"
-        disabled={pendiente}
-        className={cn(
-          "inline-flex h-11 items-center justify-center gap-2 self-start rounded-full bg-ink px-6 text-[13.5px] font-medium text-paper",
-          "transition-all duration-200 ease-out hover:bg-ink-soft active:scale-[0.98]",
-          "disabled:pointer-events-none disabled:opacity-50"
-        )}
-      >
-        {pendiente ? "Asignando…" : "Asignar"}
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="submit" disabled={pendiente} className={BTN_PRIMARIO}>
+          {pendiente ? "Asignando…" : "Asignar"}
+        </button>
+        {estado?.ok && clienteId ? (
+          <Link href={`/panel/admin/clientes/${clienteId}`} prefetch={false} className={BTN_SECUNDARIO}>
+            Ver ficha del cliente
+          </Link>
+        ) : null}
+      </div>
     </form>
   );
 }

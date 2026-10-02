@@ -19,7 +19,8 @@ import { leerConfigAgenda, leerConfigAgente } from "./agente-config";
 import { PLANTILLAS_RECORDATORIO_MANUAL } from "./agente-plantillas";
 
 export type ResultadoAccion =
-  | { ok: true; mensaje: string }
+  /** `avisoFallido`: la acción se hizo, pero el aviso por WhatsApp no salió. */
+  | { ok: true; mensaje: string; avisoFallido?: boolean }
   | { ok: false; error: string };
 
 type ResultadoClienteId =
@@ -144,6 +145,21 @@ async function enviarPorWhatsapp(
     });
     if (!res.ok) {
       const cuerpo = await res.text();
+      /* 131047 = pasaron más de 24 h desde el último mensaje de la persona:
+         WhatsApp solo deja escribirle con una plantilla aprobada. */
+      let codigo: number | undefined;
+      try {
+        codigo = (JSON.parse(cuerpo) as { error?: { code?: number } }).error?.code;
+      } catch {
+        /* cuerpo que no es JSON: se muestra tal cual abajo */
+      }
+      if (codigo === 131047) {
+        return {
+          ok: false,
+          error:
+            "Pasaron más de 24 horas desde el último mensaje de esta persona, y WhatsApp no deja escribirle libremente. Hay que esperar a que ella escriba, o usar una plantilla aprobada.",
+        };
+      }
       return { ok: false, error: `Meta respondió ${res.status}: ${cuerpo.slice(0, 200)}` };
     }
     return { ok: true };
@@ -702,7 +718,7 @@ async function reservarValidada(
   if (cuando.getTime() < ahora + agenda.anticipacionMin * 60_000) {
     return {
       ok: false,
-      error: `Tiene que ser al menos ${agenda.anticipacionMin} minutos desde ahora — es la anticipación mínima configurada en "Cómo responde".`,
+      error: `Tiene que ser al menos ${agenda.anticipacionMin} minutos desde ahora — es la anticipación mínima configurada en "Configuración".`,
     };
   }
   if (cuando.getTime() > ahora + agenda.maximoDiasAdelante * 86_400_000) {
@@ -885,9 +901,10 @@ export async function agendarCitaManual(
     return {
       ok: true,
       mensaje: `Cita agendada, pero NO se pudo avisar por WhatsApp (${aviso.error}). Avisále a mano.`,
+      avisoFallido: true,
     };
   }
-  return { ok: true, mensaje: "Cita agendada y paciente avisado por WhatsApp." };
+  return { ok: true, mensaje: "Cita agendada y contacto avisado por WhatsApp." };
 }
 
 /**
@@ -938,7 +955,7 @@ export async function reagendarCita(
     .eq("clave", citaVieja.servicio)
     .maybeSingle();
   if (eServicio || !servicio) {
-    return { ok: false, error: "No encontré el servicio de esa cita (¿lo borraron de \"Qué sabe\"?)." };
+    return { ok: false, error: "No encontré el servicio de esa cita (¿lo borraron de \"Conocimiento\"?)." };
   }
 
   const cuando = new Date(`${fecha}T${hora}:00-06:00`);
@@ -1343,7 +1360,6 @@ export async function guardarOnboardingAgente(
   const nuevoConfig = {
     ...asignacion.config,
     trato: form.get("trato") === "vos" ? "vos" : "usted",
-    onboardingCompleto: true,
   };
   const { error: e1 } = await sb.from("asignaciones").update({ config: nuevoConfig }).eq("id", asignacion.id);
   if (e1) return { ok: false, error: e1.message };
@@ -1428,6 +1444,14 @@ export async function guardarOnboardingAgente(
     const { error: e4 } = await sb.from("wa_conocimiento").insert(filas);
     if (e4) return { ok: false, error: e4.message };
   }
+
+  /* La marca de "completo" va AL FINAL: si algo de arriba falla, el cliente
+     puede reintentar en vez de quedar bloqueado con el onboarding a medias. */
+  const { error: e5 } = await sb
+    .from("asignaciones")
+    .update({ config: { ...nuevoConfig, onboardingCompleto: true } })
+    .eq("id", asignacion.id);
+  if (e5) return { ok: false, error: e5.message };
 
   revalidarAgente();
   revalidatePath("/panel/agente/onboarding");

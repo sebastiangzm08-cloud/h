@@ -4,9 +4,10 @@
    ========================================================================== */
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Caja, CajaHead, PageHead, Pill } from "@/components/panel/ui";
+import { Seccion } from "@/components/panel/configuracion/seccion";
 import { HiloConsulta } from "@/components/panel/hilo-consulta";
 import { ResponderConsulta } from "@/components/panel/responder-consulta";
+import { PageHead, Pill } from "@/components/panel/ui";
 import { getConsulta } from "@/lib/panel/datos";
 import type { EstadoConsulta } from "@/lib/panel/tipos";
 
@@ -28,9 +29,10 @@ export default async function HiloClientePage({ params }: Props) {
 
   return (
     <>
+      {/* 44 px de alto de toque: un enlace de 12 px de letra es casi imposible de acertar con el pulgar. */}
       <Link
         href="/panel/soporte"
-        className="inline-flex items-center gap-1.5 text-[12px] text-ink-mute transition-colors hover:text-ink"
+        className="-my-2 inline-flex min-h-11 items-center gap-1.5 self-start pr-3 text-[12.5px] text-ink-mute transition-colors hover:text-ink"
       >
         ‹ Soporte
       </Link>
@@ -39,21 +41,26 @@ export default async function HiloClientePage({ params }: Props) {
         <Pill tono={ESTADO[c.estado].tono}>{ESTADO[c.estado].texto}</Pill>
       </PageHead>
 
-      <Caja className="max-w-2xl">
+      <Seccion className="max-w-2xl" eyebrow="Conversación" titulo="Lo que se habló">
         <HiloConsulta lineas={c.lineas} lado="cliente" />
-      </Caja>
+      </Seccion>
 
       {c.estado === "resuelta" ? (
-        <Caja className="max-w-2xl text-center">
-          <p className="py-3 text-[13px] text-ink-faint">
-            Esta consulta está cerrada. Si necesitás algo más, abrí una nueva.
-          </p>
-        </Caja>
+        <Seccion className="max-w-2xl" eyebrow="Cerrada" titulo="Esta consulta está cerrada">
+          <p className="text-[13px] text-ink-mute">Si necesitás algo más, abrí una nueva.</p>
+          <Link
+            href="/panel/soporte/nueva"
+            className="mt-3.5 inline-flex min-h-11 items-center rounded-full border border-line-strong px-5 text-[13.5px] font-medium text-ink-soft transition-colors hover:bg-surface-3"
+          >
+            Nueva consulta
+          </Link>
+        </Seccion>
       ) : (
-        <Caja className="max-w-2xl">
-          <CajaHead eyebrow="Responder" titulo="Seguí la conversación" />
-          <ResponderConsulta mensajeId={c.id} variante="cliente" />
-        </Caja>
+        <Seccion className="max-w-2xl" eyebrow="Responder" titulo="Seguí la conversación">
+          <div className="campos-celular">
+            <ResponderConsulta mensajeId={c.id} variante="cliente" />
+          </div>
+        </Seccion>
       )}
     </>
   );

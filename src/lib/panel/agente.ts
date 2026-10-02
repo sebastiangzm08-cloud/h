@@ -18,6 +18,7 @@ import { cache } from "react";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { getPerfil } from "./datos";
 import type { PerfilWhatsapp } from "./agente-formato";
+import { REGEX_PREGUNTA_PRECIO } from "./pregunta-precio";
 
 /* -------------------------------------------------------------------------
    Tipos
@@ -1057,8 +1058,6 @@ const EJEMPLO_EMBUDO: EmbudoSemana = {
     { clave: "Resina (por pieza)", monto: 30000 },
   ],
 };
-
-const REGEX_PREGUNTA_PRECIO = /precio|cuesta|cu[aá]nto|vale|₡|colones|cobran|tarifa/i;
 
 export async function getEmbudoSemana(): Promise<EmbudoSemana> {
   if (await enModoEjemplo()) return EJEMPLO_EMBUDO;
