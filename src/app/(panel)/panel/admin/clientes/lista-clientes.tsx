@@ -51,12 +51,9 @@ function normaliza(s: string) {
 
 /** Qué le falta a un cliente para estar en marcha, en palabras. */
 function faltaDe(c: ClienteAdmin) {
-  return [
-    !c.onboarding.perfil && "perfil",
-    c.onboarding.total > 1 && !c.onboarding.buffer && "Buffer",
-    c.onboarding.total > 1 && !c.onboarding.contenido && "subir contenido",
-  ]
-    .filter(Boolean)
+  return c.onboarding.pasos
+    .filter((p) => !p.hecho)
+    .map((p) => p.corto)
     .join(", ");
 }
 

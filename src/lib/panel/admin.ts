@@ -11,16 +11,27 @@
    ejemplos y se migra cuando n8n empiece a escribir.
    ========================================================================== */
 import { supabaseServidor } from "@/lib/supabase/servidor";
-import { getPerfil, ultimoAutor } from "./datos";
+import { getPerfil, ultimoAutor, OCULTAS_EN_PANEL } from "./datos";
 import { leerConfigAgenda, leerConfigAgente } from "./agente-config";
 import type { Consulta, EstadoConsulta, HiloConsulta } from "./tipos";
 
-/** Dónde está un cliente en su puesta en marcha. */
+/** Un paso de la puesta en marcha de un cliente. */
+export type PasoPuesta = {
+  clave: string;
+  /** Frase completa, para la ficha: "Número de WhatsApp conectado". */
+  texto: string;
+  /** Una o dos palabras, para "Falta: …" en la lista. */
+  corto: string;
+  hecho: boolean;
+};
+
+/** Dónde está un cliente en su puesta en marcha. Son los MISMOS pasos que ve
+    el cliente en "Primeros pasos" (`getPrimerosPasos` en datos.ts): los del
+    Agente de WhatsApp si lo tiene activo, y los de Redes solo mientras Redes
+    no esté oculta del panel. */
 export type Onboarding = {
-  perfil: boolean;
-  buffer: boolean;
-  contenido: boolean;
-  /** true si no aplica Buffer/contenido (no tiene redes) o si están los 3. */
+  pasos: PasoPuesta[];
+  /** true si no hay pasos que aplicar o si están todos hechos. */
   completo: boolean;
   hechos: number;
   total: number;
@@ -40,27 +51,80 @@ export type ClienteAdmin = {
   onboarding: Onboarding;
 };
 
-/** Arma el estado de onboarding del formulario de Redes. Si el cliente no
-    tiene Redes, no hay nada que pedirle acá — `pasos` queda vacío y
-    `completo` da `true` (nada pendiente), en vez de mostrar para siempre
-    "falta el perfil" a un cliente que nunca iba a llenar ese formulario.
-    Mismo criterio que `getPrimerosPasos` en `datos.ts`. */
-function armarOnboarding(
+/** Redes sigue oculta del panel del cliente: mientras lo esté, sus pasos no
+    cuentan en la puesta en marcha (el código queda, solo no suma). */
+const REDES_VISIBLE = !OCULTAS_EN_PANEL.includes("redes-sociales");
+
+type SupabaseServ = Awaited<ReturnType<typeof supabaseServidor>>;
+
+/** Pasos del Agente de WhatsApp, idénticos a los del cliente. Tres conteos
+    `head:true` (no traen filas), todos filtrados por `cliente_id`. Un error
+    de consulta cuenta 0: el paso queda pendiente, nunca se marca hecho. */
+async function pasosDelAgente(
+  supabase: SupabaseServ,
+  clienteId: string
+): Promise<PasoPuesta[]> {
+  const [conexionWa, servicios, conversaciones] = await Promise.all([
+    supabase
+      .from("conexiones")
+      .select("id", { count: "exact", head: true })
+      .eq("cliente_id", clienteId)
+      .eq("servicio", "whatsapp")
+      .eq("estado", "conectada"),
+    supabase
+      .from("wa_conocimiento")
+      .select("id", { count: "exact", head: true })
+      .eq("cliente_id", clienteId)
+      .eq("tipo", "servicio"),
+    supabase
+      .from("wa_conversaciones")
+      .select("id", { count: "exact", head: true })
+      .eq("cliente_id", clienteId),
+  ]);
+  return [
+    {
+      clave: "agente-conexion",
+      texto: "Número de WhatsApp conectado",
+      corto: "número de WhatsApp",
+      hecho: (conexionWa.count ?? 0) > 0,
+    },
+    {
+      clave: "agente-servicios",
+      texto: "Servicios y precios cargados",
+      corto: "servicios y precios",
+      hecho: (servicios.count ?? 0) > 0,
+    },
+    {
+      clave: "agente-prueba",
+      texto: "Primera conversación con el agente",
+      corto: "primera conversación",
+      hecho: (conversaciones.count ?? 0) > 0,
+    },
+  ];
+}
+
+/** Pasos de Redes. Vacío mientras Redes esté oculta o el cliente no la tenga. */
+function pasosDeRedes(
+  tieneRedes: boolean,
   perfil: boolean,
   buffer: boolean,
-  contenido: boolean,
-  tieneRedes: boolean
-): Onboarding {
-  const pasos = tieneRedes ? [perfil, buffer, contenido] : [];
-  const hechos = pasos.filter(Boolean).length;
-  return {
-    perfil,
-    buffer,
-    contenido,
-    hechos,
-    total: pasos.length,
-    completo: hechos === pasos.length,
-  };
+  contenido: boolean
+): PasoPuesta[] {
+  if (!tieneRedes || !REDES_VISIBLE) return [];
+  return [
+    { clave: "perfil", texto: "Perfil del negocio", corto: "perfil", hecho: perfil },
+    { clave: "buffer", texto: "Buffer conectado", corto: "Buffer", hecho: buffer },
+    { clave: "contenido", texto: "Subió contenido", corto: "contenido", hecho: contenido },
+  ];
+}
+
+/** Arma la puesta en marcha a partir de los pasos que aplican. Sin pasos no
+    hay nada pendiente: `completo` da `true`, en vez de mostrar para siempre
+    "falta algo" a un cliente al que nada se le pide. Mismo criterio que
+    `getPrimerosPasos` en `datos.ts`. */
+function armarOnboarding(pasos: PasoPuesta[]): Onboarding {
+  const hechos = pasos.filter((p) => p.hecho).length;
+  return { pasos, hechos, total: pasos.length, completo: hechos === pasos.length };
 }
 
 export type ResumenAdmin = {
@@ -129,8 +193,10 @@ export async function getClientesAdmin(): Promise<ClienteAdmin[]> {
   if (error || !data) return [];
 
   const ids = data.map((c) => c.id);
+  /* Redes sigue oculta: mientras lo esté no se piden sus conexiones ni su
+     cola (no cuentan en la puesta en marcha). */
   const [conex, cola] = await Promise.all([
-    ids.length
+    ids.length && REDES_VISIBLE
       ? supabase
           .from("conexiones")
           .select("cliente_id")
@@ -138,12 +204,27 @@ export async function getClientesAdmin(): Promise<ClienteAdmin[]> {
           .eq("servicio", "buffer")
           .eq("estado", "conectada")
       : Promise.resolve({ data: [] as { cliente_id: string }[] }),
-    ids.length
+    ids.length && REDES_VISIBLE
       ? supabase.from("cola").select("cliente_id").in("cliente_id", ids)
       : Promise.resolve({ data: [] as { cliente_id: string }[] }),
   ]);
   const conBuffer = new Set((conex.data ?? []).map((r) => r.cliente_id));
   const conContenido = new Set((cola.data ?? []).map((r) => r.cliente_id));
+
+  const conAgente = (c: (typeof data)[number]) =>
+    ((c.asignaciones ?? []) as { estado: string; catalogo_automatizaciones: { slug?: string } | null }[]).some(
+      (a) => a.estado === "activa" && a.catalogo_automatizaciones?.slug === "agente-whatsapp"
+    );
+  /* Los pasos del Agente son tres conteos `head:true` por cliente (no se
+     traen filas de conversaciones solo para contarlas). Solo para los
+     clientes que tienen el Agente activo; van en paralelo. */
+  const pasosAgente = new Map<string, PasoPuesta[]>(
+    await Promise.all(
+      data
+        .filter(conAgente)
+        .map(async (c) => [c.id, await pasosDelAgente(supabase, c.id)] as const)
+    )
+  );
 
   return data.map((c) => {
     const asigs = (c.asignaciones ?? []) as {
@@ -166,12 +247,15 @@ export async function getClientesAdmin(): Promise<ClienteAdmin[]> {
       automatizaciones: activas.length,
       ingresoMensual: activas.reduce((s, a) => s + (a.precio_mensual ?? 0), 0),
       desde: mesAnio(c.creado_en),
-      onboarding: armarOnboarding(
-        Boolean(c.onboarding_completo),
-        conBuffer.has(c.id),
-        conContenido.has(c.id),
-        tieneRedes
-      ),
+      onboarding: armarOnboarding([
+        ...(pasosAgente.get(c.id) ?? []),
+        ...pasosDeRedes(
+          tieneRedes,
+          Boolean(c.onboarding_completo),
+          conBuffer.has(c.id),
+          conContenido.has(c.id)
+        ),
+      ]),
     };
   });
 }
@@ -287,16 +371,22 @@ export async function getFichaCliente(id: string): Promise<FichaCliente | null> 
     catalogo_automatizaciones: { slug?: string } | null;
   }[];
   const asignacionAgente = asigList.find((a) => a.catalogo_automatizaciones?.slug === "agente-whatsapp");
-  const onboarding = armarOnboarding(
-    Boolean(c.onboarding_completo),
-    conex.some((x) => x.servicio === "buffer" && x.estado === "conectada"),
-    (cola.count ?? 0) > 0,
-    asigList.some(
-      (a) =>
-        a.estado === "activa" &&
-        a.catalogo_automatizaciones?.slug === "redes-sociales"
-    )
+  const agenteActivo = asigList.some(
+    (a) => a.estado === "activa" && a.catalogo_automatizaciones?.slug === "agente-whatsapp"
   );
+  const onboarding = armarOnboarding([
+    ...(agenteActivo ? await pasosDelAgente(supabase, id) : []),
+    ...pasosDeRedes(
+      asigList.some(
+        (a) =>
+          a.estado === "activa" &&
+          a.catalogo_automatizaciones?.slug === "redes-sociales"
+      ),
+      Boolean(c.onboarding_completo),
+      conex.some((x) => x.servicio === "buffer" && x.estado === "conectada"),
+      (cola.count ?? 0) > 0
+    ),
+  ]);
 
   return {
     id: c.id,

@@ -29,6 +29,10 @@
    como red de seguridad por si este archivo fallara (ej. la consulta a
    `perfiles` de acá abajo error), pero en el camino normal ya no deberían
    dispararse — este archivo redirige antes de que la petición llegue ahí.
+
+   `/panel/admin*` también se guarda ACÁ (no solo en `admin/layout.tsx`): quien
+   no es admin vuelve a `/panel` con un redirect HTTP, y si la consulta del rol
+   falla, tampoco entra (falla cerrado).
    ========================================================================== */
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
@@ -113,15 +117,27 @@ export async function proxy(request: NextRequest) {
     // `/panel/salir` se salta esta regla: es la que cierra la sesión. Sin la
     // excepción, el admin (que no está bajo `/panel/admin`) era rebotado a
     // `/panel/admin` ANTES de llegar al `signOut`, y nunca podía salir.
-    if (!pathname.startsWith("/panel/admin") && pathname !== "/panel/salir") {
-      // Solo se consulta el rol cuando hace falta decidir esto — no en
-      // cada request al panel, para no sumar una consulta de más siempre.
-      const { data: perfil } = await supabase
+    if (pathname !== "/panel/salir") {
+      // Una sola consulta de rol por request al panel (la misma de antes: ya
+      // se hacía en las rutas que no son del admin; ahora también cubre
+      // `/panel/admin*`). Nada de esto corre fuera de `/panel*`.
+      const esRutaAdmin = pathname.startsWith("/panel/admin");
+      const { data: perfil, error: errorPerfil } = await supabase
         .from("perfiles")
         .select("rol")
         .eq("id", data.user.id)
         .maybeSingle();
-      if (perfil?.rol === "admin") {
+      /* Falla CERRADO: si la consulta da error, nadie cuenta como admin. */
+      const esAdmin = !errorPerfil && perfil?.rol === "admin";
+
+      if (esRutaAdmin && !esAdmin) {
+        // Quien no es admin no entra a `/panel/admin*`: vuelve a su panel.
+        // No hay bucle: `/panel` solo manda a `/panel/admin` si esAdmin es
+        // true, y acá esAdmin es false (o la consulta falló, que también
+        // cuenta como false).
+        return conCookiesDe(respuesta, new URL("/panel", request.url));
+      }
+      if (!esRutaAdmin && esAdmin) {
         return conCookiesDe(respuesta, new URL("/panel/admin", request.url));
       }
     }

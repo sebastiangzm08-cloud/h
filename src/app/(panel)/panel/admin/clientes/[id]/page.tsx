@@ -112,24 +112,20 @@ export default async function FichaClientePage({ params }: Props) {
   const cobroPendiente = f.cobros.find((c) => c.estado !== "pagado");
   const pagados = f.cobros.filter((c) => c.estado === "pagado").length;
   const tieneRedes = f.automatizaciones.some((a) => a.slug === "redes-sociales" && a.estado === "activa");
-  const pasosRedes = f.onboarding.total > 0;
+  const hayPasos = f.onboarding.total > 0;
 
-  /* La puesta en marcha se cuenta por Redes (perfil, Buffer, contenido). Si
-     solo tiene el Agente, se cuenta su onboarding; si no tiene ninguna de
-     las dos, no aplica. */
-  const puesta = pasosRedes
+  /* La puesta en marcha son los MISMOS pasos que ve el cliente en "Primeros
+     pasos": número de WhatsApp, servicios y primera conversación (Agente) y,
+     solo si Redes no está oculta, perfil, Buffer y contenido. Sin pasos que
+     apliquen, no aplica. */
+  const faltan = f.onboarding.pasos.filter((p) => !p.hecho).map((p) => p.corto);
+  const puesta = hayPasos
     ? {
         valor: f.onboarding.completo ? "Lista" : `${f.onboarding.hechos} de ${f.onboarding.total}`,
-        pie: f.onboarding.completo ? "Perfil, Buffer y contenido listos" : "Faltan pasos de Redes sociales",
+        pie: f.onboarding.completo ? "Todos los pasos listos" : `Falta: ${faltan.join(", ")}`,
         tono: f.onboarding.completo ? ("ok" as const) : ("warn" as const),
       }
-    : f.onboardingAgente !== null
-      ? {
-          valor: f.onboardingAgente ? "Lista" : "Pendiente",
-          pie: "Onboarding del Agente de WhatsApp",
-          tono: f.onboardingAgente ? ("ok" as const) : ("warn" as const),
-        }
-      : { valor: "No aplica", pie: "Sin automatizaciones que lo pidan", tono: "normal" as const };
+    : { valor: "No aplica", pie: "Sin automatizaciones que lo pidan", tono: "normal" as const };
 
   const estado = ESTADO_CLIENTE[f.estado];
 
@@ -235,8 +231,8 @@ export default async function FichaClientePage({ params }: Props) {
                 clase de bug que ya se corrigió en "Tu negocio" del cliente. */}
             {tieneRedes ? (
               <FilaDato k="Formulario de Redes">
-                <span className={f.onboarding.completo ? "text-ok" : "text-warn"}>
-                  {f.onboarding.completo ? "Completo" : "Sin llenar"}
+                <span className={f.onboardingCompleto ? "text-ok" : "text-warn"}>
+                  {f.onboardingCompleto ? "Completo" : "Sin llenar"}
                 </span>
               </FilaDato>
             ) : null}
@@ -278,16 +274,16 @@ export default async function FichaClientePage({ params }: Props) {
         </Caja>
       </section>
 
-      {pasosRedes ? (
+      {hayPasos ? (
         <Seccion
           titulo="Puesta en marcha"
           sub={f.onboarding.completo ? "lista" : `${f.onboarding.hechos} de ${f.onboarding.total}`}
         >
           <Caja>
             <ul className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-x-8">
-              <Paso hecho={f.onboarding.perfil} texto="Perfil del negocio" />
-              <Paso hecho={f.onboarding.buffer} texto="Buffer conectado" />
-              <Paso hecho={f.onboarding.contenido} texto="Subió contenido" />
+              {f.onboarding.pasos.map((p) => (
+                <Paso key={p.clave} hecho={p.hecho} texto={p.texto} />
+              ))}
             </ul>
           </Caja>
         </Seccion>

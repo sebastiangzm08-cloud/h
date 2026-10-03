@@ -191,7 +191,7 @@ const CATALOGO_COMPLETO: Automatizacion[] = [
 /* Redes sociales está apagada en el panel por decisión de Sebastian
    (2026-10-02): hoy el producto es el Agente de WhatsApp. Para volver a
    mostrarla, vaciá este arreglo. No se borró ningún dato ni flujo. */
-const OCULTAS_EN_PANEL = ["redes-sociales"];
+export const OCULTAS_EN_PANEL = ["redes-sociales"];
 const CATALOGO = CATALOGO_COMPLETO.filter((a) => !OCULTAS_EN_PANEL.includes(a.slug));
 
 function autPorSlug(slug: string | null | undefined): Automatizacion | undefined {

@@ -34,7 +34,7 @@ type ResultadoClienteId =
  * seguridad, y una última relectura con service_role si la cookie llegó
  * pero la consulta de perfil falló.
  */
-async function exigirCliente(form?: FormData): Promise<ResultadoClienteId> {
+export async function exigirCliente(form?: FormData): Promise<ResultadoClienteId> {
   const perfil = await getPerfil();
   if (perfil.clienteId) return { ok: true, clienteId: perfil.clienteId, perfilId: perfil.id };
 

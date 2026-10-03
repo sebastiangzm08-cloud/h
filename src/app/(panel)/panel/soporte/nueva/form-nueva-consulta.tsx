@@ -1,31 +1,28 @@
 "use client";
 
-import { startTransition, useActionState } from "react";
+import { CampoToken } from "@/components/panel/campo-token";
 import { Campo, MensajeEstado } from "@/components/panel/configuracion/controles";
 import { BTN_PRIMARIO, CAMPO } from "@/components/panel/configuracion/estilos";
 import { Spinner } from "@/components/panel/configuracion/iconos-extra";
-import { crearConsulta, type ResultadoConsulta } from "@/lib/panel/soporte-acciones";
+import { useAccionPanelCliente } from "@/components/panel/usar-accion-panel";
 import { cn } from "@/lib/utils";
 
 export function FormNuevaConsulta() {
-  const [estado, accion, pendiente] = useActionState<
-    ResultadoConsulta | null,
-    FormData
-  >(crearConsulta, null);
+  /* Ya no es un Server Action (perdían la cookie en el POST): va por
+     `/api/panel/crearConsulta`, como el admin y el agente. */
+  const [estado, ejecutar, pendiente] = useAccionPanelCliente("crearConsulta");
 
   /* `onSubmit` y no `action`: con `action`, React 19 vacía el formulario al
      enviarlo y, si el envío fallaba, se perdía la consulta que la persona
-     acababa de escribir. Es la misma acción del servidor de siempre. */
+     acababa de escribir. El navegador sigue validando (`required`) antes. */
   function enviar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const datos = new FormData(e.currentTarget);
-    startTransition(() => {
-      accion(datos);
-    });
+    ejecutar(new FormData(e.currentTarget));
   }
 
   return (
-    <form onSubmit={enviar} className="flex flex-col gap-4">
+    <form onSubmit={enviar} method="post" className="flex flex-col gap-4">
+      <CampoToken />
       <Campo etiqueta="Asunto">
         <input
           name="asunto"

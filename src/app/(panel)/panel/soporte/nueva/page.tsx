@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Nueva consulta de soporte. Al enviarla, el Server Action redirige al hilo.
+   Nueva consulta de soporte. Al enviarla, el formulario lleva al hilo.
    ========================================================================== */
 import Link from "next/link";
 import { Seccion } from "@/components/panel/configuracion/seccion";
