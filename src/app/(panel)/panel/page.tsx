@@ -239,7 +239,7 @@ export default async function InicioPanel({
       </section>
 
       {primerosPasos && !primerosPasos.completo ? (
-        <PrimerosPasos pasos={primerosPasos.pasos} nombre={primerNombre} />
+        <PrimerosPasos pasos={primerosPasos.pasos} nombre={primerNombre} copia={primerosPasos.copia} />
       ) : null}
 
       {/* ---------- Avisos del Agente ---------- */}
@@ -262,7 +262,7 @@ export default async function InicioPanel({
         </Link>
       ) : null}
 
-      {onboardingAgentePendiente ? (
+      {onboardingAgentePendiente && !(primerosPasos && !primerosPasos.completo) ? (
         <Link
           href="/panel/agente/onboarding"
           prefetch={false}

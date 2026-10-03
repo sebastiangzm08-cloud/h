@@ -38,6 +38,7 @@ import type {
   ResultadoActividad,
 } from "./tipos";
 import { PERFIL_NEGOCIO_VACIO } from "./tipos";
+import { leerConfigAgente } from "./agente-config";
 
 /* Espejo de las líneas crudas de `mensajes_lineas` que trae PostgREST. */
 type LineaRaw = { autor?: string; creado_en?: string };
@@ -873,6 +874,12 @@ export type PasoOnboarding = {
 export async function getPrimerosPasos(): Promise<{
   pasos: PasoOnboarding[];
   completo: boolean;
+  /** Texto de la tarjeta según qué automatizaciones tenga el cliente. */
+  copia: {
+    etiqueta: string;
+    intro: string;
+    enCurso: string;
+  };
 } | null> {
   const perfil = await getPerfil();
   if (perfil.rol !== "cliente" || !perfil.clienteId) return null;
@@ -887,7 +894,7 @@ export async function getPrimerosPasos(): Promise<{
       .maybeSingle(),
     supabase
       .from("asignaciones")
-      .select("estado, catalogo_automatizaciones(slug)")
+      .select("estado, config, catalogo_automatizaciones(slug)")
       .eq("cliente_id", clienteId)
       .eq("estado", "activa"),
     getConexionBuffer(),
@@ -900,6 +907,22 @@ export async function getPrimerosPasos(): Promise<{
   const tieneRedes = (asigs.data ?? []).some((a) => {
     const cat = a.catalogo_automatizaciones as { slug?: string } | null;
     return cat?.slug === "redes-sociales" && !OCULTAS_EN_PANEL.includes("redes-sociales");
+  });
+  /* Agente de WhatsApp ACTIVO (la consulta de arriba ya filtra `activa`) y
+     visible en el panel (mismo criterio que `autPorSlug`). */
+  const tieneAgente = (asigs.data ?? []).some((a) => {
+    const cat = a.catalogo_automatizaciones as { slug?: string } | null;
+    return autPorSlug(cat?.slug)?.slug === "agente-whatsapp";
+  });
+
+  /* El asistente de 7 preguntas del agente guarda su marca en la config de la
+     asignación. Mientras no esté completo, el paso de servicios lleva a él. */
+  const onboardingAgenteHecho = (asigs.data ?? []).some((a) => {
+    const cat = a.catalogo_automatizaciones as { slug?: string } | null;
+    return (
+      cat?.slug === "agente-whatsapp" &&
+      leerConfigAgente((a.config ?? {}) as Record<string, unknown>).onboardingCompleto
+    );
   });
 
   /* "Completá el perfil de tu negocio" arma el prompt de POSTS — le sirve
@@ -932,7 +955,74 @@ export async function getPrimerosPasos(): Promise<{
     });
   }
 
-  return { pasos, completo: pasos.every((p) => p.hecho) };
+  if (tieneAgente) {
+    /* Tres conteos `head:true` (no traen filas), todos con `cliente_id`.
+       Salen de lo GUARDADO: no se le pregunta a Meta desde el Inicio.
+       - Número: fila `conexiones` de whatsapp en estado "conectada", la
+         misma que decide "Conectada" en /panel/agente/conexion.
+       - Servicios: filas `wa_conocimiento` tipo "servicio" (lo que edita
+         /panel/agente/que-sabe y también llena el asistente de onboarding).
+       - Prueba: al menos una conversación real en `wa_conversaciones`.
+       Si una tabla no existe todavía, el conteo da error → 0 → el paso
+       queda pendiente (nunca se marca hecho por un error). */
+    const [conexionWa, servicios, conversaciones] = await Promise.all([
+      supabase
+        .from("conexiones")
+        .select("id", { count: "exact", head: true })
+        .eq("cliente_id", clienteId)
+        .eq("servicio", "whatsapp")
+        .eq("estado", "conectada"),
+      supabase
+        .from("wa_conocimiento")
+        .select("id", { count: "exact", head: true })
+        .eq("cliente_id", clienteId)
+        .eq("tipo", "servicio"),
+      supabase
+        .from("wa_conversaciones")
+        .select("id", { count: "exact", head: true })
+        .eq("cliente_id", clienteId),
+    ]);
+
+    pasos.push({
+      clave: "agente-conexion",
+      titulo: "Conectá tu número de WhatsApp",
+      detalle: "Es el número por donde te escriben tus clientes. Lo conectamos con vos.",
+      href: "/panel/agente/conexion",
+      hecho: (conexionWa.count ?? 0) > 0,
+    });
+    pasos.push({
+      clave: "agente-servicios",
+      titulo: "Cargá tus servicios y precios",
+      detalle: "Con esto tu agente da precios y agenda citas sin inventar nada.",
+      href: onboardingAgenteHecho ? "/panel/agente/que-sabe" : "/panel/agente/onboarding",
+      hecho: (servicios.count ?? 0) > 0,
+    });
+    pasos.push({
+      clave: "agente-prueba",
+      titulo: "Probá tu agente con un mensaje",
+      detalle: "Escribile a tu número desde otro celular y mirá cómo contesta acá.",
+      href: "/panel/agente/conversaciones",
+      hecho: (conversaciones.count ?? 0) > 0,
+    });
+  }
+
+  const soloAgente = tieneAgente && !tieneRedes;
+  const copia = soloAgente
+    ? {
+        etiqueta: "Primeros pasos · Agente de WhatsApp",
+        intro: "Tres pasos y tu agente empieza a atender y agendar por vos. Toma unos minutos.",
+        enCurso: "Dejá tu agente listo",
+      }
+    : {
+        etiqueta: "Primeros pasos",
+        intro:
+          pasos.length === 1
+            ? "Un paso y tu automatización arranca a trabajar con lo que le contés."
+            : "Unos pasos y tus automatizaciones quedan trabajando solas. Toma unos minutos.",
+        enCurso: "Dejá tu automatización lista",
+      };
+
+  return { pasos, completo: pasos.every((p) => p.hecho), copia };
 }
 
 /* -------------------------------------------------------------------------

@@ -12,9 +12,11 @@ import { cn } from "@/lib/utils";
 export function PrimerosPasos({
   pasos,
   nombre,
+  copia,
 }: {
   pasos: PasoOnboarding[];
   nombre?: string;
+  copia?: { etiqueta: string; intro: string; enCurso: string };
 }) {
   const hechos = pasos.filter((p) => p.hecho).length;
   const siguiente = pasos.find((p) => !p.hecho)?.clave;
@@ -25,18 +27,19 @@ export function PrimerosPasos({
       <div className="mb-3.5 flex items-baseline justify-between gap-3">
         <div>
           <p className="text-[10.5px] font-medium tracking-[0.14em] text-ink-faint uppercase">
-            Primeros pasos
+            {copia?.etiqueta ?? "Primeros pasos"}
           </p>
           <h2 className="mt-0.5 text-[14.5px] font-semibold tracking-tight text-ink">
             {recienEmpieza
               ? `Bienvenido${nombre ? `, ${nombre}` : ""}`
-              : "Dejá tu automatización lista"}
+              : (copia?.enCurso ?? "Dejá tu automatización lista")}
           </h2>
           {recienEmpieza ? (
             <p className="mt-1 text-[12px] leading-relaxed text-ink-mute">
-              {pasos.length === 1
-                ? "Un paso y tu automatización arranca a trabajar con lo que le contés."
-                : "Tres pasos y tu automatización queda publicando sola. Toma unos minutos."}
+              {copia?.intro ??
+                (pasos.length === 1
+                  ? "Un paso y tu automatización arranca a trabajar con lo que le contés."
+                  : "Tres pasos y tu automatización queda publicando sola. Toma unos minutos.")}
             </p>
           ) : null}
         </div>
@@ -102,7 +105,7 @@ export function PrimerosPasos({
                 <Link
                   href={p.href}
                   className={cn(
-                    "mt-px shrink-0 rounded-full px-4 py-2.5 text-[12.5px] font-medium transition-colors sm:px-3 sm:py-1 sm:text-[11.5px]",
+                    "mt-px inline-flex min-h-11 flex-none items-center rounded-full px-4 text-[12.5px] font-medium transition-colors sm:min-h-0 sm:px-3 sm:py-1 sm:text-[11.5px]",
                     esSiguiente
                       ? "bg-ink text-paper hover:bg-ink-soft"
                       : "text-ink-mute hover:text-ink"
