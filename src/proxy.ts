@@ -36,8 +36,46 @@
    ========================================================================== */
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { COOKIE_PAIS } from "@/lib/i18n";
+
+/* ==========================================================================
+   PÁGINAS PÚBLICAS (español) — aviso de idioma para visitantes de EE. UU.
+
+   Las páginas públicas son estáticas: no pueden leer cabeceras. Pero el
+   proxy sí. Si el servidor recibe una cabecera de país con valor US
+   (`cf-ipcountry` de Cloudflare, `x-vercel-ip-country` de Vercel o
+   `x-country`), deja una cookie `hz-pais=US` que el aviso "Switch to
+   English" (`components/language-notice.tsx`) lee en el navegador.
+
+   HOY NINGUNA DE ESAS CABECERAS EXISTE (el sitio corre en un VPS detrás de
+   Traefik, sin CDN con geolocalización), así que esta rama no hace nada hasta
+   que se ponga Cloudflare delante. NO se llama a ningún servicio externo de
+   geolocalización: ningún dato del visitante sale del sitio. Esta rama corre
+   ANTES y sin tocar Supabase: las páginas públicas no tienen sesión.
+   ========================================================================== */
+const CABECERAS_PAIS = ["cf-ipcountry", "x-vercel-ip-country", "x-country"];
+
+function respuestaPublica(request: NextRequest) {
+  const respuesta = NextResponse.next();
+  const esDeEeuu = CABECERAS_PAIS.some(
+    (h) => request.headers.get(h)?.trim().toUpperCase() === "US"
+  );
+  if (esDeEeuu && request.cookies.get(COOKIE_PAIS)?.value !== "US") {
+    respuesta.cookies.set(COOKIE_PAIS, "US", {
+      path: "/",
+      maxAge: 60 * 60 * 24,
+      sameSite: "lax",
+    });
+  }
+  return respuesta;
+}
 
 export async function proxy(request: NextRequest) {
+  const ruta = request.nextUrl.pathname;
+  if (!ruta.startsWith("/panel") && !ruta.startsWith("/acceso")) {
+    return respuestaPublica(request);
+  }
+
   let respuesta = NextResponse.next({ request });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -158,6 +196,18 @@ function conCookiesDe(base: NextResponse, destino: URL) {
 }
 
 export const config = {
-  /* Sólo donde importa la sesión. Nada de estáticos ni imágenes. */
-  matcher: ["/panel/:path*", "/acceso/:path*", "/acceso"],
+  /* Donde importa la sesión (panel y acceso) y las páginas públicas en español
+     (solo para la cookie de país, ver arriba). Nada de estáticos ni imágenes. */
+  matcher: [
+    "/panel/:path*",
+    "/acceso/:path*",
+    "/acceso",
+    "/",
+    "/que-automatizamos",
+    "/planes",
+    "/nosotros",
+    "/contacto",
+    "/diagnostico",
+    "/mis-herramientas",
+  ],
 };

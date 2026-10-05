@@ -1,22 +1,28 @@
 import { Reveal } from "@/components/reveal";
 import { FaqAccordion } from "@/components/faq-accordion";
 import { JsonLd } from "@/components/seo/json-ld";
-import { faq } from "@/lib/content";
+import { getContenido } from "@/lib/contenido";
+import { getCopy } from "@/lib/copy";
+import type { Idioma } from "@/lib/i18n";
 
-const faqJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: faq.map(({ q, a }) => ({
-    "@type": "Question",
-    name: q,
-    acceptedAnswer: {
-      "@type": "Answer",
-      text: a,
-    },
-  })),
-};
+export function FaqSection({ idioma = "es" }: { idioma?: Idioma }) {
+  const t = getCopy(idioma).faq;
+  const { faq } = getContenido(idioma);
 
-export function FaqSection() {
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    inLanguage: idioma === "en" ? "en" : "es",
+    mainEntity: faq.map(({ q, a }) => ({
+      "@type": "Question",
+      name: q,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: a,
+      },
+    })),
+  };
+
   return (
     <section className="border-b border-line bg-paper">
       <JsonLd data={faqJsonLd} />
@@ -24,9 +30,9 @@ export function FaqSection() {
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12">
           <div className="lg:col-span-4">
             <Reveal>
-              <p className="eyebrow mb-5">Preguntas frecuentes</p>
+              <p className="eyebrow mb-5">{t.eyebrow}</p>
               <h2 className="text-[2rem] leading-[1.05] font-semibold tracking-tight text-ink sm:text-[2.5rem]">
-                Antes de que preguntes
+                {t.titulo}
               </h2>
             </Reveal>
           </div>

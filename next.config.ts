@@ -22,6 +22,10 @@ const nextConfig: NextConfig = {
     ];
   },
   experimental: {
+    /* Hay dos layouts raíz (español e inglés, uno por idioma): el 404 de URLs
+       que no existen no se puede armar con un layout, así que se declara
+       completo en `src/app/global-not-found.tsx`. */
+    globalNotFound: true,
     /* Detrás del proxy de EasyPanel (Traefik), Next recibe un `Host` interno
        (`localhost:3000`) distinto del `Origin` real del navegador (el
        dominio). Sin esto, Next trata el POST de un Server Action como

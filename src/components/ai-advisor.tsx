@@ -1,22 +1,45 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import Link from "next/link";
-import { Sparkle, WarningCircle, ArrowUpRight } from "@phosphor-icons/react/dist/ssr";
+import { Sparkle, WarningCircle, Check } from "@phosphor-icons/react/dist/ssr";
 import { Button } from "@/components/ui/button";
-import { automatizaciones as CATALOGO, planes } from "@/lib/content";
-import { colones } from "@/config/site";
+import { precioDe } from "@/config/site";
+import type { PlanPublico } from "@/lib/content";
+import { getCopy } from "@/lib/copy";
+import type { Idioma } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
 type Estado = "idle" | "cargando" | "listo" | "error";
+type Encaje = "si" | "parcial" | "no";
 
+/* Hoy lo único que se ofrece es el Agente IA de WhatsApp. El asesor no
+   recomienda planes ni automatizaciones distintas: dice cómo ayudaría el
+   agente y, si el negocio necesita algo que el agente no hace, lo dice con
+   honestidad. */
 type Sugerencia = {
   entendido: string;
-  automatizacionIds: string[];
-  planId: string;
-  porQuePlan: string;
+  encaja: Encaje;
+  usos: string[];
+  nota: string;
 };
 
-export function AIAdvisor() {
+const colorEncaje: Record<Encaje, string> = {
+  si: "bg-ok",
+  parcial: "bg-warn",
+  no: "bg-bad",
+};
+
+export function AIAdvisor({
+  plan,
+  idioma = "es",
+}: {
+  plan: PlanPublico;
+  idioma?: Idioma;
+}) {
+  const t = getCopy(idioma).asesor;
+  const tt = getCopy(idioma).plan.tarjeta;
+  const hrefDiagnostico = idioma === "en" ? "/en/diagnostic" : `/diagnostico?plan=${plan.id}`;
+
   const [descripcion, setDescripcion] = useState("");
   const [estado, setEstado] = useState<Estado>("idle");
   const [sugerencia, setSugerencia] = useState<Sugerencia | null>(null);
@@ -26,7 +49,7 @@ export function AIAdvisor() {
     e.preventDefault();
 
     if (descripcion.trim().length < 10) {
-      setError("Contanos un poco más sobre tu negocio, al menos una frase.");
+      setError(t.errCorto);
       return;
     }
 
@@ -37,12 +60,12 @@ export function AIAdvisor() {
       const res = await fetch("/api/asistente-ia", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ descripcion }),
+        body: JSON.stringify({ descripcion, idioma }),
       });
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error ?? "Algo salió mal, probá de nuevo.");
+        setError(data.error ?? t.errGeneral);
         setEstado("error");
         return;
       }
@@ -50,45 +73,48 @@ export function AIAdvisor() {
       setSugerencia(data);
       setEstado("listo");
     } catch {
-      setError("No se pudo conectar con el asistente. Probá de nuevo.");
+      setError(t.errRed);
       setEstado("error");
     }
   };
 
-  const plan = sugerencia
-    ? planes.find((p) => p.id === sugerencia.planId)
-    : undefined;
-  const automatizaciones = sugerencia
-    ? sugerencia.automatizacionIds
-        .map((id) => CATALOGO.find((a) => a.slug === id))
-        .filter((a) => a !== undefined)
-    : [];
-
   return (
-    <section id="analizador" className="scroll-mt-28 border-t border-line bg-surface">
+    <section
+      id={idioma === "en" ? "advisor" : "analizador"}
+      className="scroll-mt-28 border-t border-line bg-surface"
+    >
       <div className="mx-auto max-w-3xl px-5 py-24 sm:px-8 sm:py-28">
-        <p className="eyebrow mb-5">O contanoslo con tus palabras</p>
+        <p className="eyebrow mb-5">{t.eyebrow}</p>
         <h2 className="text-[2rem] leading-[1.05] font-semibold tracking-tight text-ink sm:text-[2.5rem]">
-          Describí tu negocio y te sugerimos qué automatizar
+          {t.titulo}
         </h2>
         <p className="mt-4 text-[0.9375rem] leading-relaxed text-ink-mute">
-          Un párrafo alcanza. Cuanto más contés sobre cómo trabajás hoy,
-          mejor la sugerencia.
+          {t.sub}
         </p>
 
         <form onSubmit={onSubmit} className="mt-8">
+          <label htmlFor="asesor-descripcion" className="sr-only">
+            {t.titulo}
+          </label>
           <textarea
+            id="asesor-descripcion"
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
             rows={4}
             maxLength={1000}
-            placeholder="Ej: Tengo una clínica dental. Agendamos citas por WhatsApp a mano y llevamos el control de pacientes en Excel..."
-            className="w-full resize-none rounded-xl border border-line-strong bg-paper px-4 py-3 text-[0.9375rem] text-ink outline-none transition-colors placeholder:text-ink-faint focus:border-ink"
+            placeholder={t.ph}
+            className="w-full resize-none rounded-xl border border-line-strong bg-paper px-4 py-3 text-[0.9375rem] text-ink outline-none transition-colors placeholder:text-ink-faint focus:border-ink focus-visible:border-ink"
             disabled={estado === "cargando"}
+            aria-describedby={error ? "asesor-error" : undefined}
+            aria-invalid={!!error}
           />
 
           {error && (
-            <p className="mt-2 flex items-center gap-1.5 text-[0.8125rem] text-bad">
+            <p
+              id="asesor-error"
+              role="alert"
+              className="mt-2 flex items-center gap-1.5 text-[0.8125rem] text-bad"
+            >
               <WarningCircle size={14} />
               {error}
             </p>
@@ -102,7 +128,7 @@ export function AIAdvisor() {
             className="mt-5"
           >
             <Sparkle size={16} weight="fill" />
-            {estado === "cargando" ? "Analizando…" : "Generar sugerencias"}
+            {estado === "cargando" ? t.cargando : t.boton}
           </Button>
         </form>
 
@@ -110,85 +136,88 @@ export function AIAdvisor() {
             se lea como "está pensando" y no como que la página se colgó. */}
         {estado === "cargando" && (
           <div className="mt-8 flex flex-col gap-5" aria-live="polite" aria-busy="true">
-            <span className="sr-only">Generando tu recomendación…</span>
+            <span className="sr-only">{t.cargandoSr}</span>
             <div className="skeleton h-5 w-4/5 rounded-md" />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="skeleton h-24 rounded-2xl" />
-              <div className="skeleton h-24 rounded-2xl" />
-            </div>
             <div className="skeleton h-28 rounded-2xl" />
+            <div className="skeleton h-20 rounded-2xl" />
           </div>
         )}
 
         {estado === "listo" && sugerencia && (
-          <div className="mt-8 flex flex-col gap-6">
+          <div className="mt-8 flex flex-col gap-6" aria-live="polite">
             <p className="text-[0.9375rem] leading-relaxed text-ink-soft">
               {sugerencia.entendido}
             </p>
 
-            {automatizaciones.length > 0 && (
-              <div>
-                <p className="eyebrow mb-3">Para empezar, esto te sirve</p>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {automatizaciones.map((a) => (
-                    <Link
-                      key={a.slug}
-                      href="/que-automatizamos"
-                      className="group flex flex-col justify-between rounded-2xl border border-line bg-paper p-5 transition-colors hover:border-ink-mute"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="text-[0.9375rem] font-medium leading-snug tracking-tight text-ink">
-                          {a.nombre}
-                        </p>
-                        <ArrowUpRight
-                          size={15}
-                          className="mt-0.5 shrink-0 text-ink-faint opacity-0 transition-opacity group-hover:opacity-100"
-                        />
-                      </div>
-                      <p className="mt-3 text-[0.8125rem] text-ink-faint">
-                        Incluida en el plan {a.plan}
-                      </p>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
+            <div className="rounded-2xl border border-line bg-paper p-6">
+              <p className="flex items-center gap-2 text-[0.8125rem] font-medium text-ink">
+                <span
+                  aria-hidden="true"
+                  className={cn("h-2 w-2 rounded-full", colorEncaje[sugerencia.encaja])}
+                />
+                {t.encaje[sugerencia.encaja]}
+              </p>
 
-            {plan && (
-              <div className="rounded-2xl border border-acento/30 bg-acento/[0.06] p-6">
-                <p className="eyebrow mb-2 text-acento">Plan recomendado</p>
-                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <h3 className="text-[1.25rem] font-semibold tracking-tight text-ink">
-                    {plan.nombre}
-                  </h3>
-                  <p className="tnum text-[1.0625rem] font-medium text-ink">
-                    {colones(plan.mensual)}
-                    <span className="text-[0.8125rem] font-normal text-ink-faint">
-                      {" "}
-                      / mes
-                    </span>
-                  </p>
-                </div>
-                <p className="mt-2 text-[0.875rem] leading-relaxed text-ink-mute">
-                  {sugerencia.porQuePlan}
+              {sugerencia.usos.length > 0 && (
+                <>
+                  <p className="eyebrow mt-5 mb-3">{t.usosTitulo}</p>
+                  <ul className="flex flex-col gap-2.5">
+                    {sugerencia.usos.map((u) => (
+                      <li
+                        key={u}
+                        className="flex items-start gap-2.5 text-[0.9375rem] leading-snug text-ink-soft"
+                      >
+                        <Check
+                          size={15}
+                          weight="bold"
+                          aria-hidden="true"
+                          className="mt-1 shrink-0 text-ink-faint"
+                        />
+                        {u}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+
+              {sugerencia.nota && (
+                <p className="mt-5 border-t border-line pt-4 text-[0.875rem] leading-relaxed text-ink-mute">
+                  {sugerencia.nota}
                 </p>
-                <Button
-                  href={`/diagnostico?plan=${plan.id}`}
-                  variant="primary"
-                  size="md"
-                  className="mt-5 w-full"
-                >
-                  Agenda tu diagnóstico
-                </Button>
-              </div>
-            )}
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-acento/30 bg-acento/[0.06] p-6">
+              {sugerencia.encaja !== "no" && (
+                <>
+                  <p className="eyebrow mb-2 text-acento">{t.planTitulo}</p>
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                    <h3 className="text-[1.25rem] font-semibold tracking-tight text-ink">
+                      {plan.nombre}
+                    </h3>
+                    <p className="tnum text-[1.0625rem] font-medium text-ink">
+                      {precioDe(plan.moneda, plan.mensual)}
+                      <span className="text-[0.8125rem] font-normal text-ink-faint">
+                        {" "}
+                        {tt.mes}
+                      </span>
+                    </p>
+                  </div>
+                </>
+              )}
+              <Button
+                href={hrefDiagnostico}
+                variant="primary"
+                size="md"
+                className={cn("w-full", sugerencia.encaja !== "no" && "mt-5")}
+              >
+                {t.cta}
+              </Button>
+            </div>
           </div>
         )}
 
-        <p className="mt-6 text-[0.75rem] text-ink-faint">
-          Generado automáticamente a partir de tu descripción. No sustituye
-          el diagnóstico gratuito, que confirma precios y plazos exactos.
-        </p>
+        <p className="mt-6 text-[0.75rem] text-ink-faint">{t.aviso}</p>
       </div>
     </section>
   );

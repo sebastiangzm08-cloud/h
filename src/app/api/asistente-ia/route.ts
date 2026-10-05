@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI, Type } from "@google/genai";
-import { automatizaciones, planes } from "@/lib/content";
+import { getContenido } from "@/lib/contenido";
+import type { Idioma } from "@/lib/i18n";
 
 export const runtime = "nodejs";
 
@@ -48,161 +49,197 @@ async function generarConReintentos(
   throw new Error("No se pudo generar la recomendación.");
 }
 
-/* Respuesta ESTRUCTURADA, no un párrafo de texto libre. Con un negocio
-   real como input, un visitante que no sabe nada de automatización tiene
-   que poder leer esto en cinco segundos: qué le pasa, qué le conviene,
-   cuánto sale por mes. Nada de precios de compra puntual acá — esos
-   asustan y además el negocio real está en la mensualidad del plan. */
-const responseSchema = {
-  type: Type.OBJECT,
-  properties: {
-    entendido: {
-      type: Type.STRING,
-      description:
-        "Una a dos líneas, máximo 30 palabras. Muestra que entendiste el negocio y señala dónde parece perder más tiempo. Nada de relleno ni saludos.",
-    },
-    automatizacionIds: {
-      type: Type.ARRAY,
-      items: { type: Type.STRING },
-      description:
-        "Como máximo 2 ids EXACTOS del campo id de la lista de automatizaciones (nunca inventados). Las 1 o 2 más relevantes, no una lista larga.",
-    },
-    planId: {
-      type: Type.STRING,
-      enum: ["starter", "growth", "scale"],
-      description:
-        "El id del plan mensual (de la lista de planes) que mejor le queda, según cuántas automatizaciones necesita en total su negocio.",
-    },
-    porQuePlan: {
-      type: Type.STRING,
-      description:
-        "Máximo 18 palabras explicando por qué ese plan y no otro. Concreto, sin adjetivos vacíos.",
-    },
+/* Mensajes de error al visitante, en su idioma. */
+const MENSAJES: Record<
+  Idioma,
+  {
+    sinLlave: string;
+    cuerpo: string;
+    corto: string;
+    largo: string;
+    vacio: string;
+    ilegible: string;
+    falla: string;
+  }
+> = {
+  es: {
+    sinLlave:
+      "Falta configurar GEMINI_API_KEY en el servidor (archivo .env.local).",
+    cuerpo: "Cuerpo de la solicitud inválido.",
+    corto: "Contanos un poco más sobre tu negocio, al menos una frase.",
+    largo: "Ese texto es demasiado largo, resumilo un poco.",
+    vacio: "No se recibió respuesta de Gemini. Probá de nuevo.",
+    ilegible: "La respuesta no se pudo interpretar. Probá de nuevo.",
+    falla: "No se pudo generar la recomendación en este momento.",
   },
-  required: ["entendido", "automatizacionIds", "planId", "porQuePlan"],
+  en: {
+    sinLlave: "The advisor isn't configured on the server (missing GEMINI_API_KEY).",
+    cuerpo: "Invalid request body.",
+    corto: "Tell us a bit more about your business, at least a sentence.",
+    largo: "That text is too long, please shorten it a little.",
+    vacio: "No answer came back. Please try again.",
+    ilegible: "The answer couldn't be read. Please try again.",
+    falla: "We couldn't generate an answer right now.",
+  },
 };
 
-function construirContexto() {
-  const listaCatalogo = automatizaciones
-    .map((a) => `- id: ${a.slug} — ${a.nombre} (plan ${a.plan}). ${a.gancho} ${a.descripcion}`)
-    .join("\n");
-
-  const listaPlanes = planes
-    .map((p) => `- id: ${p.id} — ${p.nombre}: ${p.para}. ${p.incluye[0]}.`)
-    .join("\n");
-
-  return { listaCatalogo, listaPlanes };
+/* Respuesta ESTRUCTURADA, no un párrafo de texto libre. Hoy el asesor solo
+   habla del Agente IA de WhatsApp (lo único que se vende): dice si encaja,
+   qué haría por ese negocio y, si algo queda fuera, lo dice con honestidad.
+   El plan no lo elige el modelo: es uno solo y lo pinta la página. */
+function esquema(idioma: Idioma) {
+  const es = idioma === "es";
+  return {
+    type: Type.OBJECT,
+    properties: {
+      entendido: {
+        type: Type.STRING,
+        description: es
+          ? "Una a dos líneas, máximo 30 palabras. Muestra que entendiste el negocio y señala dónde parece perder más tiempo con sus clientes. Nada de relleno ni saludos."
+          : "One or two lines, 30 words max. Show you understood the business and where it seems to lose the most time with customers. No filler, no greetings.",
+      },
+      encaja: {
+        type: Type.STRING,
+        enum: ["si", "parcial", "no"],
+        description: es
+          ? "'si' si el negocio atiende clientes por WhatsApp (citas, consultas de precios o servicios) y el agente resuelve lo principal. 'parcial' si el agente resuelve solo una parte de lo que cuenta. 'no' si lo que necesita no tiene que ver con atender clientes por WhatsApp."
+          : "'si' if the business serves customers over WhatsApp (appointments, price or service questions) and the agent covers the main need. 'parcial' if the agent covers only part of what they describe. 'no' if what they need has nothing to do with serving customers over WhatsApp.",
+      },
+      usos: {
+        type: Type.ARRAY,
+        items: { type: Type.STRING },
+        description: es
+          ? "Entre 0 y 3 cosas CONCRETAS que el agente haría por ESTE negocio, cada una de máximo 16 palabras, tomadas solo de la lista de lo que el agente hace. Vacío si encaja es 'no'."
+          : "Between 0 and 3 CONCRETE things the agent would do for THIS business, each 16 words max, taken only from the list of what the agent does. Empty if encaja is 'no'.",
+      },
+      nota: {
+        type: Type.STRING,
+        description: es
+          ? "Máximo 28 palabras. Solo si encaja es 'parcial' o 'no': qué parte NO cubre el agente hoy y que otras automatizaciones vienen más adelante, sugiriendo el diagnóstico. Si encaja es 'si', déjalo vacío."
+          : "28 words max. Only if encaja is 'parcial' or 'no': what the agent does NOT cover today and that other automations come later, suggesting the diagnostic. If encaja is 'si', leave it empty.",
+      },
+    },
+    required: ["entendido", "encaja", "usos", "nota"],
+  };
 }
 
-function construirPrompt(descripcion: string) {
-  const { listaCatalogo, listaPlanes } = construirContexto();
+function construirPrompt(descripcion: string, idioma: Idioma) {
+  const { automatizaciones, planes } = getContenido(idioma);
+  const agente = automatizaciones[0];
+  const plan = planes[0];
 
-  return `Sos el asistente de automatización de Hoshizora, una agencia de Costa Rica que automatiza procesos de negocio conectando las herramientas que el cliente ya usa (WhatsApp, Excel, un CRM, etc.), sin migrarlo a sistemas nuevos. Trabajás con cualquier tipo de negocio, no solo con un sector. Muchos de quienes leen esto no saben nada de automatización — no des por sentado que conocen jerga técnica.
+  if (idioma === "en") {
+    const lista = agente.puntos.map((p) => `- ${p}`).join("\n");
+    return `You are the advisor on the website of Hoshizora, an agency in Costa Rica that sells ONE thing today: the AI Agent for WhatsApp (plan "${plan.nombre}"). Many readers know nothing about automation, so avoid jargon. Write in plain, natural US English.
 
-Un visitante de la web describió así su negocio y sus herramientas:
+A visitor described their business like this:
 """
 ${descripcion}
 """
 
-Hoy la agencia tiene TRES automatizaciones disponibles, una por plan (elegí como máximo 2, las más relevantes; si ninguna calza, decilo y sugerí el diagnóstico):
-${listaCatalogo}
+What the AI Agent really does (this is the ONLY list you may draw from):
+${lista}
 
-Los planes mensuales reales (elegí el que mejor le quede):
-${listaPlanes}
+What it does NOT do today: it works only on WhatsApp. It does not post on social media, find new customers (prospecting), handle invoices or payments, answer email, take phone calls, or manage inventory. Other automations may come later, but do not promise any.
 
-Reglas: no inventes ids que no estén en las listas de arriba. No menciones precios de construcción puntual — el negocio del cliente es la mensualidad del plan. No prometas resultados exagerados ni uses superlativos vacíos. Sé específico, no genérico, y priorizá que alguien sin conocimiento técnico entienda todo de un vistazo.`;
+Rules: never invent features, integrations, prices, results or numbers. Do not mention prices or fees at all. No superlatives or exaggerated promises. Be specific to this business, not generic. If the business needs something the agent does not do, say so honestly (encaja "parcial" or "no") and suggest the free diagnostic. Reply in English.`;
+  }
+
+  const lista = agente.puntos.map((p) => `- ${p}`).join("\n");
+  return `Sos el asesor del sitio de Hoshizora, una agencia de Costa Rica que hoy vende UNA sola cosa: el Agente IA de WhatsApp (plan "${plan.nombre}"). Muchos de quienes leen esto no saben nada de automatización — no des por sentado que conocen jerga técnica. Escribí en español de Costa Rica, con voseo.
+
+Un visitante de la web describió así su negocio:
+"""
+${descripcion}
+"""
+
+Lo que el Agente IA de verdad hace (esta es la ÚNICA lista de la que podés sacar usos):
+${lista}
+
+Lo que NO hace hoy: trabaja solo por WhatsApp. No publica en redes sociales, no busca clientes nuevos (prospección), no hace facturas ni cobros, no contesta correos, no atiende llamadas ni maneja inventario. Más adelante puede haber otras automatizaciones, pero no prometas ninguna.
+
+Reglas: no inventes funciones, integraciones, precios, resultados ni cifras. No menciones precios ni costos. Nada de superlativos ni promesas exageradas. Sé específico para este negocio, no genérico. Si el negocio necesita algo que el agente no hace, decilo con honestidad (encaja "parcial" o "no") y sugerí el diagnóstico gratuito.`;
+}
+
+const ENCAJES = ["si", "parcial", "no"] as const;
+
+function recortar(texto: unknown, max: number) {
+  return typeof texto === "string" ? texto.trim().slice(0, max) : "";
 }
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      {
-        error:
-          "Falta configurar GEMINI_API_KEY en el servidor (archivo .env.local).",
-      },
-      { status: 500 }
-    );
-  }
-
-  let body: { descripcion?: string };
+  let body: { descripcion?: string; idioma?: string };
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Cuerpo de la solicitud inválido." }, { status: 400 });
+    return NextResponse.json({ error: MENSAJES.es.cuerpo }, { status: 400 });
+  }
+
+  /* El idioma lo manda la página (/en pide "en"); cualquier otro valor cae en
+     español, que es lo que hacía el endpoint antes. */
+  const idioma: Idioma = body.idioma === "en" ? "en" : "es";
+  const m = MENSAJES[idioma];
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json({ error: m.sinLlave }, { status: 500 });
   }
 
   const descripcion = (body.descripcion ?? "").trim();
 
   if (descripcion.length < MIN_LARGO) {
-    return NextResponse.json(
-      { error: "Contanos un poco más sobre tu negocio, al menos una frase." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: m.corto }, { status: 400 });
   }
   if (descripcion.length > MAX_LARGO) {
-    return NextResponse.json(
-      { error: "Ese texto es demasiado largo, resumilo un poco." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: m.largo }, { status: 400 });
   }
 
   try {
     const ai = new GoogleGenAI({ apiKey });
     const respuesta = await generarConReintentos(ai, {
       model: GEMINI_MODEL,
-      contents: construirPrompt(descripcion),
+      contents: construirPrompt(descripcion, idioma),
       config: {
         responseMimeType: "application/json",
-        responseSchema,
+        responseSchema: esquema(idioma),
       },
     });
 
     const texto = respuesta.text;
     if (!texto) {
-      return NextResponse.json(
-        { error: "No se recibió respuesta de Gemini. Probá de nuevo." },
-        { status: 502 }
-      );
+      return NextResponse.json({ error: m.vacio }, { status: 502 });
     }
 
     let datos: {
-      entendido?: string;
-      automatizacionIds?: string[];
-      planId?: string;
-      porQuePlan?: string;
+      entendido?: unknown;
+      encaja?: unknown;
+      usos?: unknown;
+      nota?: unknown;
     };
     try {
       datos = JSON.parse(texto);
     } catch {
-      return NextResponse.json(
-        { error: "La respuesta no se pudo interpretar. Probá de nuevo." },
-        { status: 502 }
-      );
+      return NextResponse.json({ error: m.ilegible }, { status: 502 });
     }
 
-    // Nunca confiar en que el modelo devolvió solo ids reales: se filtra
-    // contra las automatizaciones y los planes de verdad antes de mandarlo.
-    const idsValidos = new Set(automatizaciones.map((a) => a.slug));
-    const idsElegidos = (datos.automatizacionIds ?? [])
-      .filter((id) => idsValidos.has(id))
-      .slice(0, 2);
-
-    const planValido = planes.some((p) => p.id === datos.planId);
+    // Nunca confiar en que el modelo devolvió exactamente lo pedido: se
+    // valida y se recorta antes de mandarlo.
+    const encaja = ENCAJES.find((e) => e === datos.encaja) ?? "parcial";
+    const usos = Array.isArray(datos.usos)
+      ? datos.usos
+          .map((u) => recortar(u, 200))
+          .filter((u) => u.length > 0)
+          .slice(0, 3)
+      : [];
 
     return NextResponse.json({
-      entendido: datos.entendido ?? "",
-      automatizacionIds: idsElegidos,
-      // "starter" como respaldo honesto: es el plan de entrada, nunca el
-      // que menos le conviene a alguien que recién está probando.
-      planId: planValido ? datos.planId : "starter",
-      porQuePlan: datos.porQuePlan ?? "",
+      entendido: recortar(datos.entendido, 400),
+      encaja,
+      usos: encaja === "no" ? [] : usos,
+      nota: encaja === "si" ? "" : recortar(datos.nota, 400),
     });
   } catch (err) {
     console.error("Error al llamar a Gemini:", err);
-    return NextResponse.json(
-      { error: "No se pudo generar la recomendación en este momento." },
-      { status: 502 }
-    );
+    return NextResponse.json({ error: m.falla }, { status: 502 });
   }
 }

@@ -515,3 +515,19 @@ html::-webkit-scrollbar-track {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Entrada del aviso "Switch to English": sube unos píxeles y aparece. Solo
+   transform/opacity; con "menos movimiento" no se anima. */
+@keyframes aviso-idioma-entra {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.aviso-idioma {
+  animation: aviso-idioma-entra 380ms var(--ease-out-quart) both;
+}

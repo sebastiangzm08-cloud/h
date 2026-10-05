@@ -3,47 +3,56 @@
 import { useState } from "react";
 import { WhatsappLogo } from "@phosphor-icons/react/dist/ssr";
 import { Button } from "@/components/ui/button";
-import { colones, site, waLink } from "@/config/site";
-import type { planes } from "@/lib/content";
+import { precioDe, site, waLink } from "@/config/site";
+import type { PlanPublico } from "@/lib/content";
+import { getCopy } from "@/lib/copy";
 
-type Plan = (typeof planes)[number];
 type Periodo = "mensual" | "anual";
 
+/** Tarjeta "Estás agendando sobre…" de /diagnostico?plan=… (solo español: en
+    inglés hay un único plan y no hace falta elegirlo). */
 export function DiagnosticoPlanContext({
   plan,
   periodoInicial,
 }: {
-  plan: Plan;
+  plan: PlanPublico;
   periodoInicial: Periodo;
 }) {
+  const t = getCopy("es").diagnostico.contextoPlan;
+  const tp = getCopy("es").plan.periodo;
+  const tt = getCopy("es").plan.tarjeta;
   const [periodo, setPeriodo] = useState<Periodo>(periodoInicial);
   const esAnual = periodo === "anual";
   const precio = esAnual ? plan.mensual * site.pago.mesesPagoAnual : plan.mensual;
+  const precioTexto = precioDe(plan.moneda, precio);
 
-  const mensaje = `Hola, quiero agendar un diagnóstico para el plan ${plan.nombre} (${
-    esAnual ? "pago anual" : "pago mensual"
-  }, ${colones(precio)}${esAnual ? "/año" : "/mes"}).`;
+  const mensaje = t.mensaje(plan.nombre, esAnual, precioTexto, esAnual ? "/año" : "/mes");
 
   return (
     <div className="mb-8 rounded-2xl border border-acento/30 bg-acento/[0.06] p-6">
-      <p className="eyebrow mb-3 text-acento">Estás agendando sobre</p>
+      <p className="eyebrow mb-3 text-acento">{t.eyebrow}</p>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
         <h2 className="text-[1.375rem] font-semibold tracking-tight text-ink">
-          Plan {plan.nombre}
+          {t.plan(plan.nombre)}
         </h2>
         <p className="tnum text-[1.0625rem] font-medium text-ink">
-          {colones(precio)}
+          {precioTexto}
           <span className="text-[0.8125rem] font-normal text-ink-faint">
-            {esAnual ? " / año" : " / mes"}
+            {esAnual ? ` ${tt.anio}` : ` ${tt.mes}`}
           </span>
         </p>
       </div>
       <p className="mt-1.5 text-[0.875rem] text-ink-mute">{plan.para}</p>
 
-      <div className="mt-5 inline-flex rounded-full border border-line-strong bg-paper p-1">
+      <div
+        role="group"
+        aria-label={tp.etiqueta}
+        className="mt-5 inline-flex rounded-full border border-line-strong bg-paper p-1"
+      >
         {(["mensual", "anual"] as const).map((p) => (
           <button
             key={p}
+            type="button"
             onClick={() => setPeriodo(p)}
             aria-pressed={periodo === p}
             className={`rounded-full px-3.5 py-1.5 text-[0.8125rem] font-medium tracking-tight transition-all duration-150 ${
@@ -52,7 +61,7 @@ export function DiagnosticoPlanContext({
                 : "text-ink-mute hover:text-ink"
             }`}
           >
-            {p === "mensual" ? "Mensual" : "Anual · 2 meses gratis"}
+            {p === "mensual" ? tp.mensual : tp.anual}
           </button>
         ))}
       </div>
@@ -72,7 +81,7 @@ export function DiagnosticoPlanContext({
         className="mt-6 w-full"
       >
         <WhatsappLogo size={17} weight="fill" />
-        Confirmar por WhatsApp
+        {t.confirmar}
       </Button>
     </div>
   );

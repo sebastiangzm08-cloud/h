@@ -11,7 +11,7 @@ export const site = {
   nombre: "Hoshizora",
   /* Sin punto final: el footer se lo agrega solo (footer.tsx). Si se le pone
      acá, quedan dos puntos seguidos. */
-  claim: "Tu negocio, funcionando solo. Gana tiempo y dinero",
+  claim: "Tu WhatsApp atiende y agenda, a cualquier hora",
   url: "https://hoshizora.agency",
 
   /* TEMA DEL SITIO. Cambiá esta palabra y se invierte la web entera:
@@ -87,4 +87,14 @@ export function waLink(mensaje: string) {
 
 export function colones(n: number) {
   return "₡" + n.toLocaleString("es-CR");
+}
+
+/** Dólares para el sitio en inglés: `US$397`. */
+export function dolares(n: number) {
+  return "US$" + n.toLocaleString("en-US");
+}
+
+/** Precio de un plan en su propia moneda: ₡125.000 o US$397. */
+export function precioDe(moneda: "CRC" | "USD", n: number) {
+  return moneda === "USD" ? dolares(n) : colones(n);
 }

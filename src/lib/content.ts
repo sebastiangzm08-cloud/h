@@ -184,181 +184,118 @@ export const niveles = [
 ] as const;
 
 /* -------------------------------------------------------------------------
-   Planes. Solo mensualidad: no se cobra puesta en marcha.
-   El campo  queda en null por si algún día se reactiva.
+   Plan. HOY SE VENDE UNO SOLO: el Agente IA de WhatsApp (desde el 2026-10-04
+   el sitio público ya no ofrece Redes ni Prospección: no son reales todavía).
+   Solo mensualidad: no se cobra puesta en marcha en Costa Rica.
+
+   El id sigue siendo "growth" a propósito: es el identificador interno del
+   plan (órdenes `HZ-PLAN-GROWTH`, panel, facturación). Lo que ve el cliente
+   es `nombre`.
+
+   Esta misma forma la usa `content-en.ts` para el sitio en inglés.
    ------------------------------------------------------------------------- */
-export const planes = [
-  {
-    id: "starter",
-    nombre: "Básico",
-    para: "Ideal para arrancar y atender 24/7",
-    setup: null,
-    mensual: 50000,
-    /** Días de prueba gratuita, contados desde que la automatización
-        elegida por el cliente queda entregada y funcionando (no desde
-        la firma). Solo aplica a este plan. `null` = sin prueba. */
-    pruebaGratuitaDias: 7,
-    destacado: false,
-    limites: [
-      ["Automatizaciones incluidas", "1 completa"],
-      ["Ejecuciones por mes", "2.000"],
-      ["Integraciones", "3"],
-      ["Cambios incluidos", "—"],
-      ["Soporte", "Correo, 48 h hábiles"],
-      ["Monitoreo", "Básico"],
-    ],
-    incluye: [
-      "Incluye el Publicador de contenido, completo y andando",
-      "Instalación y puesta en marcha sin costo",
-      "Prueba gratuita de 7 días desde que queda funcionando",
-      "Diagnóstico y mapa de tu operación antes de empezar",
-      "Arreglo incluido si una app conectada cambia su interfaz",
-      "Sin permanencia forzada — cancelás cuando querés",
-    ],
-    cta: "directo",
-  },
+export type PlanPublico = {
+  id: string;
+  nombre: string;
+  para: string;
+  /** Mensualidad en la moneda del plan. */
+  mensual: number;
+  moneda: "CRC" | "USD";
+  /** Costo único de instalación. `null` = sin costo de instalación. */
+  setup: { monto: number; nota: string } | null;
+  /** Permanencia mínima en meses. `null` = no se muestra ninguna. */
+  minimoMeses: number | null;
+  destacado: boolean;
+  /** Pares [etiqueta, valor] de la ficha técnica (orden/[id]). */
+  limites: [string, string][];
+  incluye: string[];
+};
+
+export const planes: PlanPublico[] = [
   {
     id: "growth",
-    nombre: "Growth",
-    para: "Automatiza ventas y seguimientos",
-    setup: null,
+    nombre: "Agente IA",
+    para: "Atiende tu WhatsApp, agenda citas y te pasa lo delicado",
     mensual: 125000,
-    pruebaGratuitaDias: null,
+    moneda: "CRC",
+    setup: null,
+    minimoMeses: 3,
     destacado: true,
     limites: [
-      ["Automatización incluida", "1 completa"],
-      ["Ejecuciones por mes", "20.000"],
-      ["Integraciones", "8"],
-      ["Cambios incluidos", "2 h por mes"],
-      ["Soporte", "Correo, 24 h"],
-      ["Monitoreo", "Con alertas"],
+      ["Automatización incluida", "Agente IA de WhatsApp"],
+      ["Atención", "24 horas, 7 días"],
+      ["Instalación", "Sin costo"],
+      ["Revisión de rendimiento", "Mensual"],
+      ["Cambios", "Con prioridad"],
+      ["Tu panel", "Conversaciones, agenda, conocimiento y resultados"],
     ],
     incluye: [
-      "Incluye el Bot de WhatsApp, completo y andando",
+      "Agente de WhatsApp con IA, completo y andando",
+      "Responde con los precios, servicios y horarios que vos cargás",
+      "Agenda citas solo, en tus horarios libres",
+      "Recordatorios de citas por WhatsApp",
+      "Entiende las notas de voz que te mandan",
+      "Te pasa la conversación cuando el caso necesita a una persona",
+      "Tu panel: conversaciones, agenda, conocimiento y resultados",
       "Instalación y puesta en marcha sin costo",
       "Revisión mensual de rendimiento",
       "Prioridad en la cola de cambios",
-      "2 horas de ajustes a flujos existentes cada mes",
-      "Informe mensual de ejecuciones y errores",
-      "Soporte por correo con respuesta en 24 horas",
-      "Monitoreo con alertas en tiempo real",
-    ],
-    cta: "llamada",
-  },
-  {
-    id: "scale",
-    nombre: "Scale",
-    para: "Diseñado a medida para operaciones grandes",
-    setup: null,
-    /* Ya no se muestra como precio fijo — ver `aCotizar`. Se deja el
-       número como referencia interna de "desde cuánto" arranca la
-       conversación, no como algo que ve el cliente. */
-    mensual: 320000,
-    aCotizar: true,
-    pruebaGratuitaDias: null,
-    destacado: false,
-    limites: [
-      ["Automatización incluida", "Prospección, a medida"],
-      ["Ejecuciones por mes", "Sin límite fijo"],
-      ["Integraciones", "Sin límite"],
-      ["Cambios incluidos", "Según lo acordado"],
-      ["Soporte", "WhatsApp, 8 h hábiles"],
-      ["Monitoreo", "Alertas y prioridad"],
-    ],
-    incluye: [
-      "Incluye Prospección e inteligencia de mercado, a la medida de tu operación",
-      "Diagnóstico y diseño a medida",
-      "Ambiente de pruebas separado antes de publicar cambios",
-      "Plan de continuidad documentado",
-      "Soporte prioritario por WhatsApp, 8 horas hábiles",
-      "Sesión trimestral de revisión estratégica",
-    ],
-    cta: "llamada",
-  },
-] as const;
-
-/* -------------------------------------------------------------------------
-   LAS AUTOMATIZACIONES QUE SE VENDEN HOY. Una por plan. Esta es la fuente
-   de verdad del sitio público (home, /qué-automatizamos, modal de planes).
-   Más adelante se agregan; por ahora son estas tres.
-   ------------------------------------------------------------------------- */
-export type AutomatizacionPublica = {
-  slug: string;
-  nombre: string;
-  /** Nombre del plan que la incluye. */
-  plan: "Básico" | "Growth" | "Scale";
-  /** Precio mensual, o null = "A cotizar". */
-  precio: number | null;
-  /** Una línea que la resume. */
-  gancho: string;
-  /** 2–3 frases de qué hace. */
-  descripcion: string;
-  /** 3–4 puntos concretos. */
-  puntos: string[];
-};
-
-export const automatizaciones: AutomatizacionPublica[] = [
-  {
-    slug: "publicador-de-contenido",
-    nombre: "Publicador de contenido",
-    plan: "Básico",
-    precio: 50000,
-    gancho: "Tus redes publican solas, con tu voz.",
-    descripcion:
-      "Subís tus fotos o videos, los aprobás una vez, y el sistema publica en tus redes por vos. La IA escribe un texto distinto para cada red, con el tono de tu negocio.",
-    puntos: [
-      "Publica en hasta 3 redes conectadas (Instagram, Facebook, TikTok)",
-      "Solo sale lo que vos subiste y aprobaste — nada inventado",
-      "Un texto propio por red, no el mismo copiado",
-      "Vos elegís el día o lo dejás salir en el próximo turno",
-    ],
-  },
-  {
-    slug: "bot-de-whatsapp",
-    nombre: "Bot de WhatsApp",
-    plan: "Growth",
-    precio: 125000,
-    gancho: "Un solo agente que atiende, vende y agenda.",
-    descripcion:
-      "Contesta por WhatsApp con tu información real a cualquier hora, agenda citas, y da seguimiento a los pedidos y cobros. Escala a una persona cuando hace falta.",
-    puntos: [
-      "Responde consultas con tu catálogo, precios y políticas reales",
-      "Agenda citas y confirma sin que muevas un dedo",
-      "Da seguimiento a cotizaciones y recordatorios de pago",
-      "Pasa la conversación a una persona cuando el caso lo pide",
-    ],
-  },
-  {
-    slug: "prospeccion",
-    nombre: "Prospección e inteligencia de mercado",
-    plan: "Scale",
-    precio: null,
-    gancho: "Encuentra clientes y estudia a tu competencia por vos.",
-    descripcion:
-      "Rastrea tu zona y tu rubro: arma listas de clientes potenciales, analiza qué publican y ofrecen tus competidores directos, y te entrega informes accionables.",
-    puntos: [
-      "Listas de prospectos de tu zona, con datos de contacto",
-      "Qué publica la competencia, cada cuánto y qué les funciona",
-      "Informes periódicos, no un volcado de datos crudos",
-      "Se arma a la medida de tu operación",
     ],
   },
 ];
 
 /* -------------------------------------------------------------------------
-   En qué plan entra cada nivel del catálogo. Se muestra como "Incluido en
-   {plan}" en vez del precio de construcción en la grilla del catálogo
-   (que puede asustar sin contexto) — el precio real sigue apareciendo tal
-   cual al dar clic (checkout o el mensaje de WhatsApp). Como el plan
-   incluye "N automatizaciones a elección", cualquier ítem de ese nivel
-   puede ser la elegida — el texto es honesto, pero ojo: no es una
-   automatización específica ya reservada para cada cliente.
+   LA AUTOMATIZACIÓN QUE SE VENDE HOY: el Agente IA de WhatsApp. Fuente de
+   verdad del sitio público (home, /que-automatizamos, modal de planes y
+   asesor de IA). Si algún día se suman otras, entran acá. Todo lo que diga
+   `puntos` tiene que existir en el producto real: no se promete lo que no
+   hay.
    ------------------------------------------------------------------------- */
+export type AutomatizacionPublica = {
+  slug: string;
+  nombre: string;
+  /** Nombre del plan que la incluye. */
+  plan: string;
+  /** Precio mensual en la moneda del plan, o null = "A cotizar". */
+  precio: number | null;
+  /** Una línea que la resume. */
+  gancho: string;
+  /** 2–3 frases de qué hace. */
+  descripcion: string;
+  /** 3–6 puntos concretos. */
+  puntos: string[];
+};
+
+export const automatizaciones: AutomatizacionPublica[] = [
+  {
+    slug: "agente-ia",
+    nombre: "Agente IA de WhatsApp",
+    plan: "Agente IA",
+    precio: 125000,
+    gancho: "Atiende tu WhatsApp, agenda citas y te pasa lo delicado.",
+    descripcion:
+      "Contesta por WhatsApp a cualquier hora con la información que vos cargaste, agenda citas en tus horarios libres y pasa la conversación a una persona cuando el caso lo pide. Vos ves todo en tu panel.",
+    puntos: [
+      "Responde al instante, de día, de noche y en fines de semana",
+      "Contesta precios, servicios y horarios con tus datos, sin inventar",
+      "Agenda citas solo, en horarios realmente libres, y manda recordatorios",
+      "Entiende las notas de voz que te mandan",
+      "Pasa la conversación a una persona cuando el caso lo pide",
+      "Tu panel: conversaciones, agenda, conocimiento y resultados",
+    ],
+  },
+];
+
+/* Ya no apunta a ningún plan vendible: el catálogo de abajo es histórico y
+   NO se ofrece en el sitio (el único plan público es el Agente IA). Se deja
+   con valores que no coinciden con ningún `planes[].nombre` a propósito, así
+   `orden/catalogo-*` responde 404 en vez de mostrar automatizaciones que
+   hoy no se venden. */
 export const planPorNivel: Record<"N1" | "N2" | "N3" | "N4", string> = {
-  N1: "Básico",
-  N2: "Básico",
-  N3: "Growth",
-  N4: "Scale",
+  N1: "(no se vende)",
+  N2: "(no se vende)",
+  N3: "(no se vende)",
+  N4: "(no se vende)",
 };
 
 /* -------------------------------------------------------------------------
@@ -722,47 +659,60 @@ export const horasPerdidasEstimadas = sintomas.reduce(
 );
 
 /* -------------------------------------------------------------------------
-   Preguntas frecuentes.
+   Preguntas frecuentes. Todas hablan del Agente IA de WhatsApp, que es lo
+   único que se vende hoy. Las que dependen de una decisión del negocio sin
+   cerrar (quién paga los mensajes de Meta, permanencia) NO afirman nada: se
+   confirma por escrito en el diagnóstico.
    ------------------------------------------------------------------------- */
-export const faq = [
+export type FaqItem = { q: string; a: string };
+
+export const faq: FaqItem[] = [
   {
-    q: "¿Trabajan con negocios como el mío?",
-    a: "Lo que se automatiza son procesos: cotizar, dar seguimiento, facturar, reportar. Esos son casi idénticos en cualquier sector; lo que cambia son las herramientas, y trabajamos con las que ya tenés. En el diagnóstico lo confirmamos antes de que pagués nada.",
+    q: "¿Qué hace exactamente el Agente IA?",
+    a: "Atiende tu WhatsApp a cualquier hora: contesta preguntas con los precios, servicios y horarios que vos cargaste, agenda citas en tus horarios libres, manda recordatorios, entiende las notas de voz y te pasa los casos que necesitan a una persona. Todo lo que habla queda en tu panel.",
   },
   {
-    q: "¿No sería mejor alguien especializado en mi industria?",
-    a: "Para un software vertical, sí. Para automatizar el flujo de trabajo entre las herramientas que ya usás, la especialización útil es técnica, no sectorial. Un flujo de seguimiento de cotizaciones es el mismo en una constructora y en una imprenta.",
+    q: "¿Para qué negocios sirve?",
+    a: "Está pensado para negocios que atienden por cita y ya reciben a sus clientes por WhatsApp: clínicas dentales y médicas, veterinarias, consultorios y otros servicios. En el diagnóstico confirmamos si te sirve antes de que pagués nada.",
   },
   {
-    q: "¿Qué pasa con las automatizaciones si dejo de pagar?",
-    a: "Corren mientras la mensualidad esté al día — eso es lo que paga el monitoreo, el mantenimiento y los cambios, no un derecho de uso aparte. Si cancelás el plan o la mora pasa el aviso de suspensión, el servicio se da de baja junto con las automatizaciones activas de ese plan. No hay permanencia forzada: cancelás cuando querés.",
+    q: "¿Y si el agente no sabe algo?",
+    a: "No lo inventa. Si algo no está en lo que cargaste, pregunta o te pasa la conversación, y queda anotado en tu panel para que se lo enseñés una vez y no lo vuelva a preguntar.",
   },
   {
-    q: "¿Puedo tener más de una automatización?",
-    a: "Cada plan incluye una, completa y andando. Si necesitás otra, subís al plan que la trae. Más adelante vamos a habilitar sumar automatizaciones dentro de un mismo plan.",
+    q: "¿Puedo ver y tomar las conversaciones?",
+    a: "Sí. En tu panel ves cada conversación, la agenda y los resultados. Cuando querés, tomás una conversación y seguís vos; después se la devolvés al agente.",
   },
   {
-    q: "¿Necesito tener alguien técnico en mi equipo?",
-    a: "No. Necesitás una persona que pueda darnos los accesos y responder dudas del proceso durante la implementación. El uso diario es el que ya tienen.",
+    q: "¿Necesito alguien técnico en mi equipo?",
+    a: "No. Necesitamos que nos cuentes tus servicios, precios y horarios, y que nos des acceso a tu número de WhatsApp durante la puesta en marcha. El uso diario es desde tu panel.",
   },
   {
-    q: "¿Qué pasa si una automatización se rompe?",
-    a: "Se rompen: las aplicaciones cambian sus interfaces sin avisar. El monitoreo nos alerta antes de que lo notés y el arreglo está incluido en la mensualidad. El tiempo de respuesta depende del plan.",
+    q: "¿Cuánto tarda en estar andando?",
+    a: "Hasta una semana, según qué tan lista esté tu información (servicios, precios, horarios) y el acceso a tu número. Lo confirmamos en el diagnóstico.",
+  },
+  {
+    q: "¿Qué pasa si algo falla?",
+    a: "El estado de la conexión con tu WhatsApp se ve en tu panel, y desde ahí nos escribís. El arreglo está incluido en la mensualidad.",
+  },
+  {
+    q: "¿Qué pasa si dejo de pagar?",
+    a: "El agente funciona mientras la mensualidad esté al día: eso es lo que paga el mantenimiento y los cambios, no un derecho de uso aparte. Si cancelás el plan o la mora pasa el aviso de suspensión, el servicio se da de baja.",
   },
   {
     q: "¿Dónde quedan mis datos?",
-    a: "Los flujos corren en infraestructura propia. Guardamos resúmenes de ejecución para poder mostrarte métricas y diagnosticar fallos, no el contenido completo de tu información. Las credenciales viven en un gestor de contraseñas compartido, nunca en una base de datos nuestra ni en un chat.",
+    a: "Las conversaciones, contactos y citas se guardan en una base de datos con acceso por cuenta: cada negocio ve solamente lo suyo. Para redactar las respuestas se usa un modelo de inteligencia artificial de un proveedor externo.",
   },
   {
     q: "¿Cómo se paga?",
-    a: "Las mensualidades por SINPE Móvil o transferencia bancaria, según el monto. Los datos de la cuenta te los pasamos al confirmar el pedido. Al recibir el pago se emite la factura electrónica. Si preferís pago anual, son diez meses en lugar de doce.",
+    a: "La mensualidad se paga por SINPE Móvil o transferencia bancaria, según el monto. Los datos de la cuenta te los pasamos al confirmar. Al recibir el pago se emite la factura electrónica. Si preferís pago anual, son diez meses en lugar de doce.",
   },
   {
-    q: "¿Los precios incluyen las licencias de las herramientas?",
-    a: "El motor de automatización va incluido. Las licencias de tus propias herramientas (el CRM, la API de WhatsApp, los créditos de IA cuando aplican) las paga el cliente y quedan a tu nombre. Te decimos el costo exacto en el presupuesto, sin sorpresas.",
+    q: "¿Qué cuesta además de la mensualidad?",
+    a: "La mensualidad cubre el agente funcionando, tu panel y los cambios. Si WhatsApp (Meta) cobra algo por los mensajes, te lo explicamos por escrito en el diagnóstico, antes de que contrates.",
   },
   {
-    q: "¿Cuánto tarda?",
-    a: "Entre dos días y una semana para cualquier automatización del catálogo. Si tu proyecto es de verdad grande (varios flujos conectados, panel propio, migración de datos), el plazo se define en el diagnóstico según lo que hablemos.",
+    q: "¿Van a tener otras automatizaciones?",
+    a: "Hoy ofrecemos una sola: el Agente IA de WhatsApp. Más adelante vamos a sumar otras y, cuando existan, las vas a ver acá. Si necesitás algo distinto, contanos en el diagnóstico y te decimos con honestidad si lo podemos hacer.",
   },
 ];

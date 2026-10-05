@@ -8,15 +8,83 @@ import { ConstellationMark } from "./constellation";
 import { Button } from "./ui/button";
 import { site } from "@/config/site";
 import { cn } from "@/lib/utils";
+import { getCopy } from "@/lib/copy";
+import {
+  guardarPreferenciaIdioma,
+  rutaEquivalente,
+  type Idioma,
+} from "@/lib/i18n";
 
-const links = [
-  { href: "/que-automatizamos", label: "Qué automatizamos" },
-  { href: "/planes", label: "Planes" },
-  { href: "/nosotros", label: "Nosotros" },
-  { href: "/contacto", label: "Contacto" },
-];
+/* Selector ES | EN. Cada idioma es un layout raíz distinto, así que se usa un
+   <a> normal (carga completa) y no <Link>: evita una petición RSC que igual
+   terminaría en recarga. Marca el idioma actual con aria-current. */
+function SelectorIdioma({
+  idioma,
+  pathname,
+  oscuro,
+  className,
+}: {
+  idioma: Idioma;
+  pathname: string;
+  oscuro: boolean;
+  className?: string;
+}) {
+  const t = getCopy(idioma);
+  return (
+    <div
+      role="group"
+      aria-label={t.nav.selectorIdioma}
+      className={cn(
+        "inline-flex items-center rounded-full border p-0.5 transition-colors duration-300",
+        oscuro ? "border-noche-texto/20" : "border-line-strong",
+        className
+      )}
+    >
+      {(["es", "en"] as const).map((l) => {
+        const actual = l === idioma;
+        const base =
+          "flex h-8 min-w-9 items-center justify-center rounded-full px-2.5 font-mono text-[0.6875rem] font-medium tracking-[0.1em] transition-colors duration-200";
+        if (actual) {
+          return (
+            <span
+              key={l}
+              aria-current="true"
+              lang={l}
+              className={cn(
+                base,
+                oscuro ? "bg-noche-texto text-noche" : "bg-ink text-paper"
+              )}
+            >
+              {l.toUpperCase()}
+            </span>
+          );
+        }
+        return (
+          <a
+            key={l}
+            href={rutaEquivalente(pathname, l)}
+            hrefLang={l}
+            lang={l}
+            aria-label={t.nav.cambiarA[l]}
+            onClick={() => guardarPreferenciaIdioma(l)}
+            className={cn(
+              base,
+              oscuro
+                ? "text-noche-texto/70 hover:text-noche-texto"
+                : "text-ink-mute hover:text-ink"
+            )}
+          >
+            {l.toUpperCase()}
+          </a>
+        );
+      })}
+    </div>
+  );
+}
 
-export function Navbar() {
+export function Navbar({ idioma = "es" }: { idioma?: Idioma }) {
+  const t = getCopy(idioma);
+  const links = t.nav.links;
   const pathname = usePathname();
   const headerRef = useRef<HTMLElement>(null);
   const [open, setOpen] = useState(false);
@@ -95,10 +163,11 @@ export function Navbar() {
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
         <Link
-          href="/"
+          href={t.nav.inicio}
+          aria-label={t.nav.irInicio}
           className="flex items-center gap-3"
           onClick={(e) => {
-            if (pathname === "/") {
+            if (pathname === t.nav.inicio) {
               e.preventDefault();
               window.scrollTo({ top: 0, behavior: "smooth" });
             }
@@ -121,7 +190,10 @@ export function Navbar() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-8 md:flex">
+        <nav
+          aria-label={t.nav.menuPrincipal}
+          className="hidden items-center gap-8 md:flex"
+        >
           {links.map((l) => (
             <Link
               key={l.href}
@@ -141,42 +213,51 @@ export function Navbar() {
         </nav>
 
         <div className="hidden items-center gap-5 md:flex">
-          <Link
-            href="/acceso"
-            className={cn(
-              "text-[0.875rem] tracking-tight transition-colors duration-300",
-              enOscuro
-                ? "text-noche-texto/70 hover:text-noche-texto"
-                : "text-ink-mute hover:text-ink"
-            )}
-          >
-            Panel de socios
-          </Link>
+          {t.nav.panel && (
+            <Link
+              href={t.nav.panelHref}
+              className={cn(
+                "text-[0.875rem] tracking-tight transition-colors duration-300",
+                enOscuro
+                  ? "text-noche-texto/70 hover:text-noche-texto"
+                  : "text-ink-mute hover:text-ink"
+              )}
+            >
+              {t.nav.panel}
+            </Link>
+          )}
+          <SelectorIdioma idioma={idioma} pathname={pathname} oscuro={enOscuro} />
           <Button
-            href="/diagnostico"
+            href={t.nav.cta.href}
             variant={enOscuro ? "inverse" : "primary"}
             size="md"
           >
-            Agenda tu diagnóstico
+            {t.nav.cta.label}
           </Button>
         </div>
 
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className={cn(
-            "flex h-10 w-10 items-center justify-center transition-colors duration-300 md:hidden",
-            enOscuro ? "text-noche-texto" : "text-ink"
-          )}
-          aria-label={open ? "Cerrar menú" : "Abrir menú"}
-          aria-expanded={open}
-        >
-          {open ? <X size={22} /> : <List size={22} />}
-        </button>
+        <div className="flex items-center gap-1 md:hidden">
+          <SelectorIdioma idioma={idioma} pathname={pathname} oscuro={enOscuro} />
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className={cn(
+              "flex h-10 w-10 items-center justify-center transition-colors duration-300",
+              enOscuro ? "text-noche-texto" : "text-ink"
+            )}
+            aria-label={open ? t.nav.cerrarMenu : t.nav.abrirMenu}
+            aria-expanded={open}
+          >
+            {open ? <X size={22} /> : <List size={22} />}
+          </button>
+        </div>
       </div>
 
       {open && (
         <div className="border-t border-line bg-paper px-5 pb-6 md:hidden">
-          <nav className="flex flex-col divide-y divide-line">
+          <nav
+            aria-label={t.nav.menuPrincipal}
+            className="flex flex-col divide-y divide-line"
+          >
             {links.map((l) => (
               <Link
                 key={l.href}
@@ -189,16 +270,18 @@ export function Navbar() {
             ))}
           </nav>
           <div className="mt-4 flex flex-col gap-3">
-            <Button href="/diagnostico" variant="primary" size="md" className="w-full">
-              Agenda tu diagnóstico
+            <Button href={t.nav.cta.href} variant="primary" size="md" className="w-full">
+              {t.nav.cta.label}
             </Button>
-            <Link
-              href="/acceso"
-              onClick={() => setOpen(false)}
-              className="py-1 text-center text-[0.9rem] text-ink-mute transition-colors hover:text-ink"
-            >
-              Panel de socios
-            </Link>
+            {t.nav.panel && (
+              <Link
+                href={t.nav.panelHref}
+                onClick={() => setOpen(false)}
+                className="py-1 text-center text-[0.9rem] text-ink-mute transition-colors hover:text-ink"
+              >
+                {t.nav.panel}
+              </Link>
+            )}
           </div>
         </div>
       )}

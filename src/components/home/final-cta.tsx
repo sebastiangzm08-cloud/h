@@ -1,24 +1,26 @@
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/reveal";
+import { getCopy } from "@/lib/copy";
+import type { Idioma } from "@/lib/i18n";
 
-export function FinalCta() {
+export function FinalCta({ idioma = "es" }: { idioma?: Idioma }) {
+  const t = getCopy(idioma).cta;
   return (
     <section data-tema="oscuro" className="bg-noche">
       <div className="mx-auto max-w-7xl px-5 py-28 sm:px-8 sm:py-36">
         <Reveal className="mx-auto max-w-2xl text-center">
           <h2 className="text-[2.25rem] leading-[1.05] font-semibold tracking-tight text-noche-texto sm:text-[3rem]">
-            Empecemos por los tres procesos que más te cuestan
+            {t.titulo}
           </h2>
-          <p className="mt-5 text-[1.0625rem] leading-relaxed text-noche-texto/60">
-            Treinta minutos, sin costo, sin compromiso de contratar nada
-            después.
+          <p className="mt-5 text-[1.0625rem] leading-relaxed text-noche-texto/65">
+            {t.texto}
           </p>
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Button href="/diagnostico" variant="inverse" size="lg">
-              Agenda tu diagnóstico
+            <Button href={t.principal.href} variant="inverse" size="lg">
+              {t.principal.label}
             </Button>
-            <Button href="/planes" variant="secondaryDark" size="lg">
-              Ver planes y precios
+            <Button href={t.secundario.href} variant="secondaryDark" size="lg">
+              {t.secundario.label}
             </Button>
           </div>
         </Reveal>

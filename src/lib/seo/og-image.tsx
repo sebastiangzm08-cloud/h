@@ -1,12 +1,15 @@
 import { ImageResponse } from "next/og";
 import { site } from "@/config/site";
+import { getCopy } from "@/lib/copy";
+import type { Idioma } from "@/lib/i18n";
 
 /** Imagen de preview compartida por opengraph-image.tsx y twitter-image.tsx
     (misma marca, generada en código para no depender de un PNG pesado). */
 export const ogImageSize = { width: 1200, height: 630 };
 export const ogImageContentType = "image/png";
 
-export function renderOgImage() {
+export function renderOgImage(idioma: Idioma = "es") {
+  const claim = getCopy(idioma).footer.claim;
   return new ImageResponse(
     (
       <div
@@ -65,7 +68,7 @@ export function renderOgImage() {
             maxWidth: 900,
           }}
         >
-          {site.claim}
+          {claim}
         </div>
       </div>
     ),
