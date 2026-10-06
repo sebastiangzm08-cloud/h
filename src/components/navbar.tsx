@@ -9,78 +9,7 @@ import { Button } from "./ui/button";
 import { site } from "@/config/site";
 import { cn } from "@/lib/utils";
 import { getCopy } from "@/lib/copy";
-import {
-  guardarPreferenciaIdioma,
-  rutaEquivalente,
-  type Idioma,
-} from "@/lib/i18n";
-
-/* Selector ES | EN. Cada idioma es un layout raíz distinto, así que se usa un
-   <a> normal (carga completa) y no <Link>: evita una petición RSC que igual
-   terminaría en recarga. Marca el idioma actual con aria-current. */
-function SelectorIdioma({
-  idioma,
-  pathname,
-  oscuro,
-  className,
-}: {
-  idioma: Idioma;
-  pathname: string;
-  oscuro: boolean;
-  className?: string;
-}) {
-  const t = getCopy(idioma);
-  return (
-    <div
-      role="group"
-      aria-label={t.nav.selectorIdioma}
-      className={cn(
-        "inline-flex items-center rounded-full border p-0.5 transition-colors duration-300",
-        oscuro ? "border-noche-texto/20" : "border-line-strong",
-        className
-      )}
-    >
-      {(["es", "en"] as const).map((l) => {
-        const actual = l === idioma;
-        const base =
-          "flex h-8 min-w-9 items-center justify-center rounded-full px-2.5 font-mono text-[0.6875rem] font-medium tracking-[0.1em] transition-colors duration-200";
-        if (actual) {
-          return (
-            <span
-              key={l}
-              aria-current="true"
-              lang={l}
-              className={cn(
-                base,
-                oscuro ? "bg-noche-texto text-noche" : "bg-ink text-paper"
-              )}
-            >
-              {l.toUpperCase()}
-            </span>
-          );
-        }
-        return (
-          <a
-            key={l}
-            href={rutaEquivalente(pathname, l)}
-            hrefLang={l}
-            lang={l}
-            aria-label={t.nav.cambiarA[l]}
-            onClick={() => guardarPreferenciaIdioma(l)}
-            className={cn(
-              base,
-              oscuro
-                ? "text-noche-texto/70 hover:text-noche-texto"
-                : "text-ink-mute hover:text-ink"
-            )}
-          >
-            {l.toUpperCase()}
-          </a>
-        );
-      })}
-    </div>
-  );
-}
+import type { Idioma } from "@/lib/i18n";
 
 export function Navbar({ idioma = "es" }: { idioma?: Idioma }) {
   const t = getCopy(idioma);
@@ -226,7 +155,6 @@ export function Navbar({ idioma = "es" }: { idioma?: Idioma }) {
               {t.nav.panel}
             </Link>
           )}
-          <SelectorIdioma idioma={idioma} pathname={pathname} oscuro={enOscuro} />
           <Button
             href={t.nav.cta.href}
             variant={enOscuro ? "inverse" : "primary"}
@@ -237,7 +165,6 @@ export function Navbar({ idioma = "es" }: { idioma?: Idioma }) {
         </div>
 
         <div className="flex items-center gap-1 md:hidden">
-          <SelectorIdioma idioma={idioma} pathname={pathname} oscuro={enOscuro} />
           <button
             onClick={() => setOpen((v) => !v)}
             className={cn(

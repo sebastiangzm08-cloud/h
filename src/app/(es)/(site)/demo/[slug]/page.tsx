@@ -3,8 +3,9 @@ import { WhatsappLogo } from "@phosphor-icons/react/dist/ssr";
 import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
 import { Button } from "@/components/ui/button";
-import { ChatWhatsapp } from "@/components/demo/chat-whatsapp";
+import { DemoEstudio } from "@/components/demo/demo-estudio";
 import { getDemoPublicaPorSlug } from "@/lib/panel/demo-publico";
+import { nombresDeServicios } from "@/lib/demo/herramientas";
 import { waLink } from "@/config/site";
 
 /* Cada demo es un enlace privado para UN prospecto — nunca al buscador. */
@@ -42,6 +43,16 @@ export default async function DemoPage({
   }
 
   const mensajeCTA = `Hola, vi la demo de "${demo.nombreNegocio}" y quiero esto para mi negocio.`;
+  const ctaHref = waLink(mensajeCTA);
+
+  /* Frases para arrancar. Solo se nombra un servicio si de verdad está cargado. */
+  const [primerServicio] = nombresDeServicios(demo.servicios, 1);
+  const sugerencias = [
+    "¿Qué servicios ofrecen?",
+    primerServicio ? `¿Cuánto cuesta ${primerServicio}?` : "¿Cuáles son los precios?",
+    "Quisiera agendar una cita",
+    "Necesito hablar con una persona",
+  ];
 
   const pasos = [
     {
@@ -56,41 +67,52 @@ export default async function DemoPage({
     },
     {
       n: "3",
-      t: "Así atendería su WhatsApp real",
-      d: "Si le convence, lo dejamos funcionando con su número en pocos días.",
+      t: "Y usted lo ve todo en su panel",
+      d: "Cada conversación, cita y cifra queda a la vista. Si le convence, lo dejamos funcionando con su número en pocos días.",
     },
   ];
 
   return (
     <>
-      <PageHeader
-        eyebrow="Demo personalizada"
-        title={`Así atendería el Agente de WhatsApp a ${demo.nombreNegocio}`}
-        lead="Escríbale como si fuera uno de sus pacientes o clientes. Las respuestas son reales, se generan en el momento con la información de su negocio. No es un guion grabado."
-      >
-        <Reveal delay={80}>
-          <div className="mt-12 grid grid-cols-1 gap-8 border-t border-line pt-10 sm:grid-cols-3 sm:gap-6">
-            {pasos.map((p) => (
-              <div key={p.n}>
-                <span className="font-mono text-[0.75rem] tracking-wide text-acento">
-                  {p.n}
-                </span>
-                <p className="mt-2 text-[0.9375rem] font-medium tracking-tight text-ink">
-                  {p.t}
-                </p>
-                <p className="mt-1.5 text-[0.875rem] leading-relaxed text-ink-mute">
-                  {p.d}
-                </p>
-              </div>
-            ))}
-          </div>
-        </Reveal>
-      </PageHeader>
+      <section className="border-b border-line bg-paper">
+        <div className="mx-auto max-w-7xl px-5 pt-8 pb-6 sm:px-8 sm:pt-10 sm:pb-7">
+          <p className="eyebrow mb-3 sm:mb-4">Demo personalizada</p>
+          <h1 className="max-w-[34ch] text-[1.75rem] leading-[1.08] font-semibold tracking-[-0.03em] text-balance text-ink sm:text-[2.25rem] sm:leading-[1.04]">
+            Así atendería el Agente de WhatsApp a {demo.nombreNegocio}
+          </h1>
+          <p className="mt-3 max-w-[62ch] text-[0.9375rem] leading-relaxed text-ink-mute sm:mt-4 sm:text-base">
+            <span className="sm:hidden">Escríbale como si fuera un cliente y mire cómo se llena el panel.</span>
+            <span className="hidden sm:inline">
+              Escríbale como si fuera uno de sus pacientes o clientes y mire cómo se llena el panel con lo que
+              usted escribe. Las respuestas se generan en el momento, no es un guion grabado.
+            </span>
+          </p>
+        </div>
+      </section>
 
       <section className="bg-paper">
-        <div className="mx-auto max-w-7xl px-5 pb-24 sm:px-8 sm:pb-32">
-          <Reveal>
-            <ChatWhatsapp slug={demo.slug} nombreNegocio={demo.nombreNegocio} logoUrl={demo.logoUrl} />
+        <div className="mx-auto max-w-7xl px-5 pb-20 sm:px-8 sm:pb-28">
+          <DemoEstudio
+            slug={demo.slug}
+            nombreNegocio={demo.nombreNegocio}
+            trato={demo.trato}
+            logoUrl={demo.logoUrl}
+            restantesIniciales={Math.max(0, demo.mensajesTope - demo.mensajesUsados)}
+            tope={demo.mensajesTope}
+            sugerencias={sugerencias}
+            ctaHref={ctaHref}
+          />
+
+          <Reveal delay={80}>
+            <div className="mt-14 grid grid-cols-1 gap-8 border-t border-line pt-10 sm:grid-cols-3 sm:gap-6">
+              {pasos.map((p) => (
+                <div key={p.n}>
+                  <span className="font-mono text-[0.75rem] tracking-wide text-acento">{p.n}</span>
+                  <p className="mt-2 text-[0.9375rem] font-medium tracking-tight text-ink">{p.t}</p>
+                  <p className="mt-1.5 text-[0.875rem] leading-relaxed text-ink-mute">{p.d}</p>
+                </div>
+              ))}
+            </div>
           </Reveal>
 
           <Reveal delay={120}>
@@ -102,7 +124,7 @@ export default async function DemoPage({
                 Esto puede estar atendiendo el WhatsApp real de su negocio en pocos días.
               </p>
               <div className="mt-6 flex justify-center">
-                <Button href={waLink(mensajeCTA)} variant="primary" size="lg">
+                <Button href={ctaHref} variant="primary" size="lg">
                   <WhatsappLogo size={17} weight="fill" />
                   Lo quiero para mi negocio
                 </Button>

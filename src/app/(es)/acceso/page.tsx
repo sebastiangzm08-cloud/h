@@ -75,6 +75,18 @@ export default async function AccesoPage({
         <p className="mt-8 text-center font-mono text-[10.5px] tracking-wide text-ink-faint">
           Área privada · cada quien ve solo lo suyo
         </p>
+        <p className="mt-3 text-center font-mono text-[10.5px] tracking-wide text-ink-faint">
+          {/* Carga completa a propósito: pasa por el proxy, que guarda la elección. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a href="/?lang=es" className="hover:text-ink-soft">
+            ES
+          </a>
+          {" · "}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a href="/?lang=en" hrefLang="en" className="hover:text-ink-soft">
+            EN
+          </a>
+        </p>
       </div>
     </main>
   );

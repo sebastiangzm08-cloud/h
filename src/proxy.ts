@@ -36,37 +36,98 @@
    ========================================================================== */
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { COOKIE_PAIS } from "@/lib/i18n";
+import { CLAVE_IDIOMA, paresDeRutas, rutaEquivalente } from "@/lib/i18n";
 
 /* ==========================================================================
-   PÁGINAS PÚBLICAS (español) — aviso de idioma para visitantes de EE. UU.
+   PÁGINAS PÚBLICAS (español) — idioma automático para visitantes de EE. UU.
 
    Las páginas públicas son estáticas: no pueden leer cabeceras. Pero el
-   proxy sí. Si el servidor recibe una cabecera de país con valor US
-   (`cf-ipcountry` de Cloudflare, `x-vercel-ip-country` de Vercel o
-   `x-country`), deja una cookie `hz-pais=US` que el aviso "Switch to
-   English" (`components/language-notice.tsx`) lee en el navegador.
-
-   HOY NINGUNA DE ESAS CABECERAS EXISTE (el sitio corre en un VPS detrás de
-   Traefik, sin CDN con geolocalización), así que esta rama no hace nada hasta
-   que se ponga Cloudflare delante. NO se llama a ningún servicio externo de
+   proxy sí. El país llega en una cabecera que agrega Cloudflare
+   (`cf-ipcountry`; también se leen `x-vercel-ip-country` y `x-country`).
+   Mientras Cloudflare no esté delante del sitio, ninguna cabecera llega y
+   todo queda en español. NO se llama a ningún servicio externo de
    geolocalización: ningún dato del visitante sale del sitio. Esta rama corre
    ANTES y sin tocar Supabase: las páginas públicas no tienen sesión.
    ========================================================================== */
 const CABECERAS_PAIS = ["cf-ipcountry", "x-vercel-ip-country", "x-country"];
 
-function respuestaPublica(request: NextRequest) {
-  const respuesta = NextResponse.next();
-  const esDeEeuu = CABECERAS_PAIS.some(
-    (h) => request.headers.get(h)?.trim().toUpperCase() === "US"
-  );
-  if (esDeEeuu && request.cookies.get(COOKIE_PAIS)?.value !== "US") {
-    respuesta.cookies.set(COOKIE_PAIS, "US", {
+/* CAMBIO AUTOMÁTICO DE IDIOMA (decisión de Sebastian, 2026-10-05): quien llega
+   desde EE. UU. a una página pública en español entra directo a su
+   equivalente en inglés, sin avisos ni botones. Reglas:
+   - El país sale de la cabecera que agrega Cloudflare (`cf-ipcountry`); sin
+     cabecera no se hace nada (todo queda en español).
+   - Se respeta la elección previa (cookie `hz-idioma`) y `?lang=es|en`, que
+     es la forma manual de corregir una detección equivocada.
+   - Si el navegador tiene el español como idioma principal, NO se cambia:
+     el público de EE. UU. que usa el sitio en español sigue en español.
+   - Los rastreadores (Google, Bing, vistas previas de WhatsApp o redes) NUNCA
+     se redirigen: Googlebot rastrea desde EE. UU. y perderíamos el español.
+   - La redirección es temporal (307) y no se guarda en ninguna caché. */
+const RASTREADORES =
+  /bot|crawl|spider|slurp|facebookexternalhit|whatsapp|telegram|preview|embedly|lighthouse|pagespeed|headless|ahrefs|semrush|curl|wget/i;
+const UNA_VEZ_AL_AÑO = 60 * 60 * 24 * 365;
+
+function idiomaPrincipalDelNavegador(request: NextRequest) {
+  return (request.headers.get("accept-language") ?? "")
+    .split(",")[0]
+    .trim()
+    .toLowerCase()
+    .slice(0, 2);
+}
+
+function destinoEnIngles(ruta: string): string | null {
+  const limpia = ruta.length > 1 ? ruta.replace(/\/+$/, "") : ruta;
+  const hayPar = paresDeRutas.some((p) => p.es === limpia) || limpia === "/mis-herramientas";
+  return hayPar ? rutaEquivalente(limpia, "en") : null;
+}
+
+function redirigir(request: NextRequest, a: string, idioma?: "es" | "en") {
+  const destino = new URL(a, request.url);
+  const respuesta = NextResponse.redirect(destino, 307);
+  respuesta.headers.set("cache-control", "private, no-store");
+  respuesta.headers.set("vary", "cookie, accept-language, cf-ipcountry");
+  if (idioma) {
+    respuesta.cookies.set(CLAVE_IDIOMA, idioma, {
       path: "/",
-      maxAge: 60 * 60 * 24,
+      maxAge: UNA_VEZ_AL_AÑO,
       sameSite: "lax",
     });
   }
+  return respuesta;
+}
+
+function respuestaPublica(request: NextRequest) {
+  const ruta = request.nextUrl.pathname;
+
+  /* Forma manual de elegir idioma: /?lang=en  o  /planes?lang=es */
+  const pedido = request.nextUrl.searchParams.get("lang");
+  if (pedido === "en" || pedido === "es") {
+    if (pedido === "en") {
+      return redirigir(request, destinoEnIngles(ruta) ?? "/en", "en");
+    }
+    const limpia = new URL(request.url);
+    limpia.searchParams.delete("lang");
+    return redirigir(request, limpia.pathname + limpia.search, "es");
+  }
+
+  const yaEligio = request.cookies.get(CLAVE_IDIOMA)?.value;
+  const esRastreador = RASTREADORES.test(request.headers.get("user-agent") ?? "");
+  const esDeEeuu = CABECERAS_PAIS.some(
+    (h) => request.headers.get(h)?.trim().toUpperCase() === "US"
+  );
+  const destino = destinoEnIngles(ruta);
+  if (
+    esDeEeuu &&
+    !yaEligio &&
+    !esRastreador &&
+    destino &&
+    idiomaPrincipalDelNavegador(request) !== "es"
+  ) {
+    return redirigir(request, destino, "en");
+  }
+
+  const respuesta = NextResponse.next();
+  respuesta.headers.append("vary", "cookie, accept-language, cf-ipcountry");
   return respuesta;
 }
 
