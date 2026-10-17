@@ -17,6 +17,7 @@ import {
   devolverAgenteCorreo,
   eliminarConocimiento,
   ensenarCorreccion,
+  enviarArchivoManual,
   enviarMensajeManual,
   enviarMensajeManualCorreo,
   guardarAgenda,
@@ -41,6 +42,7 @@ type FnAccion = (
 
 const ACCIONES: Record<string, FnAccion> = {
   enviarMensajeManual,
+  enviarArchivoManual,
   tomarControl,
   devolverAgente,
   enviarMensajeManualCorreo,

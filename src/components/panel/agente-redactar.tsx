@@ -17,15 +17,23 @@
      tecla Shift cómoda), y se envía con el botón.
    - El texto SOLO se borra cuando el envío salió bien: antes se borraba al
      tocar "Enviar" y, si fallaba, se perdía lo escrito.
+
+   Archivos (2026-10-17): el 📎 adjunta UNA foto, video o documento; el texto
+   de la caja viaja como pie. Se valida tipo y peso acá mismo (los límites de
+   WhatsApp) antes de subir nada, y el servidor lo vuelve a comprobar.
    ========================================================================== */
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
+  type ChangeEvent,
   type FormEvent,
   type KeyboardEvent,
 } from "react";
+import { ACEPTA_ARCHIVOS, pesoLegible, validarArchivo } from "@/lib/panel/medios-reglas";
 import { CampoToken } from "@/components/panel/campo-token";
 import { useAccionAgente } from "@/components/panel/usar-accion-agente";
 import { BarraAcciones } from "@/components/panel/conversaciones/acciones-rapidas";
@@ -61,6 +69,51 @@ export function Redactar({
     if (texto === enviado) setTexto("");
   }
 
+  /* ---- Archivo adjunto ---- */
+  const entradaArchivo = useRef<HTMLInputElement>(null);
+  const [archivo, setArchivo] = useState<File | null>(null);
+  const [errorArchivo, setErrorArchivo] = useState<string | null>(null);
+  /* Cambiar la `key` del <input type="file"> lo vacía (no se puede escribir su valor). */
+  const [claveEntrada, setClaveEntrada] = useState(0);
+  const [estadoArchivo, enviarArchivo, enviandoArchivo] = useAccionAgente("enviarArchivoManual");
+  const [exitoArchivoVisto, setExitoArchivoVisto] = useState<unknown>(null);
+
+  if (estadoArchivo?.ok && estadoArchivo !== exitoArchivoVisto) {
+    setExitoArchivoVisto(estadoArchivo);
+    setArchivo(null);
+    setClaveEntrada((k) => k + 1);
+    if (texto === enviado) setTexto("");
+  }
+
+  const vistaPrevia = useMemo(
+    () => (archivo && archivo.type.startsWith("image/") ? URL.createObjectURL(archivo) : null),
+    [archivo]
+  );
+  useEffect(() => () => (vistaPrevia ? URL.revokeObjectURL(vistaPrevia) : undefined), [vistaPrevia]);
+
+  function alElegirArchivo(e: ChangeEvent<HTMLInputElement>) {
+    const elegido = e.target.files?.[0];
+    if (!elegido) return;
+    const valido = validarArchivo(elegido);
+    if (!valido.ok) {
+      setErrorArchivo(valido.error);
+      setArchivo(null);
+      setClaveEntrada((k) => k + 1);
+      return;
+    }
+    setErrorArchivo(null);
+    setArchivo(elegido);
+    campo.current?.focus({ preventScroll: true });
+  }
+
+  function quitarArchivo() {
+    setArchivo(null);
+    setErrorArchivo(null);
+    setClaveEntrada((k) => k + 1);
+  }
+
+  const ocupado = enviando || enviandoArchivo;
+
   /* Altura automática: crece con el contenido hasta el tope y ahí scrollea. */
   useLayoutEffect(() => {
     const el = campo.current;
@@ -94,7 +147,13 @@ export function Redactar({
 
   function alEnviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!texto.trim() || enviando) return;
+    if (ocupado) return;
+    if (archivo) {
+      setEnviado(texto);
+      enviarArchivo(new FormData(e.currentTarget));
+      return;
+    }
+    if (!texto.trim()) return;
     setEnviado(texto);
     enviar(new FormData(e.currentTarget));
   }
@@ -118,15 +177,70 @@ export function Redactar({
         </p>
       ) : null}
 
-      {estadoEnvio && !estadoEnvio.ok ? (
-        <p role="alert" className="mx-3 mt-2 rounded-xl bg-bad/10 px-3.5 py-2.5 text-[12.5px] leading-snug text-bad sm:mx-5">
-          {estadoEnvio.error}
-        </p>
+      {[
+        estadoEnvio && !estadoEnvio.ok ? estadoEnvio.error : null,
+        estadoArchivo && !estadoArchivo.ok ? estadoArchivo.error : null,
+        errorArchivo,
+      ]
+        .filter(Boolean)
+        .map((error) => (
+          <p key={error} role="alert" className="mx-3 mt-2 rounded-xl bg-bad/10 px-3.5 py-2.5 text-[12.5px] leading-snug text-bad sm:mx-5">
+            {error}
+          </p>
+        ))}
+
+      {archivo ? (
+        <div className="mx-3 mt-2 flex items-center gap-3 rounded-2xl border border-line bg-surface-2 py-2 pr-1 pl-2 sm:mx-5">
+          {vistaPrevia ? (
+            // eslint-disable-next-line @next/next/no-img-element -- vista previa local (blob:) antes de subir
+            <img src={vistaPrevia} alt="" className="h-12 w-12 flex-none rounded-lg object-cover" />
+          ) : (
+            <span className="grid h-12 w-12 flex-none place-items-center rounded-lg bg-surface-3 text-ink-mute">
+              <IconoChat nombre={archivo.type.startsWith("video/") ? "video" : "documento"} className="h-5 w-5" />
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13px] font-medium text-ink">{archivo.name}</p>
+            <p className="font-mono text-[11px] text-ink-mute" aria-live="polite">
+              {pesoLegible(archivo.size)} · {enviandoArchivo ? "Enviando…" : "El texto de abajo va como pie (opcional)"}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={quitarArchivo}
+            disabled={enviandoArchivo}
+            aria-label="Quitar el archivo"
+            className="grid h-11 w-11 flex-none place-items-center rounded-full text-ink-mute transition-colors hover:bg-surface-3 hover:text-ink active:bg-surface-3 disabled:opacity-40"
+          >
+            <IconoChat nombre="cerrar" className="h-[18px] w-[18px]" />
+          </button>
+        </div>
       ) : null}
 
       <form onSubmit={alEnviar} className="flex items-end gap-2 px-3 pt-2 sm:px-5">
         <input type="hidden" name="conversacionId" value={conversacion.id} />
         <CampoToken />
+        <input
+          key={claveEntrada}
+          ref={entradaArchivo}
+          type="file"
+          name="archivo"
+          accept={ACEPTA_ARCHIVOS}
+          onChange={alElegirArchivo}
+          tabIndex={-1}
+          aria-hidden="true"
+          className="hidden"
+        />
+        <button
+          type="button"
+          onClick={() => entradaArchivo.current?.click()}
+          disabled={ocupado}
+          aria-label="Adjuntar foto, video o documento"
+          title="Adjuntar foto, video o documento"
+          className="grid h-11 w-11 flex-none place-items-center rounded-full text-ink-mute transition-colors hover:bg-surface-2 hover:text-ink active:bg-surface-3 disabled:pointer-events-none disabled:opacity-40"
+        >
+          <IconoChat nombre="adjuntar" className="h-[20px] w-[20px]" />
+        </button>
         <textarea
           ref={campo}
           name="texto"
@@ -135,17 +249,19 @@ export function Redactar({
           onChange={(e) => setTexto(e.target.value)}
           onKeyDown={alTeclear}
           autoComplete="off"
-          placeholder={atiendeAgente ? "Respondé vos (pausa a la IA)" : "Escribí un mensaje…"}
+          placeholder={
+            archivo ? "Agregá un mensaje (opcional)" : atiendeAgente ? "Respondé vos (pausa a la IA)" : "Escribí un mensaje…"
+          }
           aria-label="Escribir mensaje"
           className="min-h-11 min-w-0 flex-1 resize-none rounded-[22px] border border-line-strong bg-surface-2 px-4 py-[10px] text-[16px] leading-snug text-ink outline-none transition-colors placeholder:text-ink-mute focus:border-[var(--panel-acento)]"
         />
         <button
           type="submit"
-          disabled={!texto.trim() || enviando}
-          aria-label={enviando ? "Enviando…" : "Enviar mensaje"}
+          disabled={(!texto.trim() && !archivo) || ocupado}
+          aria-label={ocupado ? "Enviando…" : archivo ? "Enviar archivo" : "Enviar mensaje"}
           className="grid h-11 w-11 flex-none place-items-center rounded-full bg-[color-mix(in_srgb,var(--panel-acento)_82%,black)] text-white transition-[transform,opacity] active:scale-95 disabled:pointer-events-none disabled:opacity-40"
         >
-          {enviando ? (
+          {ocupado ? (
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
           ) : (
             <IconoChat nombre="enviar" className="h-[19px] w-[19px]" />

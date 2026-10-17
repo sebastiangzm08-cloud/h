@@ -17,6 +17,9 @@ import { supabaseAdmin, supabaseConToken, supabaseServidor } from "@/lib/supabas
 import { getPerfil } from "./datos";
 import { leerConfigAgenda, leerConfigAgente } from "./agente-config";
 import { PLANTILLAS_RECORDATORIO_MANUAL } from "./agente-plantillas";
+import { detalleWhatsapp } from "./whatsapp-conexion";
+import { enviarArchivoPorWhatsapp, guardarCopiaDeArchivo } from "./medios";
+import { MAX_PIE_DE_ARCHIVO, etiquetaArchivo, validarArchivo } from "./medios-reglas";
 
 export type ResultadoAccion =
   /** `avisoFallido`: la acción se hizo, pero el aviso por WhatsApp no salió. */
@@ -86,32 +89,6 @@ function revalidarAgente() {
   ]) {
     revalidatePath(ruta);
   }
-}
-
-/** El `detalle` de la conexión de WhatsApp de un cliente, ya validado. */
-async function detalleWhatsapp(
-  clienteId: string
-): Promise<{ token: string; endpoint: string; phoneNumberId: string } | null> {
-  const sb = supabaseAdmin();
-  const { data: conexion } = await sb
-    .from("conexiones")
-    .select("detalle")
-    .eq("cliente_id", clienteId)
-    .eq("servicio", "whatsapp")
-    .maybeSingle();
-
-  const detalle = (conexion?.detalle ?? {}) as {
-    token?: string;
-    endpoint?: string;
-    phone_number_id?: string;
-  };
-  if (!detalle.token || !detalle.phone_number_id) return null;
-
-  return {
-    token: detalle.token,
-    endpoint: detalle.endpoint || "https://graph.facebook.com/v21.0",
-    phoneNumberId: detalle.phone_number_id,
-  };
 }
 
 /**
@@ -220,6 +197,79 @@ export async function enviarMensajeManual(
 
   revalidarAgente();
   return { ok: true, mensaje: "Mensaje enviado." };
+}
+
+/** Lo mismo que `enviarMensajeManual`, con una foto, video o documento y el texto como pie. */
+export async function enviarArchivoManual(
+  _prev: ResultadoAccion | null,
+  form: FormData
+): Promise<ResultadoAccion> {
+  const auth = await exigirCliente(form);
+  if (!auth.ok) return auth;
+
+  const conversacionId = String(form.get("conversacionId") ?? "");
+  const texto = String(form.get("texto") ?? "").trim();
+  const archivo = form.get("archivo");
+  if (!conversacionId || !(archivo instanceof File) || archivo.size === 0) {
+    return { ok: false, error: "Falta el archivo." };
+  }
+  const valido = validarArchivo(archivo);
+  if (!valido.ok) return valido;
+  if (texto.length > MAX_PIE_DE_ARCHIVO) {
+    return { ok: false, error: `El texto debajo del archivo puede tener hasta ${MAX_PIE_DE_ARCHIVO} caracteres.` };
+  }
+
+  const sb = await supabaseServidor();
+  const { data: conv, error: eConv } = await sb
+    .from("wa_conversaciones")
+    .select("id, contacto_id, wa_contactos(telefono)")
+    .eq("id", conversacionId)
+    .eq("cliente_id", auth.clienteId)
+    .maybeSingle();
+  if (eConv || !conv) return { ok: false, error: "No encontré esa conversación." };
+
+  const telefono = (conv.wa_contactos as unknown as { telefono: string } | null)?.telefono;
+  if (!telefono) return { ok: false, error: "Ese contacto no tiene teléfono guardado." };
+
+  const conexion = await detalleWhatsapp(auth.clienteId);
+  if (!conexion) return { ok: false, error: "Este negocio todavía no tiene conectado un número de WhatsApp." };
+
+  const envio = await enviarArchivoPorWhatsapp(conexion, telefono, archivo, valido.tipo, texto);
+  if (!envio.ok) return { ok: false, error: `No se pudo enviar: ${envio.error}` };
+
+  const mensajeId = crypto.randomUUID();
+  const ahora = new Date().toISOString();
+  const ruta = await guardarCopiaDeArchivo(auth.clienteId, mensajeId, ahora, archivo);
+
+  await sb.from("wa_mensajes").insert({
+    id: mensajeId,
+    cliente_id: auth.clienteId,
+    conversacion_id: conversacionId,
+    autor: "humano",
+    tipo: valido.tipo,
+    texto,
+    media_id: envio.mediaId,
+    media_url: ruta,
+    media_mime: archivo.type,
+    media_nombre: archivo.name,
+    media_bytes: archivo.size,
+    creado_en: ahora,
+  });
+
+  await sb
+    .from("wa_conversaciones")
+    .update({
+      estado: "humano",
+      motivo_espera: "",
+      tomada_por: auth.perfilId,
+      tomada_en: ahora,
+      ultimo_mensaje: texto || etiquetaArchivo(valido.tipo),
+      ultimo_en: ahora,
+    })
+    .eq("id", conversacionId);
+
+  revalidarAgente();
+  return { ok: true, mensaje: "Archivo enviado." };
 }
 
 export async function tomarControl(

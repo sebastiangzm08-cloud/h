@@ -19,6 +19,7 @@ import { supabaseServidor } from "@/lib/supabase/servidor";
 import { getPerfil } from "./datos";
 import type { PerfilWhatsapp } from "./agente-formato";
 import { REGEX_PREGUNTA_PRECIO } from "./pregunta-precio";
+import { VIDA_ARCHIVO_META_MS, firmarArchivos, guardarArchivoRecibido } from "./medios";
 
 /* -------------------------------------------------------------------------
    Tipos
@@ -62,11 +63,14 @@ export type ConversacionAgente = {
 export type MensajeAgente = {
   id: string;
   autor: AutorMensaje;
-  tipo: "texto" | "audio" | "imagen" | "documento";
+  tipo: "texto" | "audio" | "imagen" | "documento" | "video" | "sticker";
   texto: string;
   transcripcion: string | null;
   herramientas: string[];
   creadoEn: string;
+  /** Foto, video, sticker, nota de voz o documento. `url` es temporal (1 h) y
+      es null si el archivo no se pudo guardar (Meta lo borra a los 7 días). */
+  archivo?: { url: string | null; mime: string | null; nombre: string | null; bytes: number | null } | null;
 };
 
 export type CitaAgente = {
@@ -593,13 +597,34 @@ export async function getMensajes(conversacionId: string): Promise<MensajeAgente
   const sb = await supabaseServidor();
   const { data, error } = await sb
     .from("wa_mensajes")
-    .select("id, autor, tipo, texto, transcripcion, herramientas, creado_en")
+    .select(
+      "id, autor, tipo, texto, transcripcion, herramientas, creado_en, media_id, media_url, media_mime, media_nombre, media_bytes"
+    )
     .eq("cliente_id", id)
     .eq("conversacion_id", conversacionId)
     .order("creado_en", { ascending: true })
     .limit(300);
 
   if (error || !data) return [];
+
+  /* Red de seguridad: si n8n no pudo avisar, el archivo se guarda ahora, al
+     abrir la conversación — mientras Meta todavía lo tenga (7 días). Con
+     tope, para que abrir un chat nunca tarde de más. */
+  const sinGuardar = data
+    .filter(
+      (f) =>
+        f.media_id &&
+        !f.media_url &&
+        f.autor === "contacto" &&
+        Date.now() - new Date(f.creado_en as string).getTime() < VIDA_ARCHIVO_META_MS
+    )
+    .slice(-6);
+  for (const f of sinGuardar) {
+    const r = await guardarArchivoRecibido(f.id as string);
+    if (r.ok) f.media_url = r.ruta;
+  }
+
+  const urls = await firmarArchivos(data.map((f) => f.media_url as string | null).filter((r): r is string => Boolean(r)));
 
   return data.map((f) => ({
     id: f.id as string,
@@ -609,6 +634,15 @@ export async function getMensajes(conversacionId: string): Promise<MensajeAgente
     transcripcion: (f.transcripcion as string | null) ?? null,
     herramientas: (f.herramientas as string[] | null) ?? [],
     creadoEn: f.creado_en as string,
+    archivo:
+      f.tipo && f.tipo !== "texto"
+        ? {
+            url: f.media_url ? (urls.get(f.media_url as string) ?? null) : null,
+            mime: (f.media_mime as string | null) ?? null,
+            nombre: (f.media_nombre as string | null) ?? null,
+            bytes: (f.media_bytes as number | null) ?? null,
+          }
+        : null,
   }));
 }
 

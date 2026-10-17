@@ -14,6 +14,7 @@ import { Icono } from "@/components/panel/iconos";
 import { Vacio } from "@/components/panel/agente-ui";
 import { hora, type MensajeAgente } from "@/lib/panel/agente";
 import { etiquetaDia, nombreHerramienta } from "@/lib/panel/conversaciones";
+import { pesoLegible } from "@/lib/panel/medios-reglas";
 import { cn } from "@/lib/utils";
 
 type Item =
@@ -56,6 +57,87 @@ export function Hilo({ mensajes }: { mensajes: MensajeAgente[] }) {
         )
       )}
     </div>
+  );
+}
+
+const NOMBRE_ARCHIVO: Record<string, string> = {
+  imagen: "Foto",
+  video: "Video",
+  sticker: "Sticker",
+  documento: "Documento",
+};
+
+/**
+ * Lo que va arriba del texto en una burbuja con archivo. Tocar la foto la
+ * abre en grande en otra pestaña (la URL firmada dura una hora). Si el
+ * archivo no se pudo guardar, queda la etiqueta y el porqué, nunca un hueco.
+ */
+function Archivo({ m }: { m: MensajeAgente }) {
+  const url = m.archivo?.url ?? null;
+  const nombre = NOMBRE_ARCHIVO[m.tipo] ?? "Archivo";
+
+  if (!url) {
+    return (
+      <p className="mb-1 flex items-center gap-2 font-mono text-[11px] text-ink-mute">
+        <Icono nombre={m.tipo === "documento" ? "documento" : "imagen"} className="h-3.5 w-3.5" />
+        {nombre} · no disponible
+      </p>
+    );
+  }
+
+  if (m.tipo === "imagen") {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="-mx-1.5 -mt-1 mb-1.5 block overflow-hidden rounded-xl bg-surface-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--panel-acento)] sm:w-[20rem]"
+        aria-label="Abrir la foto en grande"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- URL firmada temporal del bucket privado */}
+        <img
+          src={url}
+          alt={m.texto ? `Foto: ${m.texto}` : "Foto enviada por WhatsApp"}
+          loading="lazy"
+          decoding="async"
+          className="block max-h-80 w-full object-cover"
+        />
+      </a>
+    );
+  }
+
+  if (m.tipo === "video") {
+    return (
+      <video
+        controls
+        playsInline
+        preload="metadata"
+        src={url}
+        className="-mx-1.5 -mt-1 mb-1.5 block max-h-80 w-[calc(100%+0.75rem)] max-w-none rounded-xl bg-black sm:w-[20rem]"
+      />
+    );
+  }
+
+  /* Documento: tarjeta con nombre y peso; se abre o descarga en otra pestaña. */
+  const peso = m.archivo?.bytes ? pesoLegible(m.archivo.bytes) : null;
+  const ext = m.archivo?.nombre?.match(/\.([a-z0-9]{1,5})$/i)?.[1]?.toUpperCase();
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="-mx-1 mb-1.5 flex min-h-11 items-center gap-3 rounded-xl border border-line bg-surface px-3 py-2.5 transition-colors hover:bg-surface-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--panel-acento)]"
+    >
+      <span className="grid h-9 w-9 flex-none place-items-center rounded-lg bg-surface-3 text-ink-mute">
+        <Icono nombre="documento" className="h-[18px] w-[18px]" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[13px] font-medium text-ink">{m.archivo?.nombre || "Documento"}</span>
+        <span className="block font-mono text-[10.5px] text-ink-mute">
+          {[ext, peso].filter(Boolean).join(" · ") || "Abrir"}
+        </span>
+      </span>
+    </a>
   );
 }
 
@@ -104,7 +186,17 @@ function Mensaje({ m }: { m: MensajeAgente }) {
   }
 
   const mio = m.autor === "agente" || m.autor === "humano";
-  const archivo = m.tipo === "imagen" ? "Imagen" : m.tipo === "documento" ? "Documento" : null;
+
+  /* El sticker va suelto, sin burbuja, como en WhatsApp. */
+  if (m.tipo === "sticker" && m.archivo?.url) {
+    return (
+      <div className={cn("flex flex-col gap-1", mio ? "items-end" : "items-start")}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- URL firmada temporal del bucket privado */}
+        <img src={m.archivo.url} alt="Sticker" loading="lazy" decoding="async" className="h-32 w-32 object-contain" />
+        <span className="font-mono text-[10px] text-ink-mute">{hora(m.creadoEn)}</span>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("flex flex-col gap-1", mio ? "items-end" : "items-start")}>
@@ -122,6 +214,9 @@ function Mensaje({ m }: { m: MensajeAgente }) {
               <Icono nombre="actividad" className="h-3.5 w-3.5" />
               Nota de voz
             </p>
+            {m.archivo?.url ? (
+              <audio controls preload="none" src={m.archivo.url} className="mt-2 h-10 w-64 max-w-full" />
+            ) : null}
             {m.transcripcion ? (
               <p className="mt-2 border-t border-dashed border-line-strong pt-2 text-[13px] text-ink-mute italic">
                 «{m.transcripcion}»
@@ -130,12 +225,7 @@ function Mensaje({ m }: { m: MensajeAgente }) {
           </>
         ) : (
           <>
-            {archivo ? (
-              <p className="mb-1 flex items-center gap-2 font-mono text-[11px] text-ink-mute">
-                <Icono nombre={m.tipo === "imagen" ? "imagen" : "documento"} className="h-3.5 w-3.5" />
-                {archivo}
-              </p>
-            ) : null}
+            {m.tipo !== "texto" ? <Archivo m={m} /> : null}
             {m.texto.split("\n").map((linea, i) =>
               linea ? (
                 <p key={i} className={i > 0 ? "mt-2" : ""}>
