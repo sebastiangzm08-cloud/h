@@ -26,6 +26,7 @@ import { ChipAccion } from "./chip-accion";
 import { Hoja, useCerrarHoja } from "./hoja";
 import { VacioHoja } from "./vacio-hoja";
 import { duracionTexto, precioTexto } from "./textos";
+import { SelectorHora } from "@/components/panel/selector-hora";
 import { cn } from "@/lib/utils";
 import type { PropsAccion } from "./acciones-tipos";
 
@@ -95,7 +96,7 @@ function Formulario({ conversacion, datos }: Pick<PropsAccion, "conversacion" | 
         </label>
         <label className="flex min-w-0 flex-col gap-1.5">
           <span className="text-[12px] text-ink-mute">Hora</span>
-          <input autoComplete="off" type="time" name="hora" required step={900} className={campo} />
+          <SelectorHora name="hora" required claseCampo={campo} />
         </label>
       </div>
 

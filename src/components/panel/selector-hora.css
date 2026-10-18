@@ -1,0 +1,30 @@
+/* Entrada y salida del panel del selector de hora: un fundido corto con un
+   desplazamiento mínimo, sin rebotes. `allow-discrete` deja animar también
+   la salida, cuando el popover ya pasa a `display: none`. */
+.selector-hora {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease,
+    overlay 160ms allow-discrete,
+    display 160ms allow-discrete;
+}
+
+.selector-hora:popover-open {
+  opacity: 1;
+  transform: none;
+}
+
+@starting-style {
+  .selector-hora:popover-open {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .selector-hora {
+    transition: none;
+  }
+}

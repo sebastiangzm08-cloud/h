@@ -44,6 +44,7 @@ import {
 import { BotonCopiar } from "@/components/admin/boton-copiar";
 import { useEnvio } from "@/components/admin/usar-envio";
 import { DIAS_HORARIO, CONFIG_AGENDA_POR_DEFECTO } from "@/lib/panel/agente-config";
+import { SelectorHora } from "@/components/panel/selector-hora";
 import { cn } from "@/lib/utils";
 
 type Paso = "cuenta" | "whatsapp" | "agenda" | "listo";
@@ -597,24 +598,24 @@ function HorarioPorDefecto() {
               {finde ? <span className="ml-2 text-[11.5px] text-ink-faint">cerrado</span> : null}
             </span>
             <div className="flex min-w-0 flex-1 items-center gap-2">
-              <input
-                type="time"
+              <SelectorHora
                 name={`ini_${clave}`}
                 defaultValue={finde ? "" : "08:00"}
                 disabled={finde}
-                aria-label={`${texto}: abre`}
-                className={cn(CAMPO, "sm:max-w-[140px]")}
+                etiqueta={`${texto}: abre`}
+                claseCampo={CAMPO}
+                className="flex-1 sm:max-w-[140px]"
               />
               <span className="text-ink-faint" aria-hidden="true">
                 –
               </span>
-              <input
-                type="time"
+              <SelectorHora
                 name={`fin_${clave}`}
                 defaultValue={finde ? "" : "17:00"}
                 disabled={finde}
-                aria-label={`${texto}: cierra`}
-                className={cn(CAMPO, "sm:max-w-[140px]")}
+                etiqueta={`${texto}: cierra`}
+                claseCampo={CAMPO}
+                className="flex-1 sm:max-w-[140px]"
               />
             </div>
             <input type="hidden" name={`cerrado_${clave}`} value={finde ? "on" : ""} />

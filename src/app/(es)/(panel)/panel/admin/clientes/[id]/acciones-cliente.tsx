@@ -39,6 +39,7 @@ import {
 import { useDesplegable } from "@/components/admin/usar-desplegable";
 import { useEnvio } from "@/components/admin/usar-envio";
 import { Icono, type NombreIcono } from "@/components/panel/iconos";
+import { SelectorHora } from "@/components/panel/selector-hora";
 import { cn } from "@/lib/utils";
 
 /** Botón que abre un panel de la ficha. */
@@ -683,25 +684,25 @@ export function FormaAgendaAdmin({
                 {cerrado ? <span className="text-[11.5px] text-ink-faint">cerrado</span> : null}
               </label>
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <input
-                  type="time"
-                  name={`ini_${clave}`}
-                  defaultValue={bloque?.[0] ?? "08:00"}
-                  disabled={cerrado}
-                  aria-label={`${texto}: abre`}
-                  className={cn(CAMPO, "sm:max-w-[140px]")}
-                />
+                <SelectorHora
+                name={`ini_${clave}`}
+                defaultValue={bloque?.[0] ?? "08:00"}
+                disabled={cerrado}
+                etiqueta={`${texto}: abre`}
+                claseCampo={CAMPO}
+                className="flex-1 sm:max-w-[140px]"
+              />
                 <span className="text-ink-faint" aria-hidden="true">
                   –
                 </span>
-                <input
-                  type="time"
-                  name={`fin_${clave}`}
-                  defaultValue={bloque?.[1] ?? "17:00"}
-                  disabled={cerrado}
-                  aria-label={`${texto}: cierra`}
-                  className={cn(CAMPO, "sm:max-w-[140px]")}
-                />
+                <SelectorHora
+                name={`fin_${clave}`}
+                defaultValue={bloque?.[1] ?? "17:00"}
+                disabled={cerrado}
+                etiqueta={`${texto}: cierra`}
+                claseCampo={CAMPO}
+                className="flex-1 sm:max-w-[140px]"
+              />
               </div>
               <input type="hidden" name={`cerrado_${clave}`} value={cerrado ? "on" : ""} />
             </div>

@@ -22,6 +22,7 @@ import {
   MensajeResultado,
 } from "@/components/panel/clientes/formulario";
 import { HojaModal } from "@/components/panel/clientes/hoja-modal";
+import { SelectorHora } from "@/components/panel/selector-hora";
 import { BOTON, BOTON_BASE } from "@/components/panel/clientes/piezas";
 import { useAccionAgente } from "@/components/panel/usar-accion-agente";
 import { cn } from "@/lib/utils";
@@ -57,7 +58,7 @@ function CamposComunes({ servicios }: { servicios: ServicioOpcion[] }) {
           <input autoComplete="off" type="date" name="fecha" required className={CLASE_INPUT} />
         </Campo>
         <Campo etiqueta="Hora">
-          <input autoComplete="off" type="time" name="hora" required step={900} className={CLASE_INPUT} />
+          <SelectorHora name="hora" required claseCampo={CLASE_INPUT} />
         </Campo>
       </div>
     </>

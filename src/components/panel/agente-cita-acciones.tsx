@@ -20,6 +20,7 @@ import {
 } from "@/components/panel/clientes/formulario";
 import { BOTON, BOTON_BASE, TAM_FILA_TRES } from "@/components/panel/clientes/piezas";
 import { useAccionAgente } from "@/components/panel/usar-accion-agente";
+import { SelectorHora } from "@/components/panel/selector-hora";
 import { cn } from "@/lib/utils";
 
 export function BotonesCita({
@@ -127,7 +128,7 @@ export function FormaReagendar({ citaId, onCerrar }: { citaId: string; onCerrar:
           <input autoComplete="off" type="date" name="fecha" required className={CLASE_INPUT} />
         </Campo>
         <Campo etiqueta="Nueva hora">
-          <input autoComplete="off" type="time" name="hora" required step={900} className={CLASE_INPUT} />
+          <SelectorHora name="hora" required etiqueta="Nueva hora" claseCampo={CLASE_INPUT} />
         </Campo>
       </div>
       <p className="text-[12px] leading-snug text-ink-faint">

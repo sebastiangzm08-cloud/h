@@ -12,6 +12,7 @@
    ========================================================================== */
 import { useState } from "react";
 import { CAMPO_HORA } from "./estilos";
+import { SelectorHora } from "@/components/panel/selector-hora";
 import { DIAS_HORARIO } from "@/lib/panel/agente-config";
 import { cn } from "@/lib/utils";
 
@@ -55,22 +56,22 @@ export function EditorHorario({
             </label>
 
             <div className={cn("items-center gap-2 pb-2 sm:flex-1 sm:pb-0", cerrado ? "hidden" : "flex")}>
-              <input
-                type="time"
+              <SelectorHora
                 name={`ini_${clave}`}
                 defaultValue={bloque?.[0] ?? "08:00"}
                 disabled={cerrado}
-                aria-label={`${texto}: abre`}
-                className={cn(CAMPO_HORA, "min-w-0 flex-1 sm:max-w-[150px]")}
+                etiqueta={`${texto}: abre`}
+                claseCampo={CAMPO_HORA}
+                className="flex-1 sm:max-w-[150px]"
               />
               <span className="flex-none text-[12px] text-ink-mute">a</span>
-              <input
-                type="time"
+              <SelectorHora
                 name={`fin_${clave}`}
                 defaultValue={bloque?.[1] ?? "17:00"}
                 disabled={cerrado}
-                aria-label={`${texto}: cierra`}
-                className={cn(CAMPO_HORA, "min-w-0 flex-1 sm:max-w-[150px]")}
+                etiqueta={`${texto}: cierra`}
+                claseCampo={CAMPO_HORA}
+                className="flex-1 sm:max-w-[150px]"
               />
             </div>
             <input type="hidden" name={`cerrado_${clave}`} value={cerrado ? "on" : ""} />
