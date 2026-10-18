@@ -20,6 +20,7 @@ import { PLANTILLAS_RECORDATORIO_MANUAL } from "./agente-plantillas";
 import { detalleWhatsapp } from "./whatsapp-conexion";
 import { enviarArchivoPorWhatsapp, guardarCopiaDeArchivo } from "./medios";
 import { MAX_PIE_DE_ARCHIVO, etiquetaArchivo, validarArchivo } from "./medios-reglas";
+import { asegurarPlantillasAutomaticas } from "./automatizaciones";
 
 export type ResultadoAccion =
   /** `avisoFallido`: la acción se hizo, pero el aviso por WhatsApp no salió. */
@@ -1168,6 +1169,64 @@ export async function guardarConfigAgente(
 
   revalidarAgente();
   return { ok: true, mensaje: "Guardado. Se aplica desde la siguiente conversación." };
+}
+
+/** "Mensajes automáticos" de Cómo responde (seguimiento, y más adelante reseñas y reactivación). */
+export async function guardarAutomatizacionesAgente(
+  _prev: ResultadoAccion | null,
+  form: FormData
+): Promise<ResultadoAccion> {
+  const auth = await exigirCliente(form);
+  if (!auth.ok) return auth;
+
+  const sb = await supabaseServidor();
+  const asignacion = await traerAsignacionAgente(sb, auth.clienteId);
+  if (!asignacion) return { ok: false, error: "No encontré la asignación del agente." };
+
+  const config = (asignacion.config ?? {}) as Record<string, unknown>;
+  const previo = (k: string) => (config[k] as Record<string, unknown> | undefined) ?? {};
+
+  const resenasActivo = form.get("resenas") === "on";
+  const urlResenas = String(form.get("resenas_url") ?? "").trim();
+  if (resenasActivo && !/^https:\/\/\S+$/.test(urlResenas)) {
+    return { ok: false, error: "Para pedir reseñas hace falta el enlace de Google (empieza con https://)." };
+  }
+
+  /* Meses por servicio: vienen como "meses::<clave del servicio>". 0 o vacío = no se reactiva. */
+  const servicios: Record<string, number> = {};
+  for (const [k, v] of form.entries()) {
+    if (!k.startsWith("meses::")) continue;
+    const n = Math.round(Number(v));
+    if (Number.isFinite(n) && n > 0 && n <= 36) servicios[k.slice("meses::".length)] = n;
+  }
+  const reactivarActivo = form.get("reactivar") === "on";
+  if (reactivarActivo && Object.keys(servicios).length === 0) {
+    return { ok: false, error: "Para reactivar pacientes poné cada cuántos meses vuelve al menos un servicio." };
+  }
+  const tope = Math.min(50, Math.max(1, Math.round(Number(form.get("tope_dia")) || 10)));
+
+  const nuevoConfig: Record<string, unknown> = {
+    ...config,
+    seguimiento: { ...previo("seguimiento"), activo: form.get("seguimiento") === "on" },
+    resenas: { ...previo("resenas"), activo: resenasActivo, url: urlResenas },
+    reactivar: { ...previo("reactivar"), activo: reactivarActivo, servicios, tope_dia: tope },
+  };
+
+  /* Las plantillas de Meta se crean al encender (la aprobación tarda de horas a 1–2 días). */
+  let nota = "";
+  if (resenasActivo || reactivarActivo) {
+    const estados = await asegurarPlantillasAutomaticas(auth.clienteId, { resenas: resenasActivo, reactivar: reactivarActivo });
+    nuevoConfig.plantillas = { ...((config.plantillas as Record<string, unknown>) ?? {}), ...estados, revisadas_en: new Date().toISOString() };
+    const pendientes = Object.entries(estados).filter(([, e]) => e !== "APPROVED");
+    if (estados.error) nota = ` Ojo: ${estados.error}`;
+    else if (pendientes.length) nota = " Las plantillas quedaron en revisión de Meta; mientras tanto solo se escribe a quien te habló en las últimas 24 h.";
+  }
+
+  const { error } = await sb.from("asignaciones").update({ config: nuevoConfig }).eq("id", asignacion.id);
+  if (error) return { ok: false, error: error.message };
+
+  revalidarAgente();
+  return { ok: true, mensaje: `Guardado.${nota}` };
 }
 
 const DIAS_ORDEN = ["lun", "mar", "mie", "jue", "vie", "sab", "dom"] as const;

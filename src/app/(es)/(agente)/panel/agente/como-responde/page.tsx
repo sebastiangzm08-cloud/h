@@ -2,10 +2,11 @@ import Link from "next/link";
 import { Cabecera, Cuerpo } from "@/components/panel/agente-ui";
 import { SeccionesComportamiento } from "@/components/panel/agente-config-form";
 import { SeccionesAgenda } from "@/components/panel/agente-agenda-form";
+import { SeccionAutomatizaciones, type ConfigAutomatizaciones } from "@/components/panel/agente-automatizaciones-form";
 import { FilaDato, Filas, Seccion } from "@/components/panel/configuracion/seccion";
 import { Chip } from "@/components/panel/ui";
 import { getAsignacion } from "@/lib/panel/datos";
-import { getHorarioNegocio } from "@/lib/panel/agente";
+import { getConocimiento, getHorarioNegocio } from "@/lib/panel/agente";
 import { leerConfigAgente, leerConfigAgenda } from "@/lib/panel/agente-config";
 
 /* ==========================================================================
@@ -17,12 +18,31 @@ import { leerConfigAgente, leerConfigAgenda } from "@/lib/panel/agente-config";
    siguiente conversación.
    ========================================================================== */
 export default async function ConfiguracionAgentePage() {
-  const [asignacion, horario] = await Promise.all([
+  const [asignacion, horario, conocimiento] = await Promise.all([
     getAsignacion("agente-whatsapp"),
     getHorarioNegocio(),
+    getConocimiento(),
   ]);
   const cfg = leerConfigAgente(asignacion?.config);
   const agenda = leerConfigAgenda(asignacion?.config);
+
+  /* "Mensajes automáticos": lo guardado + los servicios activos de Conocimiento. */
+  const raw = (asignacion?.config ?? {}) as Record<string, unknown>;
+  const leer = (k: string) => (raw[k] as Record<string, unknown> | undefined) ?? {};
+  const mesesGuardados = (leer("reactivar").servicios as Record<string, number> | undefined) ?? {};
+  const plantillas = leer("plantillas");
+  const automaticos: ConfigAutomatizaciones = {
+    seguimiento: leer("seguimiento").activo === true,
+    resenas: { activo: leer("resenas").activo === true, url: String(leer("resenas").url ?? "") },
+    reactivar: {
+      activo: leer("reactivar").activo === true,
+      tope: Number(leer("reactivar").tope_dia) || 10,
+      servicios: conocimiento
+        .filter((c) => c.tipo === "servicio" && c.activo)
+        .map((c) => ({ clave: c.clave, meses: mesesGuardados[c.clave] ?? null })),
+    },
+    plantillasPendientes: Object.entries(plantillas).some(([k, v]) => k.startsWith("hz_") && v !== "APPROVED"),
+  };
 
   return (
     <>
@@ -58,6 +78,8 @@ export default async function ConfiguracionAgentePage() {
         </Seccion>
 
         <SeccionesAgenda agenda={agenda} horario={horario} />
+
+        <SeccionAutomatizaciones config={automaticos} />
 
         <p className="text-[12.5px] leading-snug text-ink-mute">
           Los servicios, precios y reglas de lo que nunca decir se editan en{" "}
