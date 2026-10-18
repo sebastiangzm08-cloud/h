@@ -114,7 +114,10 @@ export function SeccionConocimiento({
           </div>
         )
       ) : (
-        <ul className="divide-y divide-line border-t border-line">
+        /* En pantalla ancha la lista va dentro de un cuadro con scroll: con muchos datos, una
+           columna larguísima al lado de otra corta se veía desbalanceada (pedido de Sebastian,
+           2026-10-17). En celular sigue el scroll normal de la página: dos scrolls anidados ahí molestan. */
+        <ul className="scroll-fino divide-y divide-line border-t border-line lg:max-h-[30rem] lg:overflow-y-auto lg:overscroll-contain">
           {items.map((item) => (
             <FilaConocimiento key={item.id} item={item} />
           ))}

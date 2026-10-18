@@ -818,6 +818,34 @@ export async function getCorrecciones(): Promise<CorreccionAgente[]> {
   }));
 }
 
+export type AprendidoAgente = { id: string; pregunta: string; respuesta: string; respondidaEn: string };
+
+/** Lo que el dueño ya le enseñó desde Correcciones (lo más reciente primero). */
+export async function getAprendido(): Promise<AprendidoAgente[]> {
+  if (await enModoEjemplo()) return [];
+
+  const id = await clienteId();
+  if (!id) return [];
+
+  const sb = await supabaseServidor();
+  const { data, error } = await sb
+    .from("wa_correcciones")
+    .select("id, pregunta, respuesta, respondida_en, creada_en")
+    .eq("cliente_id", id)
+    .eq("estado", "ensenada")
+    .order("respondida_en", { ascending: false, nullsFirst: false })
+    .limit(100);
+
+  if (error || !data) return [];
+
+  return data.map((f) => ({
+    id: f.id as string,
+    pregunta: (f.pregunta as string) ?? "",
+    respuesta: (f.respuesta as string | null) ?? "",
+    respondidaEn: ((f.respondida_en ?? f.creada_en) as string) ?? "",
+  }));
+}
+
 type FilaConversacionCorreo = {
   id: string;
   contacto_id: string;
