@@ -76,7 +76,7 @@ async function decidirSeguimiento(
     "Decidí si vale la pena mandarle UN solo mensaje de seguimiento.",
     "NO lo mandés si: se despidió, dijo que no le interesa, ya quedó todo resuelto, pidió que no le escriban, o la conversación no tenía que ver con el negocio.",
     "SÍ mandalo si: mostró interés (preguntó precio, servicios, horarios) y quedó a medias.",
-    `Si lo mandás: tratala ${trato}. Retomá lo último que hablaron (si quedó una pregunta tuya sin responder, retomala), sin saludar como si fuera la primera vez, y proponé el siguiente paso. Un solo mensaje de 2 a 4 líneas, cálido y sin presión. Español de Costa Rica.`,
+    `Si lo mandás: tratala ${trato}. Sin saludar como si fuera la primera vez, recordá UN beneficio concreto ligado a lo que la persona contó (qué gana, no qué pierde) y proponé el siguiente paso con una pregunta fácil de sí o no. No repitás preguntas que ya hiciste ni hagás preguntas de diagnóstico. Un solo mensaje de 2 a 4 líneas, cálido y sin presión. Español de Costa Rica.`,
     "Nunca ofrezcás demostraciones, llamadas, descuentos, regalos ni nada que no aparezca en la conversación o en las reglas de abajo. Nunca inventés precios, horarios ni datos.",
     ...(venta.length ? ["", "# CÓMO VENDE ESTE NEGOCIO (respetalo)", ...venta.map((v) => `- ${v}`)] : []),
     "",
