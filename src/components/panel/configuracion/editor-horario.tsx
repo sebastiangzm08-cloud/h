@@ -12,6 +12,7 @@
    ========================================================================== */
 import { useState } from "react";
 import { CAMPO_HORA } from "./estilos";
+import { PistaCasilla } from "./controles";
 import { SelectorHora } from "@/components/panel/selector-hora";
 import { DIAS_HORARIO } from "@/lib/panel/agente-config";
 import { cn } from "@/lib/utils";
@@ -43,14 +44,15 @@ export function EditorHorario({
             key={clave}
             className="rounded-xl border border-line bg-surface px-3.5 py-1.5 sm:flex sm:items-center sm:gap-4"
           >
-            <label className="flex min-h-11 cursor-pointer items-center gap-3 sm:w-44 sm:flex-none">
+            <label className="group flex min-h-11 cursor-pointer items-center gap-3 sm:w-36 sm:flex-none">
               <input
                 type="checkbox"
                 checked={!cerrado}
                 onChange={(e) => setCerrados((c) => ({ ...c, [clave]: !e.target.checked }))}
                 aria-label={`${texto}: abierto`}
-                className="h-5 w-5 flex-none accent-[color:var(--panel-acento)]"
+                className="peer sr-only"
               />
+              <PistaCasilla />
               <span className="text-[13px] font-medium text-ink-soft">{texto}</span>
               {cerrado ? <span className="text-[12px] text-ink-mute">Cerrado</span> : null}
             </label>
@@ -62,7 +64,7 @@ export function EditorHorario({
                 disabled={cerrado}
                 etiqueta={`${texto}: abre`}
                 claseCampo={CAMPO_HORA}
-                className="flex-1 sm:max-w-[150px]"
+                className="flex-1 sm:max-w-[172px]"
               />
               <span className="flex-none text-[12px] text-ink-mute">a</span>
               <SelectorHora
@@ -71,7 +73,7 @@ export function EditorHorario({
                 disabled={cerrado}
                 etiqueta={`${texto}: cierra`}
                 claseCampo={CAMPO_HORA}
-                className="flex-1 sm:max-w-[150px]"
+                className="flex-1 sm:max-w-[172px]"
               />
             </div>
             <input type="hidden" name={`cerrado_${clave}`} value={cerrado ? "on" : ""} />

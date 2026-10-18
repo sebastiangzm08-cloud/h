@@ -113,16 +113,28 @@ export function InterruptorCasilla({
           : { defaultChecked: activo })}
         className="peer sr-only"
       />
-      <span
-        aria-hidden="true"
-        className={cn(
-          "relative block h-[22px] w-[38px] flex-none rounded-full border border-line-strong bg-surface-3 transition-colors duration-200",
-          "peer-checked:border-transparent peer-checked:bg-[var(--panel-acento)]"
-        )}
-      >
-        <span className="absolute top-[2px] left-[2px] h-4 w-4 rounded-full bg-ink-mute shadow-sm transition-[transform,background-color] duration-200 group-has-[:checked]:translate-x-4 group-has-[:checked]:bg-white" />
-      </span>
+      <PistaCasilla />
     </label>
+  );
+}
+
+/**
+ * La cara de interruptor de una casilla nativa. Va justo DESPUÉS de un
+ * `<input type="checkbox" className="peer sr-only">`, dentro de un elemento
+ * con `group` (la etiqueta), que es lo que le avisa si está marcada.
+ */
+export function PistaCasilla() {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "relative block h-[22px] w-[38px] flex-none rounded-full border border-line-strong bg-surface-3 transition-colors duration-200",
+        "peer-checked:border-transparent peer-checked:bg-[var(--panel-acento)]",
+        "peer-focus-visible:ring-2 peer-focus-visible:ring-[color:var(--panel-acento-borde)]"
+      )}
+    >
+      <span className="absolute top-[2px] left-[2px] h-4 w-4 rounded-full bg-ink-mute shadow-sm transition-[transform,background-color] duration-200 group-has-[:checked]:translate-x-4 group-has-[:checked]:bg-white" />
+    </span>
   );
 }
 

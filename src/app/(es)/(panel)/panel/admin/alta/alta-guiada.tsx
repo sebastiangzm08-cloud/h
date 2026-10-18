@@ -604,7 +604,7 @@ function HorarioPorDefecto() {
                 disabled={finde}
                 etiqueta={`${texto}: abre`}
                 claseCampo={CAMPO}
-                className="flex-1 sm:max-w-[140px]"
+                className="flex-1 sm:max-w-[172px]"
               />
               <span className="text-ink-faint" aria-hidden="true">
                 –
@@ -615,7 +615,7 @@ function HorarioPorDefecto() {
                 disabled={finde}
                 etiqueta={`${texto}: cierra`}
                 claseCampo={CAMPO}
-                className="flex-1 sm:max-w-[140px]"
+                className="flex-1 sm:max-w-[172px]"
               />
             </div>
             <input type="hidden" name={`cerrado_${clave}`} value={finde ? "on" : ""} />

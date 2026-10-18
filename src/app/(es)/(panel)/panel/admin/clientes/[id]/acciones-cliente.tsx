@@ -690,7 +690,7 @@ export function FormaAgendaAdmin({
                 disabled={cerrado}
                 etiqueta={`${texto}: abre`}
                 claseCampo={CAMPO}
-                className="flex-1 sm:max-w-[140px]"
+                className="flex-1 sm:max-w-[172px]"
               />
                 <span className="text-ink-faint" aria-hidden="true">
                   –
@@ -701,7 +701,7 @@ export function FormaAgendaAdmin({
                 disabled={cerrado}
                 etiqueta={`${texto}: cierra`}
                 claseCampo={CAMPO}
-                className="flex-1 sm:max-w-[140px]"
+                className="flex-1 sm:max-w-[172px]"
               />
               </div>
               <input type="hidden" name={`cerrado_${clave}`} value={cerrado ? "on" : ""} />

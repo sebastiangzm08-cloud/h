@@ -152,7 +152,7 @@ export function SelectorHora({
   };
 
   return (
-    <div className={cn("relative min-w-0", className)}>
+    <div className={cn("relative min-w-max", className)}>
       <button
         ref={boton}
         type="button"
@@ -164,14 +164,16 @@ export function SelectorHora({
         aria-describedby={falta ? `${idPanel}-falta` : undefined}
         className={cn(claseCampo, "text-left", falta && "border-bad")}
       >
-        <span className="flex min-w-0 items-center gap-2">
+        {/* Es un botón, no un campo de texto: la letra puede bajar de 16 px sin
+            que iOS haga zoom. La hora nunca se corta: el bloque entero mide
+            como mínimo lo que mide la hora escrita (min-w-max, abajo). */}
+        <span className="flex items-center gap-1.5">
           <Icono nombre="reloj" className="h-4 w-4 flex-none text-ink-faint" />
-          <span className={cn("min-w-0 flex-1 truncate tabular-nums", !hora && "text-ink-faint")}>
+          <span
+            className={cn("flex-1 text-[15px] whitespace-nowrap tabular-nums sm:text-[13.5px]", !hora && "text-ink-faint")}
+          >
             {hora ? texto(hora) : placeholder}
           </span>
-          <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 flex-none text-ink-faint">
-            <path d="m6 8 4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-          </svg>
         </span>
       </button>
 
