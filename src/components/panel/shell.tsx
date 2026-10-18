@@ -57,6 +57,9 @@ export type ModulosCliente = {
   /** "Tu negocio" (el formulario de posts) solo le sirve a Redes sociales. */
   redes: boolean;
   agente: boolean;
+  /** "Correo" solo aparece si el cliente tiene una casilla conectada (2026-10-17): sin
+      casilla era una sección vacía que estorbaba. Se conecta desde administración. */
+  correo?: boolean;
 };
 
 /** Tarjeta del plan, abajo en la barra. `uso` solo si hay un tope real. */
@@ -77,14 +80,14 @@ const HREF_ALERTA = new Set([
   "/panel/admin/pagos",
 ]);
 
-function navCliente({ redes, agente }: ModulosCliente): Grupo[] {
+function navCliente({ redes, agente, correo }: ModulosCliente): Grupo[] {
   const principal: Item[] = [
     { href: "/panel", label: "Inicio", icono: "inicio", tour: "resumen" },
   ];
   if (agente) {
     principal.push(
       { href: "/panel/agente/conversaciones", label: "Conversaciones", icono: "mensajes", tour: "conversaciones" },
-      { href: "/panel/agente/correo", label: "Correo", icono: "correo", tour: "correo" },
+      ...(correo ? [{ href: "/panel/agente/correo", label: "Correo", icono: "correo" as const, tour: "correo" }] : []),
       { href: "/panel/agente/contactos", label: "Clientes", icono: "clientes", tour: "contactos" },
       { href: "/panel/agente/citas", label: "Agenda", icono: "calendario", tour: "citas" },
       /* "¿Cuánto me deja y dónde se me escapa gente?": embudo, ventas,
@@ -557,7 +560,11 @@ export function PanelShell({
       {/* El recorrido guiado solo corre dentro del entorno del Agente, igual
           que antes con su barra propia. */}
       {!enAdmin && enAgente && modulos.agente ? (
-        <TourGuiado id={ID_TOUR_AGENTE} pasos={PASOS_TOUR_AGENTE} />
+        <TourGuiado
+          id={ID_TOUR_AGENTE}
+          /* Sin "Correo" en el menú, su paso dejaría el recorrido trabado. */
+          pasos={modulos.correo ? PASOS_TOUR_AGENTE : PASOS_TOUR_AGENTE.filter((p) => !p.selector.includes("correo"))}
+        />
       ) : null}
     </div>
   );

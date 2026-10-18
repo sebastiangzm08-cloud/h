@@ -9,6 +9,7 @@ import type { ModulosCliente, PlanTarjeta } from "@/components/panel/shell";
 import { getContadoresAgente, getMensajesAgenteMes } from "./agente";
 import { getAsignaciones, getContadoresCliente } from "./datos";
 import type { Asignacion, Cliente } from "./tipos";
+import { supabaseAdmin } from "@/lib/supabase/servidor";
 
 /* Mismo respaldo que la pantalla "Uso y límites" del Agente (y el nodo
    "¿Cuántos van?" del workflow de n8n): si la asignación no trae tope, 4000. */
@@ -32,10 +33,21 @@ export async function getDatosShellCliente(
   const redes = porSlug("redes-sociales");
   const agente = porSlug("agente-whatsapp");
 
-  const [c, ag, mensajesAgente] = await Promise.all([
+  const [c, ag, mensajesAgente, casilla] = await Promise.all([
     getContadoresCliente(clienteId),
     agente ? getContadoresAgente() : null,
     agente ? getMensajesAgenteMes() : 0,
+    /* ¿Tiene casilla de correo conectada? Decide si "Correo" aparece en el menú. */
+    agente && clienteId
+      ? supabaseAdmin()
+          .from("conexiones")
+          .select("id")
+          .eq("cliente_id", clienteId)
+          .eq("servicio", "correo")
+          .eq("estado", "conectada")
+          .limit(1)
+          .maybeSingle()
+      : null,
   ]);
 
   const contadores: Record<string, number> = {
@@ -50,7 +62,7 @@ export async function getDatosShellCliente(
   return {
     asignaciones,
     agente,
-    modulos: { redes: Boolean(redes), agente: Boolean(agente) },
+    modulos: { redes: Boolean(redes), agente: Boolean(agente), correo: Boolean(casilla?.data) },
     contadores,
     plan: {
       nombre: cliente.plan,
