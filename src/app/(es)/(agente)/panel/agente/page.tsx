@@ -75,7 +75,7 @@ export default async function ResumenAgentePage() {
           <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line-strong bg-surface-2 px-4 py-3.5">
             <Icono nombre="negocio" className="h-4 w-4 flex-none text-ink-soft" />
             <p className="min-w-0 flex-1 text-[13px] text-ink-soft">
-              <span className="font-medium text-ink">Faltan 7 preguntas cortas</span> para que el agente
+              <span className="font-medium text-ink">Faltan 4 pasos cortos</span> para que el agente
               conteste con los datos reales de tu negocio (servicios, precios, horario…).
             </p>
             <Link

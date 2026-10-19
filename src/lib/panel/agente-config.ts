@@ -162,6 +162,57 @@ export const DIAS_HORARIO: { clave: string; texto: string }[] = [
   { clave: "dom", texto: "Domingo" },
 ];
 
+/* -------------------------------------------------------------------------
+   Horario con almuerzo (2026-10-18). Casi todas las clínicas de Costa Rica
+   cierran al mediodía, pero pedirle a alguien que arme "bloques" por día es
+   enredado. En pantalla se pide abre / cierra por día y UN almuerzo para
+   todos; en la base se sigue guardando como bloques (`[["08:00","12:00"],
+   ["13:00","17:00"]]`), que es lo que el agente de n8n ya sabe leer.
+   ------------------------------------------------------------------------- */
+export type Almuerzo = { activo: boolean; ini: string; fin: string };
+export const ALMUERZO_POR_DEFECTO: Almuerzo = { activo: false, ini: "12:00", fin: "13:00" };
+
+/** Lee el almuerzo de lo guardado: el hueco entre el primer y el segundo bloque del primer día que lo tenga. */
+export function almuerzoDeHorario(horario: Record<string, [string, string][]>): Almuerzo {
+  for (const { clave } of DIAS_HORARIO) {
+    const b = horario[clave];
+    if (b && b.length >= 2 && b[0][1] < b[1][0]) return { activo: true, ini: b[0][1], fin: b[1][0] };
+  }
+  return ALMUERZO_POR_DEFECTO;
+}
+
+/** Abre / cierra del día completo, aunque esté guardado en dos bloques. */
+export function extremosDelDia(bloques: [string, string][] | undefined): [string, string] | null {
+  if (!bloques?.length) return null;
+  return [bloques[0][0], bloques[bloques.length - 1][1]];
+}
+
+/** Parte un día en mañana y tarde si el almuerzo cae dentro; si no, queda en un solo bloque. */
+export function bloquesDelDia(ini: string, fin: string, almuerzo: Almuerzo): [string, string][] {
+  if (!almuerzo.activo || almuerzo.fin <= almuerzo.ini || almuerzo.fin <= ini || almuerzo.ini >= fin) return [[ini, fin]];
+  const bloques: [string, string][] = [];
+  if (almuerzo.ini > ini) bloques.push([ini, almuerzo.ini]);
+  if (almuerzo.fin < fin) bloques.push([almuerzo.fin, fin]);
+  return bloques;
+}
+
+/** Arma `clientes.horario` desde los campos del editor (`ini_lun`, `fin_lun`, `cerrado_lun`, `almuerzo`…). */
+export function horarioDesdeFormulario(form: FormData, dias: readonly string[]): Record<string, [string, string][]> {
+  const almuerzo: Almuerzo = {
+    activo: form.get("almuerzo") === "on",
+    ini: String(form.get("almuerzo_ini") ?? ""),
+    fin: String(form.get("almuerzo_fin") ?? ""),
+  };
+  const horario: Record<string, [string, string][]> = {};
+  for (const dia of dias) {
+    const cerrado = form.get(`cerrado_${dia}`) === "on";
+    const ini = String(form.get(`ini_${dia}`) ?? "");
+    const fin = String(form.get(`fin_${dia}`) ?? "");
+    horario[dia] = cerrado || !ini || !fin ? [] : bloquesDelDia(ini, fin, almuerzo);
+  }
+  return horario;
+}
+
 /** `[["08:00","17:00"]]` → "8:00 a.m. – 5:00 p.m.". Vacío → "Cerrado". */
 export function textoBloquesHorario(bloques: unknown): string {
   if (!Array.isArray(bloques) || bloques.length === 0) return "Cerrado";

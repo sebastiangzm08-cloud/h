@@ -62,6 +62,14 @@ export function SeccionesAgenda({ agenda, horario }: { agenda: ConfigAgenda; hor
         return;
       }
     }
+    if (datos.get("almuerzo") === "on") {
+      const desde = String(datos.get("almuerzo_ini") ?? "");
+      const hasta = String(datos.get("almuerzo_fin") ?? "");
+      if (desde && hasta && hasta <= desde) {
+        setErrorLocal("El almuerzo termina antes de empezar. Revisá las horas.");
+        return;
+      }
+    }
     setErrorLocal(null);
     guardar(datos);
   }

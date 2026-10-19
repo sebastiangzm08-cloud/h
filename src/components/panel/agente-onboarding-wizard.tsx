@@ -3,8 +3,8 @@
 /* ==========================================================================
    Onboarding del Agente de WhatsApp — lo llena el CLIENTE, no el admin.
 
-   7 preguntas cortas (acordadas con Sebastián para no agobiar a una clínica
-   o veterinaria) en 3 pantallas, con UN solo guardado al final
+   Preguntas cortas (acordadas con Sebastián para no agobiar a una clínica
+   o veterinaria) en 4 pantallas, con UN solo guardado al final
    (`guardarOnboardingAgente`). Los 3 pasos viven en el MISMO <form>: los pasos
    que no se están viendo se ocultan con una clase (`hidden`, es decir
    `display:none`), no se desmontan, así el navegador igual manda sus valores al
@@ -31,13 +31,16 @@ import { IconoBasura, IconoCheck, IconoMas, Spinner } from "@/components/panel/c
 import { useAccionPanel } from "@/components/panel/configuracion/usar-accion";
 import { cn } from "@/lib/utils";
 
-type Paso = 1 | 2 | 3 | "listo";
+type Paso = 1 | 2 | 3 | 4 | "listo";
 
 const PASOS = [
   { n: 1, texto: "Tu negocio" },
   { n: 2, texto: "Servicios" },
-  { n: 3, texto: "Horario y contacto" },
+  { n: 3, texto: "Horario" },
+  { n: 4, texto: "Preguntas frecuentes" },
 ] as const;
+
+const ULTIMO_PASO = 4;
 
 const MAX_SERVICIOS = 5;
 
@@ -157,12 +160,13 @@ export function AgenteOnboardingWizard({
   function siguiente() {
     if (paso === 1) irAlPaso2();
     else if (paso === 2) setPaso(3);
+    else if (paso === 3) setPaso(4);
   }
 
-  /* Enter dentro de un campo de los pasos 1 y 2 avanza de paso. Sin esto, el
+  /* Enter dentro de un campo de los pasos 1 a 3 avanza de paso. Sin esto, el
      navegador lo toma como "enviar" y guardaba todo a medias. */
   function alTeclear(e: React.KeyboardEvent<HTMLFormElement>) {
-    if (e.key !== "Enter" || paso === 3) return;
+    if (e.key !== "Enter" || paso === ULTIMO_PASO) return;
     if ((e.target as HTMLElement).tagName !== "INPUT") return;
     e.preventDefault();
     siguiente();
@@ -172,7 +176,7 @@ export function AgenteOnboardingWizard({
      enviarlo y, si el guardado fallaba, se perdía todo lo escrito. */
   function enviar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (paso !== 3) {
+    if (paso !== ULTIMO_PASO) {
       siguiente();
       return;
     }
@@ -310,21 +314,33 @@ export function AgenteOnboardingWizard({
       {/* ------------------------------------------------------------ Paso 2 */}
       <fieldset className={cn("flex min-w-0 flex-col gap-4", paso !== 2 && "hidden")} disabled={pendiente}>
         <TituloPaso n={2} titulo="Tus servicios">
-          Los 3 a 5 servicios más pedidos alcanzan — no hace falta el catálogo completo, eso lo vas completando
-          después desde Conocimiento.
+          Los 3 a 5 servicios más pedidos alcanzan, con su precio y cuántos minutos dura la cita. El catálogo
+          completo lo vas sumando después desde Conocimiento.
         </TituloPaso>
 
         <ul className="flex flex-col gap-3">
           {filas.map((id, i) => (
             <li
               key={id}
-              className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-2.5 gap-y-3 rounded-xl border border-line bg-surface p-3 sm:grid-cols-[minmax(0,1fr)_170px_auto] sm:p-3.5"
+              className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.75fr)_auto] items-end gap-x-2.5 gap-y-3 rounded-xl border border-line bg-surface p-3 sm:grid-cols-[minmax(0,1fr)_150px_104px_auto] sm:p-3.5"
             >
-              <Campo etiqueta={`Servicio ${i + 1}`} className="col-span-2 sm:col-span-1">
+              <Campo etiqueta={`Servicio ${i + 1}`} className="col-span-3 sm:col-span-1">
                 <input name="servicioNombre" autoComplete="off" placeholder="Ej.: Consulta general" className={CAMPO} />
               </Campo>
               <Campo etiqueta="Precio (₡)">
                 <CampoMonto name="servicioPrecio" placeholder="Ej.: 15.000" className={CAMPO} />
+              </Campo>
+              {/* Sin la duración el agente no sabe cuánto espacio apartar en la agenda. */}
+              <Campo etiqueta="Minutos">
+                <input
+                  name="servicioMinutos"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={3}
+                  autoComplete="off"
+                  placeholder="Ej.: 30"
+                  className={CAMPO}
+                />
               </Campo>
               <button
                 type="button"
@@ -403,10 +419,123 @@ export function AgenteOnboardingWizard({
           <input name="formasPago" autoComplete="off" placeholder="Ej.: SINPE Móvil, efectivo, tarjeta" className={CAMPO} />
         </Campo>
 
+        <Campo
+          etiqueta={
+            <>
+              Link de Google Maps <span className="text-ink-mute">(opcional)</span>
+            </>
+          }
+          ayuda="El agente lo manda cuando alguien pregunta cómo llegar."
+        >
+          <input
+            name="mapsLink"
+            type="url"
+            inputMode="url"
+            autoComplete="off"
+            placeholder="Ej.: https://maps.app.goo.gl/…"
+            className={CAMPO}
+          />
+        </Campo>
+
+        <div className="flex justify-between gap-3">
+          <button type="button" onClick={() => setPaso(2)} className={BTN_SECUNDARIO}>
+            <span aria-hidden="true">←</span>
+            Atrás
+          </button>
+          <button type="button" onClick={() => setPaso(4)} className={BTN_PRIMARIO}>
+            Siguiente
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      </fieldset>
+
+      {/* ------------------------------------------------------------ Paso 4
+          Lo que más preguntan los pacientes y no cabe en "servicios" ni en
+          "horario". Todo opcional: si lo dejan en blanco, el agente dice que
+          no tiene el dato y avisa, en vez de inventar. */}
+      <fieldset className={cn("flex min-w-0 flex-col gap-5", paso !== 4 && "hidden")} disabled={pendiente}>
+        <TituloPaso n={4} titulo="Preguntas frecuentes">
+          Lo que más les preguntan por WhatsApp. Todo es opcional y lo podés cambiar después en Conocimiento.
+        </TituloPaso>
+
+        <Segmentado
+          nombre="parqueo"
+          etiqueta="¿Tienen parqueo?"
+          valor=""
+          opciones={[
+            { valor: "propio", texto: "Sí, propio" },
+            { valor: "calle", texto: "En la calle" },
+            { valor: "no", texto: "No" },
+          ]}
+        />
+
+        <Segmentado
+          nombre="silla"
+          etiqueta="¿Se puede entrar en silla de ruedas?"
+          valor=""
+          opciones={[
+            { valor: "si", texto: "Sí" },
+            { valor: "no", texto: "No" },
+          ]}
+        />
+
+        <Campo
+          etiqueta={
+            <>
+              ¿Trabajan con seguros médicos? <span className="text-ink-mute">(opcional)</span>
+            </>
+          }
+        >
+          <input
+            name="seguros"
+            autoComplete="off"
+            maxLength={200}
+            placeholder="Ej.: Sí, con INS y Pan-American Life · No trabajamos con seguros"
+            className={CAMPO}
+          />
+        </Campo>
+
+        <Campo
+          etiqueta={
+            <>
+              Si alguien cancela o no llega <span className="text-ink-mute">(opcional)</span>
+            </>
+          }
+        >
+          <textarea
+            name="cancelaciones"
+            rows={2}
+            maxLength={300}
+            autoComplete="off"
+            placeholder="Ej.: Cancelar o cambiar la cita con 24 horas de anticipación, por este mismo WhatsApp."
+            className={cn(CAMPO, "resize-none")}
+          />
+        </Campo>
+
+        <div className="flex flex-col gap-2.5 rounded-xl border border-line bg-surface p-3 sm:p-3.5">
+          <span className="text-[12px] font-medium text-ink-mute">Otra pregunta que les hacen mucho (opcional)</span>
+          <input
+            name="otraPregunta"
+            autoComplete="off"
+            maxLength={120}
+            aria-label="Pregunta"
+            placeholder="Pregunta. Ej.: ¿Atienden niños?"
+            className={CAMPO}
+          />
+          <input
+            name="otraRespuesta"
+            autoComplete="off"
+            maxLength={300}
+            aria-label="Respuesta"
+            placeholder="Respuesta. Ej.: Sí, desde los 3 años."
+            className={CAMPO}
+          />
+        </div>
+
         {estado && !estado.ok ? <MensajeEstado ok={false}>{estado.error}</MensajeEstado> : null}
 
         <div className="flex justify-between gap-3">
-          <button type="button" disabled={pendiente} onClick={() => setPaso(2)} className={BTN_SECUNDARIO}>
+          <button type="button" disabled={pendiente} onClick={() => setPaso(3)} className={BTN_SECUNDARIO}>
             <span aria-hidden="true">←</span>
             Atrás
           </button>

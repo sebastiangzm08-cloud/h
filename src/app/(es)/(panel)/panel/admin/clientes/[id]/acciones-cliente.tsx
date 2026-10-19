@@ -23,7 +23,7 @@ import type { ResultadoAccion } from "@/lib/panel/admin-acciones";
 import { useAccionAdmin } from "@/components/panel/usar-accion-admin";
 import { CampoMonto } from "@/components/panel/campo-monto";
 import { CampoToken } from "@/components/panel/campo-token";
-import { DIAS_HORARIO, type ConfigAgenda } from "@/lib/panel/agente-config";
+import type { ConfigAgenda } from "@/lib/panel/agente-config";
 import {
   BTN_CHICO_PRIMARIO,
   BTN_CHICO_SECUNDARIO,
@@ -39,7 +39,7 @@ import {
 import { useDesplegable } from "@/components/admin/usar-desplegable";
 import { useEnvio } from "@/components/admin/usar-envio";
 import { Icono, type NombreIcono } from "@/components/panel/iconos";
-import { SelectorHora } from "@/components/panel/selector-hora";
+import { EditorHorario } from "@/components/panel/configuracion/editor-horario";
 import { cn } from "@/lib/utils";
 
 /** Botón que abre un panel de la ficha. */
@@ -624,9 +624,6 @@ export function FormaAgendaAdmin({
   const [estado, ejecutar, pendiente] = useAccionAdmin("sembrarAgenda");
   const [abierto, setAbierto] = useState(false);
   const envio = useEnvio(estado, ejecutar, { limpiarSiOk: false });
-  const [cerrados, setCerrados] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(DIAS_HORARIO.map(({ clave }) => [clave, !horario[clave]?.length]))
-  );
 
   if (!abierto) {
     return (
@@ -667,48 +664,7 @@ export function FormaAgendaAdmin({
         </Etiquetado>
       </div>
 
-      <div className="flex flex-col divide-y divide-line rounded-xl border border-line px-3.5">
-        {DIAS_HORARIO.map(({ clave, texto }) => {
-          const bloque = horario[clave]?.[0];
-          const cerrado = cerrados[clave];
-          return (
-            <div key={clave} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 sm:flex-nowrap">
-              <label className="flex min-h-11 w-full flex-none cursor-pointer items-center gap-3 text-[13px] text-ink-soft sm:w-32">
-                <input
-                  type="checkbox"
-                  checked={!cerrado}
-                  onChange={(e) => setCerrados((c) => ({ ...c, [clave]: !e.target.checked }))}
-                  className="h-5 w-5 flex-none accent-[var(--panel-acento,#7c5cff)]"
-                />
-                {texto}
-                {cerrado ? <span className="text-[11.5px] text-ink-faint">cerrado</span> : null}
-              </label>
-              <div className="flex min-w-0 flex-1 items-center gap-2">
-                <SelectorHora
-                name={`ini_${clave}`}
-                defaultValue={bloque?.[0] ?? "08:00"}
-                disabled={cerrado}
-                etiqueta={`${texto}: abre`}
-                claseCampo={CAMPO}
-                className="flex-1 sm:max-w-[172px]"
-              />
-                <span className="text-ink-faint" aria-hidden="true">
-                  –
-                </span>
-                <SelectorHora
-                name={`fin_${clave}`}
-                defaultValue={bloque?.[1] ?? "17:00"}
-                disabled={cerrado}
-                etiqueta={`${texto}: cierra`}
-                claseCampo={CAMPO}
-                className="flex-1 sm:max-w-[172px]"
-              />
-              </div>
-              <input type="hidden" name={`cerrado_${clave}`} value={cerrado ? "on" : ""} />
-            </div>
-          );
-        })}
-      </div>
+      <EditorHorario horario={horario} />
 
       <MensajeAccion estado={estado} />
       <div className="flex flex-wrap items-center gap-2">

@@ -15,7 +15,7 @@
 import { revalidatePath } from "next/cache";
 import { supabaseAdmin, supabaseConToken, supabaseServidor } from "@/lib/supabase/servidor";
 import { getPerfil } from "./datos";
-import { leerConfigAgenda, leerConfigAgente } from "./agente-config";
+import { horarioDesdeFormulario, leerConfigAgenda, leerConfigAgente } from "./agente-config";
 import { PLANTILLAS_RECORDATORIO_MANUAL } from "./agente-plantillas";
 import { detalleWhatsapp } from "./whatsapp-conexion";
 import { enviarArchivoPorWhatsapp, guardarCopiaDeArchivo } from "./medios";
@@ -1255,13 +1255,7 @@ export async function guardarAgenda(
     maximoDiasAdelante: Math.min(90, Math.max(1, num(form.get("maximoDiasAdelante"), 30))),
   };
 
-  const horario: Record<string, [string, string][]> = {};
-  for (const dia of DIAS_ORDEN) {
-    const cerrado = form.get(`cerrado_${dia}`) === "on";
-    const ini = String(form.get(`ini_${dia}`) ?? "");
-    const fin = String(form.get(`fin_${dia}`) ?? "");
-    horario[dia] = cerrado || !ini || !fin ? [] : [[ini, fin]];
-  }
+  const horario = horarioDesdeFormulario(form, DIAS_ORDEN);
 
   const nuevoConfig = { ...asignacion.config, agenda: nuevaAgenda };
 
@@ -1479,29 +1473,32 @@ export async function guardarOnboardingAgente(
     .eq("id", auth.clienteId);
   if (e2) return { ok: false, error: e2.message };
 
-  const horario: Record<string, [string, string][]> = {};
-  for (const dia of DIAS_ORDEN) {
-    const cerrado = form.get(`cerrado_${dia}`) === "on";
-    const ini = String(form.get(`ini_${dia}`) ?? "");
-    const fin = String(form.get(`fin_${dia}`) ?? "");
-    horario[dia] = cerrado || !ini || !fin ? [] : [[ini, fin]];
-  }
+  const horario = horarioDesdeFormulario(form, DIAS_ORDEN);
   const { error: e3 } = await sb.from("clientes").update({ horario }).eq("id", auth.clienteId);
   if (e3) return { ok: false, error: e3.message };
 
-  type FilaNueva = { tipo: "servicio" | "dato" | "regla"; clave: string; valor: string; monto: number | null };
+  type FilaNueva = {
+    tipo: "servicio" | "dato" | "regla";
+    clave: string;
+    valor: string;
+    monto: number | null;
+    duracion?: number | null;
+  };
   const filasNuevas: FilaNueva[] = [];
 
   const nombres = form.getAll("servicioNombre").map((v) => String(v).trim());
   const precios = form.getAll("servicioPrecio").map((v) => String(v).trim());
+  const minutos = form.getAll("servicioMinutos").map((v) => Number(String(v).trim()));
   nombres.forEach((nombre, i) => {
     if (!nombre) return;
     const montoRaw = precios[i] ?? "";
+    const duracion = minutos[i];
     filasNuevas.push({
       tipo: "servicio",
       clave: nombre.slice(0, 120),
       valor: "",
       monto: montoRaw ? Number(montoRaw) : null,
+      duracion: Number.isFinite(duracion) && duracion >= 5 ? Math.min(480, Math.round(duracion)) : null,
     });
   });
 
@@ -1514,6 +1511,35 @@ export async function guardarOnboardingAgente(
   if (formasPago) {
     filasNuevas.push({ tipo: "dato", clave: "Formas de pago", valor: formasPago.slice(0, 300), monto: null });
   }
+
+  /* Paso 4 (2026-10-18): las preguntas que más hacen los pacientes. Todo
+     opcional; lo que viene en blanco no se guarda y el agente sigue diciendo
+     que no tiene el dato en vez de inventarlo. */
+  const dato = (clave: string, valor: string) => {
+    if (valor) filasNuevas.push({ tipo: "dato", clave, valor: valor.slice(0, 300), monto: null });
+  };
+  const mapsLink = String(form.get("mapsLink") ?? "").trim();
+  if (/^https?:\/\//i.test(mapsLink)) dato("Ubicación en Google Maps", mapsLink);
+  dato(
+    "Parqueo",
+    ({
+      propio: "Sí, tenemos parqueo propio para pacientes.",
+      calle: "No tenemos parqueo propio, pero se puede estacionar en la calle, cerca.",
+      no: "No tenemos parqueo.",
+    } as Record<string, string>)[String(form.get("parqueo") ?? "")] ?? ""
+  );
+  dato(
+    "Acceso para silla de ruedas",
+    ({
+      si: "Sí, se puede entrar en silla de ruedas.",
+      no: "Por ahora la entrada no está adaptada para silla de ruedas.",
+    } as Record<string, string>)[String(form.get("silla") ?? "")] ?? ""
+  );
+  dato("Seguros médicos", String(form.get("seguros") ?? "").trim());
+  dato("Cancelaciones y cambios de cita", String(form.get("cancelaciones") ?? "").trim());
+  const otraPregunta = String(form.get("otraPregunta") ?? "").trim().slice(0, 120);
+  const otraRespuesta = String(form.get("otraRespuesta") ?? "").trim();
+  if (otraPregunta && otraRespuesta) dato(otraPregunta, otraRespuesta);
 
   const queNuncaPrometer = String(form.get("queNuncaPrometer") ?? "").trim();
   if (queNuncaPrometer) {
@@ -1545,7 +1571,7 @@ export async function guardarOnboardingAgente(
       clave: f.clave,
       valor: f.valor,
       monto: f.monto,
-      duracion_min: null,
+      duracion_min: f.duracion ?? null,
       orden: ++ordenPorTipo[f.tipo],
       activo: true,
     }));

@@ -16,7 +16,7 @@ export default async function OnboardingAgentePage() {
       <Cabecera
         eyebrow="El agente"
         titulo="Contanos de tu negocio"
-        descripcion="7 preguntas cortas, una sola vez. Con esto el agente ya contesta bien desde el primer mensaje real — lo podés seguir afinando después."
+        descripcion="4 pasos cortos, unos 5 minutos, una sola vez. Con esto el agente ya contesta bien desde el primer mensaje real — lo podés seguir afinando después."
       />
 
       <Cuerpo>

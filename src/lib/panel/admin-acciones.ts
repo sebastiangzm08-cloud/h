@@ -31,6 +31,7 @@ import {
   PLANTILLA_RECORDATORIO_NOMBRE,
   PLANTILLAS_RECORDATORIO_MANUAL,
 } from "./agente-plantillas";
+import { horarioDesdeFormulario } from "./agente-config";
 
 export type ResultadoAccion =
   | { ok: true; mensaje: string; datos?: Record<string, unknown> }
@@ -667,13 +668,7 @@ export async function sembrarAgenda(
     maximoDiasAdelante: Math.min(90, Math.max(1, num(form.get("maximoDiasAdelante"), 30))),
   };
 
-  const horario: Record<string, [string, string][]> = {};
-  for (const dia of DIAS_AGENDA) {
-    const cerrado = form.get(`cerrado_${dia}`) === "on";
-    const ini = String(form.get(`ini_${dia}`) ?? "");
-    const fin = String(form.get(`fin_${dia}`) ?? "");
-    horario[dia] = cerrado || !ini || !fin ? [] : [[ini, fin]];
-  }
+  const horario = horarioDesdeFormulario(form, DIAS_AGENDA);
 
   const config = (asignacion.config ?? {}) as Record<string, unknown>;
   const { error: e1 } = await admin
