@@ -298,7 +298,7 @@ export function DemoEstudio({
                     <PuntoNovedad />
                     <span
                       key={totalNovedades}
-                      className="demo-pop grid h-5 min-w-5 place-items-center rounded-full bg-acento px-1.5 font-mono text-[11px] leading-none text-white"
+                      className="demo-pop grid h-5 min-w-5 place-items-center rounded-full bg-acento px-1.5 font-mono text-[11px] leading-none text-noche"
                     >
                       {totalNovedades > 9 ? "9+" : totalNovedades}
                     </span>

@@ -18,9 +18,12 @@ export function Navbar({ idioma = "es" }: { idioma?: Idioma }) {
   const headerRef = useRef<HTMLElement>(null);
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  /* Arranca ya en oscuro si el sitio lo está: evita el parpadeo blanco
-     entre el primer render y la primera medición. */
-  const [oscuro, setOscuro] = useState(site.tema === "oscuro");
+  /* Arranca ya en oscuro si el sitio lo está, o si la página abre con el
+     hero negro (la home): evita el parpadeo blanco entre el primer render y
+     la primera medición. */
+  const [oscuro, setOscuro] = useState(
+    site.tema === "oscuro" || pathname === "/" || pathname === "/en"
+  );
 
   /**
    * La barra se pinta según la sección que tiene detrás: mira qué elemento
@@ -83,10 +86,10 @@ export function Navbar({ idioma = "es" }: { idioma?: Idioma }) {
         "sticky top-0 z-50 border-b transition-colors duration-300",
         enOscuro
           ? scrolled
-            ? "border-noche-texto/10 bg-noche/90 backdrop-blur-md"
+            ? "border-noche-texto bg-noche backdrop-blur-md"
             : "border-transparent bg-noche"
           : scrolled
-            ? "border-line bg-paper/85 backdrop-blur-md"
+            ? "border-line bg-paper backdrop-blur-md"
             : "border-transparent bg-paper"
       )}
     >
@@ -130,7 +133,7 @@ export function Navbar({ idioma = "es" }: { idioma?: Idioma }) {
               className={cn(
                 "text-[0.875rem] tracking-tight transition-colors duration-300",
                 enOscuro
-                  ? "text-noche-texto/70 hover:text-noche-texto"
+                  ? "text-noche-texto hover:text-noche-texto"
                   : pathname === l.href
                     ? "text-ink"
                     : "text-ink-mute hover:text-ink"
@@ -148,7 +151,7 @@ export function Navbar({ idioma = "es" }: { idioma?: Idioma }) {
               className={cn(
                 "text-[0.875rem] tracking-tight transition-colors duration-300",
                 enOscuro
-                  ? "text-noche-texto/70 hover:text-noche-texto"
+                  ? "text-noche-texto hover:text-noche-texto"
                   : "text-ink-mute hover:text-ink"
               )}
             >

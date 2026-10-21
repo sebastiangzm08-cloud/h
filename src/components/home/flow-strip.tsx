@@ -107,7 +107,7 @@ export function FlowStrip({
 
         {/* Luz en la punta del avance */}
         <motion.div
-          className="pointer-events-none absolute top-[11px] h-[4px] w-[30px] -translate-y-[1.5px] rounded-full bg-acento/50 blur-[4px]"
+          className="pointer-events-none absolute top-[11px] h-[4px] w-[30px] -translate-y-[1.5px] hidden"
           style={{ left: `${margen}%` }}
           animate={{ x: `calc(${avance} * ${trazado} * 1%)` }}
           transition={{ type: "spring", stiffness: 160, damping: 26 }}
@@ -142,7 +142,7 @@ export function FlowStrip({
                   {esActivo && (
                     <motion.span
                       layoutId={`flujo-resplandor-${sufijoLayout}`}
-                      className="absolute h-[26px] w-[26px] rounded-full bg-acento/25 blur-[5px]"
+                      className="absolute h-[26px] w-[26px] rounded-full border border-acento"
                       transition={{
                         type: "spring",
                         stiffness: 320,
@@ -174,7 +174,7 @@ export function FlowStrip({
                         esActivo
                           ? "h-[17px] w-[17px] text-acento"
                           : yaPaso
-                            ? "h-[12px] w-[12px] text-acento/70"
+                            ? "h-[12px] w-[12px] text-acento"
                             : "h-[11px] w-[11px] text-line-strong group-hover:text-ink-mute"
                       )}
                     />
@@ -202,7 +202,7 @@ export function FlowStrip({
 
       {/* Qué pasa en el paso activo */}
       {detalleActivo && (
-        <div className="mt-6 min-h-[76px] rounded-xl border border-line bg-paper/70 p-4 sm:min-h-[64px]">
+        <div className="mt-6 min-h-[76px] rounded-xl border border-line bg-paper p-4 sm:min-h-[64px]">
           <motion.p
             key={activo}
             initial={{ opacity: 0, y: 6 }}

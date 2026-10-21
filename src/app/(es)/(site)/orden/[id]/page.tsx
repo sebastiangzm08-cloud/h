@@ -33,7 +33,7 @@ import {
   type ProcesoSlug,
   type ToolId,
 } from "@/lib/content";
-import { colones, site, waLink } from "@/config/site";
+import { colones, cuposFundador, mensualVigente, site, waLink } from "@/config/site";
 import { Button } from "@/components/ui/button";
 import { ReceiptUpload } from "@/components/receipt-upload";
 import { FlowStrip } from "@/components/home/flow-strip";
@@ -97,25 +97,30 @@ type OrdenResuelta =
     };
 
 function resolverOrden(id: string): OrdenResuelta | null {
-  const esAnual = id.endsWith("-anual");
+  // Con el pago anual apagado, `growth-anual` no resuelve a ningún plan → 404.
+  const esAnual = site.pago.pagoAnual && id.endsWith("-anual");
   const planId = esAnual ? id.replace(/-anual$/, "") : id;
   const plan = planes.find((p) => p.id === planId);
   if (plan) {
-    const monto = esAnual
-      ? plan.mensual * site.pago.mesesPagoAnual
-      : plan.mensual;
+    // Precio de fundador mientras queden cupos (site.fundador): se cobra
+    // desde el primer mes y se mantiene mientras la clínica no cancele.
+    const fundador = !esAnual && cuposFundador() > 0;
+    const mensual = mensualVigente(plan.mensual);
+    const monto = esAnual ? plan.mensual * site.pago.mesesPagoAnual : mensual;
     return {
       tipo: "plan",
       plan,
       esAnual,
       numero: `HZ-PLAN-${plan.id.toUpperCase()}${esAnual ? "-ANUAL" : ""}`,
-      titulo: `Plan ${plan.nombre}${esAnual ? " · pago anual" : ""}`,
+      titulo: `Plan ${plan.nombre}${esAnual ? " · pago anual" : fundador ? " · precio de fundador" : ""}`,
       detalle: esAnual
         ? `${colones(monto)} por el año (equivale a ${site.pago.mesesPagoAnual} meses), sin costo de instalación`
-        : `${colones(plan.mensual)} por mes, sin costo de instalación`,
+        : fundador
+          ? `${colones(mensual)} por mes en lugar de ${colones(plan.mensual)}, mientras no canceles. Sin costo de instalación`
+          : `${colones(plan.mensual)} por mes, sin costo de instalación`,
       monto,
       montoLabel: esAnual ? "Pago anual" : "Primer mes",
-      montoRecurrente: esAnual ? null : plan.mensual,
+      montoRecurrente: esAnual ? null : mensual,
     };
   }
   if (id.startsWith("catalogo-")) {
@@ -313,17 +318,16 @@ export default async function OrdenPage({
                 </div>
 
                 <div className="mt-8 rounded-2xl border border-line-strong bg-noche p-7 text-noche-texto">
-                  <p className="text-[0.9375rem] leading-relaxed text-noche-texto/75">
+                  <p className="text-[0.9375rem] leading-relaxed text-noche-texto">
                     Hacé el depósito por el monto exacto y confirmá por
                     WhatsApp adjuntando el comprobante. En cuanto se confirme
-                    el pago te llega la factura electrónica y el checklist
-                    de arranque.
+                    el pago te mandamos el checklist de arranque.
                   </p>
                   <Button
                     href={waLink(mensaje)}
                     variant="secondary"
                     size="lg"
-                    className="mt-6 w-full border-noche-texto/25 bg-noche-texto text-noche hover:bg-noche-texto/90"
+                    className="mt-6 w-full border-noche-texto bg-noche-texto text-noche"
                   >
                     <WhatsappLogo size={18} weight="fill" />
                     Confirmar por WhatsApp
@@ -344,7 +348,7 @@ export default async function OrdenPage({
                  dice a qué plan pertenece, con el precio real de ESE
                  plan, y se confirma por WhatsApp. Sin SINPE ni
                  comprobante acá — eso es al contratar el plan. */
-              <div className="rounded-2xl border border-acento/30 bg-acento/[0.06] p-7">
+              <div className="rounded-2xl border border-acento p-7">
                 <p className="eyebrow mb-3 text-acento">
                   Incluida en el plan
                 </p>

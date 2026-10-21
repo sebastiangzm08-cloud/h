@@ -72,7 +72,7 @@ export function PanelDemo({
 
   return (
     <div
-      className="panel-scope @container flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-line-strong bg-paper text-ink shadow-[0_40px_100px_-40px_rgba(124,92,255,0.3)]"
+      className="panel-scope @container flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-line-strong bg-paper text-ink shadow-[0_40px_100px_-40px_rgba(255,255,255,0.1)]"
       data-tema="oscuro"
     >
       {/* barra de marca */}

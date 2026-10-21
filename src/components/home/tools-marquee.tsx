@@ -11,9 +11,9 @@ export function ToolsMarquee({ idioma = "es" }: { idioma?: Idioma }) {
     <section
       data-tema="oscuro"
       aria-label={t.titulo}
-      className="border-t border-noche-texto/10 bg-noche pt-8 pb-10"
+      className="border-y border-noche-texto bg-noche pt-8 pb-10"
     >
-      <p className="eyebrow mx-auto mb-6 max-w-7xl px-5 text-noche-texto/55 sm:px-8">
+      <p className="eyebrow mx-auto mb-6 max-w-7xl px-5 text-noche-texto sm:px-8">
         {t.titulo}
       </p>
       {/* La lista real va para lectores de pantalla; la cinta animada es
@@ -30,10 +30,10 @@ export function ToolsMarquee({ idioma = "es" }: { idioma?: Idioma }) {
           {[...items, ...items].map((item, i) => (
             <span
               key={i}
-              className="flex items-center gap-12 text-[1.05rem] font-medium tracking-tight whitespace-nowrap text-noche-texto/55"
+              className="flex items-center gap-12 text-[1.05rem] font-medium tracking-tight whitespace-nowrap text-noche-texto"
             >
               {item}
-              <span className="h-1 w-1 rounded-full bg-acento/60" />
+              <span className="h-1 w-1 rounded-full bg-acento" />
             </span>
           ))}
         </div>

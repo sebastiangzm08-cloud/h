@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Reveal } from "@/components/reveal";
 import { PlanCard } from "@/components/plans/plan-card";
+import { site } from "@/config/site";
 import type { AutomatizacionPublica, PlanPublico } from "@/lib/content";
 import { getCopy } from "@/lib/copy";
 import type { Idioma } from "@/lib/i18n";
@@ -22,7 +23,7 @@ export function PlansGrid({
 }) {
   const t = getCopy(idioma).plan.periodo;
   const [periodo, setPeriodo] = useState<Periodo>("mensual");
-  const hayAnual = idioma === "es";
+  const hayAnual = idioma === "es" && site.pago.pagoAnual;
 
   return (
     <div>

@@ -94,7 +94,7 @@ export const faq: FaqItem[] = [
   },
   {
     q: "How long until it's live?",
-    a: "Up to about a week, depending on how ready your information is (services, prices, hours) and access to your number. We confirm it on the diagnostic call.",
+    a: "2 days at most, counted from when you send us everything we need: your services, prices and hours, plus access to your WhatsApp number.",
   },
   {
     q: "How does pricing work?",

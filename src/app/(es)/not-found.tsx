@@ -30,15 +30,7 @@ export default function NotFound() {
               Anclado al centro del bloque (no a los bordes de la sección)
               para que siempre coincida con el contenido, sea cual sea su
               alto real. */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 left-1/2 h-[560px] w-[1100px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-acento/20 blur-[150px]"
-          />
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 left-1/2 h-[420px] w-[520px] translate-x-1/4 translate-y-1/4 rounded-full bg-acento/10 blur-[130px]"
-          />
-          <ConstellationField className="pointer-events-none absolute inset-0 h-full w-full text-noche-texto/[0.14]" />
+          <ConstellationField className="pointer-events-none absolute inset-0 h-full w-full text-noche-texto" />
 
           <div className="relative mx-auto flex max-w-3xl flex-col items-center px-5 text-center sm:px-8">
             <ConstellationMark
@@ -46,7 +38,7 @@ export default function NotFound() {
               className="mb-10 h-24 w-24 text-noche-texto drop-shadow-[0_0_28px_var(--color-acento)] sm:h-28 sm:w-28"
             />
 
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-acento/30 bg-acento/[0.07] px-3 py-1.5 text-[0.75rem] font-medium tracking-tight text-noche-texto/80">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-acento px-3 py-1.5 text-[0.75rem] font-medium tracking-tight text-noche-texto">
               <Sparkle size={13} weight="fill" className="text-acento-claro" />
               Error 404
             </span>
@@ -56,7 +48,7 @@ export default function NotFound() {
               <span className="text-acento-claro">entre las estrellas</span>
             </h1>
 
-            <p className="mt-6 max-w-[46ch] text-[1.0625rem] leading-relaxed text-noche-texto/60">
+            <p className="mt-6 max-w-[46ch] text-[1.0625rem] leading-relaxed text-noche-texto">
               El enlace que seguiste no existe o se movió. Volvamos a un
               punto conocido del mapa.
             </p>

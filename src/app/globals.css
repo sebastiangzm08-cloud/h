@@ -2,42 +2,48 @@
 
 /* ==========================================================================
    Hoshizora — sistema de diseño
-   Monocromo. Blanco, grises, casi-negro. Un solo acento: el propio negro.
-   Los grises son todos fríos (familia zinc). No mezclar con grises cálidos.
+   SOLO BLANCO Y NEGRO (decisión de Sebastian, 2026-10-20). El logo es
+   blanco sobre negro y la marca no lleva grises: la jerarquía se arma con
+   tamaño, peso y espacio, nunca bajando el color a gris.
+
+   Los tokens "suaves" (ink-soft/mute/faint, surface-*, line-*) siguen
+   existiendo para no reescribir cada componente, pero valen lo mismo que
+   la tinta o el papel puros. El panel (.panel-scope) tiene los suyos.
    ========================================================================== */
 
 @theme {
-  /* Superficies. Los grises tienen que LEERSE como gris al lado del blanco:
-     con tonos por encima de #F5 el ojo no los distingue del papel. */
+  /* Superficies: todas papel puro. */
   --color-paper: #ffffff;
-  --color-surface: #f6f6f7;
-  --color-surface-2: #efeff1;
-  --color-surface-3: #e7e7ea;
+  --color-surface: #ffffff;
+  --color-surface-2: #ffffff;
+  --color-surface-3: #ffffff;
 
-  /* Tinta */
-  --color-ink: #0a0a0b;
-  --color-ink-soft: #18181b;
-  --color-ink-mute: #52525b;
-  --color-ink-faint: #7a7a84;
+  /* Tinta: toda negra pura. */
+  --color-ink: #09090b;
+  --color-ink-soft: #09090b;
+  --color-ink-mute: #09090b;
+  --color-ink-faint: #09090b;
 
-  /* Líneas. Tienen que ser más oscuras que --color-surface-3, si no
-     desaparecen justo sobre las secciones grises. */
-  --color-line: #dcdce1;
-  --color-line-strong: #c6c6ce;
-  --color-line-dark: #26262b;
+  /* Líneas: 1 px de tinta, nítidas. Sin grises que separen. */
+  --color-line: #09090b;
+  --color-line-strong: #09090b;
+  --color-line-dark: #09090b;
 
   /* Noche: las secciones que son oscuras SIEMPRE, en cualquier tema.
-     No se invierten al cambiar de tema; por eso tienen tokens propios.
-     El negro lleva una pizca de violeta: un cielo nocturno real no es
-     negro puro, y Hoshizora es justamente "cielo estrellado". */
-  --color-noche: #0a0a0f;
+     No se invierten al cambiar de tema; por eso tienen tokens propios. */
+  --color-noche: #09090b;
   --color-noche-texto: #ffffff;
 
-  /* Acento. Se usa con avaricia: estado activo, resplandores y el CTA
-     principal. Nunca como campo de color grande ni en bloques de texto. */
-  --color-acento: #7c5cff;
-  --color-acento-claro: #a68bff;
-  --color-acento-oscuro: #5b3fd6;
+  /* Acento. MONOCROMO desde el 2026-10-20: el logo es una constelación
+     blanca sobre negro, así que la "luz" del sitio es la de una estrella,
+     no un color. El violeta queda solo en el panel (.panel-scope, abajo).
+       acento        → blanco puro: estado activo, resplandores, marcas.
+       acento-claro  → plata: la frase destacada y los íconos sobre noche.
+       acento-oscuro → gris claro: hover del CTA blanco.
+     Se usa con avaricia, igual que antes. */
+  --color-acento: #ffffff;
+  --color-acento-claro: #ffffff;
+  --color-acento-oscuro: #ffffff;
 
   /* Estados (funcionales, no de marca) */
   --color-ok: #4d7c5f;
@@ -64,20 +70,19 @@
    ven afectadas porque ya eran oscuras.
    ========================================================================== */
 html[data-sitio="oscuro"] {
-  /* Nada de grises neutros: en oscuro se ven apagados y sucios.
-     Todas las superficies llevan violeta, cada vez más claro al elevarse. */
-  --color-paper: #0a0a12;
-  --color-surface: #12121f;
-  --color-surface-2: #191927;
-  --color-surface-3: #212133;
+  /* Solo negro y blanco puros (2026-10-20). */
+  --color-paper: #09090b;
+  --color-surface: #09090b;
+  --color-surface-2: #09090b;
+  --color-surface-3: #09090b;
 
   --color-ink: #ffffff;
-  --color-ink-soft: #eaeaf2;
-  --color-ink-mute: #a6a6b8;
-  --color-ink-faint: #8d8da2;
+  --color-ink-soft: #ffffff;
+  --color-ink-mute: #ffffff;
+  --color-ink-faint: #ffffff;
 
-  --color-line: #272738;
-  --color-line-strong: #3d3d55;
+  --color-line: #ffffff;
+  --color-line-strong: #ffffff;
 
   /* En oscuro los estados necesitan más luz para leerse */
   --color-ok: #6fae87;
@@ -85,10 +90,132 @@ html[data-sitio="oscuro"] {
   --color-bad: #c98080;
 }
 
-/* El acento también manda en selección y foco cuando está oscuro */
+/* ==========================================================================
+   INTERCALADO (2026-10-20) — blanco y negro alternados, sección por sección.
+   HOY SIN USO VISIBLE: el mismo día Sebastian pidió todo en fondo negro
+   (los fondos blancos "saturan la vista"); el sitio volvió a tema "oscuro"
+   y el blanco quedó solo en piezas puntuales (botones, tarjeta del plan).
+   Las clases quedan por si se retoma.
+   Dos clases que invierten una sección entera sin tocar sus componentes,
+   porque solo redefinen los tokens que ya usan:
+     .tema-noche → una sección clara (paper/ink) pasa a negro con letra blanca.
+     .tema-dia   → una sección `noche` pasa a blanco con letra negra.
+   Acompañarlas con data-tema="oscuro" / "claro" para que la barra de
+   navegación lea bien el fondo que tiene detrás.
+   ========================================================================== */
+.tema-noche {
+  --color-paper: #09090b;
+  --color-surface: #09090b;
+  --color-surface-2: #09090b;
+  --color-surface-3: #09090b;
+
+  --color-ink: #ffffff;
+  --color-ink-soft: #ffffff;
+  --color-ink-mute: #ffffff;
+  --color-ink-faint: #ffffff;
+
+  --color-line: #ffffff;
+  --color-line-strong: #ffffff;
+
+  --color-ok: #6fae87;
+  --color-warn: #c2a06a;
+  --color-bad: #c98080;
+}
+
+.tema-dia {
+  --color-noche: #ffffff;
+  --color-noche-texto: #09090b;
+
+  /* El acento es "la luz" de la sección: sobre blanco, la luz es tinta. */
+  --color-acento: #09090b;
+  --color-acento-claro: #09090b;
+  --color-acento-oscuro: #09090b;
+}
+
+/* ==========================================================================
+   SUBRAYADO QUE SE DIBUJA — la frase destacada del hero (2026-10-20).
+   Una barra del color del texto que crece de izquierda a derecha, se queda
+   un rato y se vuelve a dibujar. Sigue el salto de línea (clone), así cada
+   renglón lleva su propia barra.
+   ========================================================================== */
+.subrayado-vivo {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 100% 0.075em;
+  padding-bottom: 0.06em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  animation: subrayar 6s var(--ease-out-quart) 0.4s infinite both;
+}
+
+@keyframes subrayar {
+  0% {
+    background-size: 0% 0.075em;
+  }
+  18%,
+  94% {
+    background-size: 100% 0.075em;
+  }
+  100% {
+    background-size: 0% 0.075em;
+    background-position: 100% 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .subrayado-vivo {
+    animation: none;
+  }
+}
+
+/* ==========================================================================
+   PRECIO DE FUNDADOR CON MOVIMIENTO (2026-10-20) — ver fundador-vivo.tsx.
+   ========================================================================== */
+/* Pulso de luz que da vueltas por el borde de la tarjeta (pathLength=100). */
+.borde-vivo {
+  stroke-dasharray: 9 91;
+  animation: borde-vivo 4.5s linear infinite;
+}
+@keyframes borde-vivo {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
+/* El precio, al terminar de bajar, queda latiendo: un golpe rápido y una
+   pausa, como un pulso. Crece desde abajo a la izquierda para no taparle
+   el "/ mes". */
+.precio-late {
+  display: inline-block;
+  animation: precio-late 2.2s var(--ease-out-quart) infinite;
+}
+@keyframes precio-late {
+  0%,
+  40%,
+  100% {
+    transform: scale(1);
+  }
+  12% {
+    transform: scale(1.07);
+  }
+  24% {
+    transform: scale(1.02);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .borde-vivo,
+  .precio-late {
+    animation: none;
+  }
+}
+
+/* El acento también manda en selección y foco cuando está oscuro.
+   Acento blanco → el texto seleccionado va en negro para leerse. */
 html[data-sitio="oscuro"] ::selection {
   background: var(--color-acento);
-  color: #ffffff;
+  color: var(--color-noche);
 }
 
 html[data-sitio="oscuro"] :focus-visible {
@@ -128,6 +255,12 @@ html[data-sitio="oscuro"] :focus-visible {
 
   --color-line: #242429;
   --color-line-strong: #33333b;
+
+  /* El sitio público pasó a monocromo (2026-10-20); el panel conserva su
+     violeta. Se fija acá para que nada del panel cambie por arrastre. */
+  --color-acento: #7c5cff;
+  --color-acento-claro: #a68bff;
+  --color-acento-oscuro: #5b3fd6;
 
   /* Más apagados que en el sitio: en un tablero el color es información,
      no decoración, y compite con los datos si grita. */

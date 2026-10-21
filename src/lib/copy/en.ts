@@ -149,7 +149,14 @@ export const en: Copy = {
       etiqueta: "Illustrative example",
       negocio: "Bright Smile Dental",
       estado: "AI Agent",
-      nota: "Sample conversation with made-up details for illustration.",
+      contacto: "Laura Smith",
+      canal: "WhatsApp",
+      dia: "Today",
+      tomar: "Hand off to a person",
+      consulto: "checked",
+      autorIA: "AI",
+      sistema: "Appointment booked · Wednesday 2:30 PM",
+      nota: "This is how a conversation looks in your dashboard. Sample conversation with made-up details.",
       mensajes: [
         { de: "cliente", texto: "Hi, how much is a teeth cleaning?", hora: "11:42 PM" },
         { de: "agente", texto: "Hi there! A cleaning is $120 and takes about 40 minutes. Want me to find you an appointment?", hora: "11:42 PM" },
@@ -246,6 +253,11 @@ export const en: Copy = {
       titulo: "One plan. Simple pricing.",
       lead: "The full AI Agent, live and working, with your dashboard.",
       verTodo: "See the full plan",
+      datos: [
+        { valor: "2 days", texto: "at most to go live" },
+        { valor: "3 months", texto: "minimum commitment" },
+        { valor: "24/7", texto: "replies, nights and weekends" },
+      ],
     },
     tarjeta: {
       recomendado: "One plan",
@@ -257,6 +269,17 @@ export const en: Copy = {
       setupEtiqueta: "One-time setup",
       minimoEtiqueta: "Minimum commitment",
       minimoValor: (meses: number) => `${meses} months`,
+      verTodoIncluye: "See everything included",
+      /* Founder pricing only exists on the Spanish (Costa Rica) site. */
+      fundador: {
+        etiqueta: "Founder price",
+        regular: "Regular price",
+        cupos: (quedan: number, total: number) => `${quedan} of ${total} spots left`,
+        condicion:
+          "Paid from the first month and kept while you stay. If you cancel, the founder price is gone.",
+        agotados: "Founder spots are taken",
+        descuento: (pct: number) => `−${pct}%`,
+      },
     },
     periodo: {
       etiqueta: "Billing period",

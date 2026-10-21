@@ -20,6 +20,15 @@ export const site = {
      No hay que tocar ninguna sección: los colores salen de tokens. */
   tema: "oscuro" as "mixto" | "oscuro",
 
+  /* SITIO EN INGLÉS (/en). APAGADO el 2026-10-20 por decisión de Sebastian:
+     por ahora solo se vende en Costa Rica. Con false:
+       - toda URL /en... redirige (307, temporal) a su par en español;
+       - nadie de EE. UU. se manda al inglés ni con ?lang=en;
+       - el sitemap y los hreflang dejan de anunciar el inglés;
+       - la página de error no ofrece "Back to the English site".
+     Las páginas siguen en src/app/(en): poné true y vuelve todo. */
+  sitioIngles: false,
+
   /* Aviso superior de "esto es un borrador". Poné true para volver a mostrarlo. */
   mostrarAvisoBorrador: false,
 
@@ -61,6 +70,11 @@ export const site = {
     // eliminó el 30/8/2026 por pedido del usuario. El precio del plan es
     // el mismo siempre, no hay "precio introductorio" que después suba.
     // Pago anual: se cobran estos meses en vez de 12 (dos meses gratis).
+    // APAGADO el 2026-10-20 por decisión de Sebastian: no está en el
+    // contrato y choca con el precio fundador y el mínimo de 3 meses. Con
+    // false desaparece el selector de /planes y /diagnostico, y las órdenes
+    // `*-anual` responden 404. Para volver a ofrecerlo, poné true.
+    pagoAnual: false,
     mesesPagoAnual: 10,
     // Agregar una automatización a un plan ya activo no cobra
     // construcción aparte: solo sube la mensualidad, según cuánto
@@ -73,6 +87,19 @@ export const site = {
     },
   },
 
+  /* PRECIO DE FUNDADOR (decisión de Sebastian, 2026-10-20). Solo las
+     primeras clínicas, en colones. Se paga desde el primer mes (no hay mes
+     gratis) y se mantiene mientras no cancelen: si cancelan, se pierde.
+
+     ⚠️ CADA VEZ QUE SE CIERRA UN FUNDADOR, SUMAR 1 A `ocupados`.
+     Cuando ocupados = cupos, el sitio vuelve solo al precio regular y
+     muestra "Cupos de fundador agotados". */
+  fundador: {
+    precio: 50000,
+    cupos: 3,
+    ocupados: 0,
+  },
+
   /* Días del ciclo de cobro manual (alimenta el flujo de recordatorios) */
   cobro: {
     avisoPrevioDias: 3,
@@ -80,6 +107,17 @@ export const site = {
     avisoSuspensionDias: 2,
   },
 } as const;
+
+/** Cupos de fundador que quedan (0 = agotados). */
+export function cuposFundador() {
+  return Math.max(0, site.fundador.cupos - site.fundador.ocupados);
+}
+
+/** Mensualidad que paga hoy una clínica nueva en colones: la de fundador
+    mientras queden cupos, la regular después. */
+export function mensualVigente(regular: number) {
+  return cuposFundador() > 0 ? site.fundador.precio : regular;
+}
 
 export function waLink(mensaje: string) {
   return `https://wa.me/${site.contacto.whatsapp}?text=${encodeURIComponent(mensaje)}`;

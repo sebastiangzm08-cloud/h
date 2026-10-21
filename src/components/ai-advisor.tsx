@@ -187,7 +187,7 @@ export function AIAdvisor({
               )}
             </div>
 
-            <div className="rounded-2xl border border-acento/30 bg-acento/[0.06] p-6">
+            <div className="rounded-2xl border border-acento p-6">
               {sugerencia.encaja !== "no" && (
                 <>
                   <p className="eyebrow mb-2 text-acento">{t.planTitulo}</p>

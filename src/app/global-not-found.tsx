@@ -29,26 +29,30 @@ export default function GlobalNotFound() {
         <p className="mt-4 max-w-[44ch] text-[1rem] leading-relaxed text-ink-mute">
           El enlace no existe o se movió.
         </p>
-        <p lang="en" className="mt-2 max-w-[44ch] text-[1rem] leading-relaxed text-ink-mute">
-          This page doesn&apos;t exist, or it moved.
-        </p>
+        {site.sitioIngles && (
+          <p lang="en" className="mt-2 max-w-[44ch] text-[1rem] leading-relaxed text-ink-mute">
+            This page doesn&apos;t exist, or it moved.
+          </p>
+        )}
         <div className="mt-9 flex flex-col gap-3 sm:flex-row">
           {/* <a> normal a propósito: este documento es su propio layout raíz,
               no hay router de Next para una navegación suave. */}
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a
             href="/"
-            className="inline-flex h-[3.25rem] items-center justify-center rounded-full bg-gradient-to-b from-acento-claro to-acento px-7 text-[0.975rem] font-medium tracking-tight text-noche-texto"
+            className="inline-flex h-[3.25rem] items-center justify-center rounded-full bg-noche-texto px-7 text-[0.975rem] font-medium tracking-tight text-noche transition-colors hover:bg-acento-oscuro"
           >
             Volver al inicio
           </a>
-          <a
-            href="/en"
-            lang="en"
-            className="inline-flex h-[3.25rem] items-center justify-center rounded-full border border-line-strong px-7 text-[0.975rem] font-medium tracking-tight text-ink"
-          >
-            Back to the English site
-          </a>
+          {site.sitioIngles && (
+            <a
+              href="/en"
+              lang="en"
+              className="inline-flex h-[3.25rem] items-center justify-center rounded-full border border-line-strong px-7 text-[0.975rem] font-medium tracking-tight text-ink"
+            >
+              Back to the English site
+            </a>
+          )}
         </div>
       </body>
     </html>

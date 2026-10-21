@@ -15,7 +15,7 @@ export default function TerminosPage() {
     <LegalPage
       eyebrow="Legal"
       title="Términos de servicio"
-      actualizado="8 de septiembre de 2026"
+      actualizado="20 de octubre de 2026"
       secciones={[
         {
           titulo: "Quién presta el servicio",
@@ -26,7 +26,7 @@ export default function TerminosPage() {
         {
           titulo: "Alcance del servicio",
           parrafos: [
-            "La agencia diseña, implementa y mantiene automatizaciones de procesos de negocio sobre las herramientas que el cliente ya utiliza. El alcance de cada proyecto queda definido por escrito antes de comenzar, junto con el precio y el plazo.",
+            "La agencia instala, configura y mantiene el Agente IA de WhatsApp sobre el número del negocio del cliente, junto con su panel. El alcance, el precio y las condiciones quedan por escrito en un contrato antes de comenzar.",
           ],
         },
         {
@@ -48,7 +48,10 @@ export default function TerminosPage() {
         {
           titulo: "Cancelación",
           parrafos: [
-            "El cliente puede cancelar el plan mensual en cualquier momento, con el aviso previo que se defina en el contrato particular. Al cancelar, las automatizaciones activas bajo ese plan dejan de ejecutarse. No se cobra costo de instalación ni puesta en marcha, y no hay permanencia forzada.",
+            "El plan tiene una permanencia mínima de 3 meses. Cumplido ese plazo, el cliente puede cancelarlo avisando con al menos un mes de anticipación: el servicio termina en su fecha de pago, sin cortes a mitad de mes ni devoluciones por días sueltos. Si el aviso llega tarde, la baja corre al ciclo siguiente.",
+            "Hoshizora también puede terminar el servicio sin causa avisando con un mes de anticipación, en la fecha de pago del cliente.",
+            "Si la agencia falla de forma repetida y no lo corrige, el cliente puede irse sin cumplir los 3 meses mínimos y sin el mes de aviso. Las condiciones exactas quedan en el contrato particular.",
+            "Al cancelar, el agente deja de atender y se desconecta el número de nuestro sistema. No se cobra costo de instalación ni puesta en marcha.",
           ],
         },
         {

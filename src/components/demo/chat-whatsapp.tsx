@@ -120,7 +120,7 @@ export function ChatWhatsapp({
         "flex h-full flex-col overflow-hidden bg-[#0b141a]",
         /* Celular: pantalla plana. Escritorio: el marco de un celular. */
         "max-xl:rounded-2xl max-xl:border max-xl:border-line-strong",
-        "xl:rounded-[2.25rem] xl:border-[6px] xl:border-[#0a0a0a] xl:bg-black xl:shadow-[0_40px_100px_-24px_rgba(124,92,255,0.35)] xl:ring-1 xl:ring-white/10"
+        "xl:rounded-[2.25rem] xl:border-[6px] xl:border-[#0a0a0a] xl:bg-black xl:shadow-[0_40px_100px_-24px_rgba(255,255,255,0.12)] xl:ring-1 xl:ring-white/10"
       )}
     >
       {/* cabecera */}

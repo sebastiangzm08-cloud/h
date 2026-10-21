@@ -36,7 +36,8 @@
    ========================================================================== */
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { CLAVE_IDIOMA, paresDeRutas, rutaEquivalente } from "@/lib/i18n";
+import { CLAVE_IDIOMA, idiomaDeRuta, paresDeRutas, rutaEquivalente } from "@/lib/i18n";
+import { site } from "@/config/site";
 
 /* ==========================================================================
    PÁGINAS PÚBLICAS (español) — idioma automático para visitantes de EE. UU.
@@ -98,6 +99,20 @@ function redirigir(request: NextRequest, a: string, idioma?: "es" | "en") {
 
 function respuestaPublica(request: NextRequest) {
   const ruta = request.nextUrl.pathname;
+
+  /* Sitio en inglés apagado (site.sitioIngles): /en... vuelve a su par en
+     español y no se hace ningún cambio automático de idioma. */
+  if (!site.sitioIngles) {
+    if (idiomaDeRuta(ruta) === "en") {
+      return redirigir(request, rutaEquivalente(ruta, "es"));
+    }
+    if (request.nextUrl.searchParams.get("lang") === "en") {
+      const limpia = new URL(request.url);
+      limpia.searchParams.delete("lang");
+      return redirigir(request, limpia.pathname + limpia.search);
+    }
+    return NextResponse.next();
+  }
 
   /* Forma manual de elegir idioma: /?lang=en  o  /planes?lang=es */
   const pedido = request.nextUrl.searchParams.get("lang");
@@ -270,5 +285,9 @@ export const config = {
     "/contacto",
     "/diagnostico",
     "/mis-herramientas",
+    /* El inglés pasa por acá solo para redirigirlo si está apagado
+       (site.sitioIngles); prendido, sigue de largo. */
+    "/en",
+    "/en/:path*",
   ],
 };

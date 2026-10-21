@@ -117,7 +117,7 @@ export function AnalyzerLive({ idioma = "es" }: { idioma?: Idioma }) {
     >
       {/* Cabecera */}
       <div className="relative flex items-center justify-between">
-        <span className="eyebrow flex items-center gap-1.5 text-noche-texto/50">
+        <span className="eyebrow flex items-center gap-1.5 text-noche-texto">
           <Sparkle size={12} weight="fill" />
           {t.cabecera}
         </span>
@@ -127,7 +127,7 @@ export function AnalyzerLive({ idioma = "es" }: { idioma?: Idioma }) {
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
-          className="rounded-full border border-noche-texto/15 px-2.5 py-1 font-mono text-[0.625rem] tracking-wide text-noche-texto/60 uppercase"
+          className="rounded-full border border-noche-texto px-2.5 py-1 font-mono text-[0.625rem] tracking-wide text-noche-texto uppercase"
         >
           {esc.rubro}
         </motion.span>
@@ -136,7 +136,7 @@ export function AnalyzerLive({ idioma = "es" }: { idioma?: Idioma }) {
       {/* Acto 2: la constelación.
           Altura fija a propósito: sin ella el SVG toma su proporción natural
           (viewBox 300×180) y estira el hero fuera de pantalla. */}
-      <div className="relative h-[188px] shrink-0 py-3 sm:h-[200px]">
+      <div className="relative h-[150px] shrink-0 py-3">
         <svg
           viewBox={`0 0 ${VB.w} ${VB.h}`}
           preserveAspectRatio="xMidYMid meet"
@@ -154,7 +154,8 @@ export function AnalyzerLive({ idioma = "es" }: { idioma?: Idioma }) {
                 y2={m.y}
                 stroke="currentColor"
                 strokeWidth="1"
-                className="text-noche-texto/10"
+                strokeDasharray="2 5"
+                className="text-noche-texto"
               />
             );
           })}
@@ -164,7 +165,7 @@ export function AnalyzerLive({ idioma = "es" }: { idioma?: Idioma }) {
               cx={n.x}
               cy={n.y}
               r="2.5"
-              className="fill-noche-texto/20"
+              className="fill-noche stroke-noche-texto"
             />
           ))}
 
@@ -180,7 +181,7 @@ export function AnalyzerLive({ idioma = "es" }: { idioma?: Idioma }) {
                     stroke="currentColor"
                     strokeWidth="1.25"
                     fill="none"
-                    className="text-acento/70"
+                    className="text-acento"
                     initial={{ pathLength: 0 }}
                     animate={{ pathLength: 1 }}
                     transition={{
@@ -198,7 +199,7 @@ export function AnalyzerLive({ idioma = "es" }: { idioma?: Idioma }) {
                     cx={n.x}
                     cy={n.y}
                     r="9"
-                    className="fill-noche-texto/10"
+                    className="fill-none stroke-noche-texto"
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: [0, 1, 0.35] }}
                     transition={{ duration: 0.9, delay: i * 0.55 }}
@@ -225,7 +226,7 @@ export function AnalyzerLive({ idioma = "es" }: { idioma?: Idioma }) {
                     x={n.x}
                     y={n.y + 20}
                     textAnchor="middle"
-                    className="fill-noche-texto/70 font-mono"
+                    className="fill-noche-texto font-mono"
                     style={{ fontSize: 9, letterSpacing: "0.04em" }}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -260,7 +261,7 @@ export function AnalyzerLive({ idioma = "es" }: { idioma?: Idioma }) {
       </div>
 
       {/* Actos 1 y 3: la tarjeta */}
-      <div className="relative min-h-[164px] rounded-xl border border-noche-texto/12 bg-noche-texto/[0.035] p-5">
+      <div className="relative min-h-[132px] rounded-xl border border-noche-texto p-5">
         {fase === "resultado" ? (
             <motion.div
               key={`resultado-${idx}`}
@@ -268,14 +269,14 @@ export function AnalyzerLive({ idioma = "es" }: { idioma?: Idioma }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, ease: [0.25, 1, 0.5, 1] }}
             >
-              <p className="eyebrow mb-2 text-noche-texto/55">{t.recomendacion}</p>
+              <p className="eyebrow mb-2 text-noche-texto">{t.recomendacion}</p>
               <p className="text-[0.9375rem] leading-snug font-medium text-noche-texto">
                 {t.nombreAgente}
               </p>
-              <p className="mt-1.5 text-[0.8125rem] leading-snug text-noche-texto/70">
+              <p className="mt-1.5 text-[0.8125rem] leading-snug text-noche-texto">
                 {esc.resultado}
               </p>
-              <p className="mt-3 text-[0.75rem] text-noche-texto/50">
+              <p className="mt-3 text-[0.75rem] text-noche-texto">
                 {t.incluido}
               </p>
             </motion.div>
@@ -289,14 +290,14 @@ export function AnalyzerLive({ idioma = "es" }: { idioma?: Idioma }) {
               <motion.p
                 animate={{ opacity: fase === "detectando" ? 0.4 : 1 }}
                 transition={{ duration: 0.4 }}
-                className="text-[0.8125rem] leading-relaxed text-noche-texto/75 italic"
+                className="text-[0.8125rem] leading-relaxed text-noche-texto italic"
               >
                 &ldquo;{esc.cita.slice(0, letras)}
                 {fase === "escribiendo" && (
                   <motion.span
                     animate={{ opacity: [1, 1, 0, 0] }}
                     transition={{ duration: 0.9, repeat: Infinity }}
-                    className="ml-0.5 inline-block h-[0.9em] w-[2px] translate-y-[0.1em] bg-noche-texto/80"
+                    className="ml-0.5 inline-block h-[0.9em] w-[2px] translate-y-[0.1em] bg-noche-texto"
                   />
                 )}
                 {letras >= esc.cita.length && "”"}
@@ -307,10 +308,10 @@ export function AnalyzerLive({ idioma = "es" }: { idioma?: Idioma }) {
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: 0.15 }}
-                  className="mt-4 flex items-center gap-2 border-t border-noche-texto/10 pt-4"
+                  className="mt-4 flex items-center gap-2 border-t border-noche-texto pt-4"
                 >
                   <span className="breathe h-1.5 w-1.5 rounded-full bg-noche-texto" />
-                  <span className="font-mono text-[0.6875rem] tracking-wide text-noche-texto/60 uppercase">
+                  <span className="font-mono text-[0.6875rem] tracking-wide text-noche-texto uppercase">
                     {t.leyendo}
                   </span>
                 </motion.div>
@@ -324,8 +325,8 @@ export function AnalyzerLive({ idioma = "es" }: { idioma?: Idioma }) {
         {escenarios.map((e, i) => (
           <span
             key={e.rubro}
-            className={`h-0.5 flex-1 rounded-full transition-colors duration-500 ${
-              i === idx ? "bg-noche-texto/60" : "bg-noche-texto/15"
+            className={`flex-1 self-center rounded-full transition-colors duration-500 ${
+              i === idx ? "h-[3px] bg-noche-texto" : "h-px bg-noche-texto"
             }`}
           />
         ))}

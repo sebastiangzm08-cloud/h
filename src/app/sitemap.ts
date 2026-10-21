@@ -20,6 +20,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const bilingues = paresDeRutas.flatMap((par) => {
     const { prioridad, frecuencia } = prioridades[par.es];
+    /* Inglés apagado (site.sitioIngles): solo la página en español. */
+    if (!site.sitioIngles) {
+      return [
+        {
+          url: `${site.url}${par.es}`,
+          lastModified: ahora,
+          changeFrequency: frecuencia,
+          priority: prioridad,
+        },
+      ];
+    }
     const languages = {
       es: `${site.url}${par.es}`,
       en: `${site.url}${par.en}`,

@@ -12,7 +12,7 @@ export function Footer({ idioma = "es" }: { idioma?: Idioma }) {
   const legalEnEspanol = idioma === "en";
 
   return (
-    <footer className="border-t border-line bg-paper">
+    <footer data-tema="oscuro" className="tema-noche border-t border-line bg-paper">
       <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8">
         <div className="grid grid-cols-2 gap-10 sm:grid-cols-5">
           <div className="col-span-2">

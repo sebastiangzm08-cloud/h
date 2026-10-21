@@ -13,7 +13,10 @@ export function PlansSummary({ idioma = "es" }: { idioma?: Idioma }) {
 
   return (
     <section className="border-b border-line bg-paper">
-      <div className="mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-32">
+      <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-24">
+        {/* La tarjeta va compacta (5 puntos) y la columna de texto lleva tres
+            datos: antes la tarjeta completa era tan alta que el texto
+            centrado dejaba un bloque enorme de blanco vacío (2026-10-20). */}
         <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-12 lg:gap-16">
           <Reveal className="lg:col-span-6">
             <p className="eyebrow mb-5">{t.eyebrow}</p>
@@ -23,6 +26,24 @@ export function PlansSummary({ idioma = "es" }: { idioma?: Idioma }) {
             <p className="mt-4 max-w-[44ch] text-[0.9375rem] leading-relaxed text-ink-mute">
               {t.lead}
             </p>
+
+            <dl className="mt-10 grid max-w-lg grid-cols-1 border-t border-line sm:grid-cols-3">
+              {t.datos.map((d) => (
+                <div
+                  key={d.valor}
+                  className="border-b border-line py-5 sm:border-b-0 sm:border-l sm:px-5 sm:first:border-l-0 sm:first:pl-0"
+                >
+                  <dt className="sr-only">{d.texto}</dt>
+                  <dd>
+                    <span className="block text-[1.75rem] leading-none font-semibold tracking-tight tnum">
+                      {d.valor}
+                    </span>
+                    <span className="mt-2 block text-[0.8125rem] leading-snug">{d.texto}</span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+
             <Link
               href={hrefPlan}
               className="mt-8 inline-flex items-center gap-1.5 text-[0.9375rem] text-ink-soft underline underline-offset-4 transition-colors hover:text-ink"
@@ -39,6 +60,8 @@ export function PlansSummary({ idioma = "es" }: { idioma?: Idioma }) {
                   <PlanCard
                     plan={p}
                     idioma={idioma}
+                    compacto
+                    hrefCompleto={hrefPlan}
                     automatizacion={automatizaciones.find((a) => a.plan === p.nombre)}
                   />
                 </div>

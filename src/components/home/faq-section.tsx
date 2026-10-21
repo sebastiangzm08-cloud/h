@@ -24,7 +24,7 @@ export function FaqSection({ idioma = "es" }: { idioma?: Idioma }) {
   };
 
   return (
-    <section className="border-b border-line bg-paper">
+    <section data-tema="oscuro" className="tema-noche border-b border-line bg-paper">
       <JsonLd data={faqJsonLd} />
       <div className="mx-auto max-w-7xl px-5 py-24 sm:px-8 sm:py-32">
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12">

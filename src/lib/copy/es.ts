@@ -143,19 +143,28 @@ export const es = {
     titulo: "Un agente que atiende tu WhatsApp como lo harías vos",
     lead: "Contesta cuando vos no podés: de noche, en fin de semana o con la sala llena. Y cuando un caso necesita a una persona, te lo pasa.",
     verPlan: "Ver el plan y el precio",
+    /* Réplica de la vista Conversaciones del panel (hilo.tsx): mismo
+       encabezado, mismas burbujas y mismas marcas ("· IA", "consultó …"). */
     chat: {
       etiqueta: "Ejemplo ilustrativo",
       negocio: "Clínica Dental Sonrisa",
       estado: "Agente IA",
-      nota: "Conversación de muestra, con datos inventados para el ejemplo.",
+      contacto: "Laura Méndez",
+      canal: "WhatsApp",
+      dia: "Hoy",
+      tomar: "Transferir a humano",
+      consulto: "consultó",
+      autorIA: "IA",
+      sistema: "Cita agendada · miércoles 2:30 p. m.",
+      nota: "Así se ve una conversación en tu panel. Conversación de muestra, con datos inventados para el ejemplo.",
       mensajes: [
         { de: "cliente", texto: "Hola, buenas noches. ¿Cuánto cuesta una limpieza dental?", hora: "11:42 p. m." },
-        { de: "agente", texto: "¡Hola! La limpieza dental cuesta ₡30.000 y dura unos 40 minutos. ¿Querés que te busque una cita?", hora: "11:42 p. m." },
+        { de: "agente", texto: "¡Hola! La limpieza dental cuesta ₡30.000 y dura unos 40 minutos. ¿Querés que te busque una cita?", hora: "11:42 p. m.", herramienta: "servicios" },
         { de: "cliente", texto: "Sí, por favor", hora: "11:43 p. m." },
-        { de: "agente", texto: "Tengo estos horarios libres: martes 9:00 a. m., miércoles 2:30 p. m. o jueves 10:00 a. m. ¿Cuál te sirve?", hora: "11:43 p. m." },
+        { de: "agente", texto: "Tengo estos horarios libres: martes 9:00 a. m., miércoles 2:30 p. m. o jueves 10:00 a. m. ¿Cuál te sirve?", hora: "11:43 p. m.", herramienta: "agenda" },
         { de: "cliente", texto: "El miércoles", hora: "11:44 p. m." },
-        { de: "agente", texto: "Listo, tu cita quedó agendada: miércoles 2:30 p. m. Te voy a escribir un recordatorio antes.", hora: "11:44 p. m." },
-      ] as { de: "cliente" | "agente"; texto: string; hora: string }[],
+        { de: "agente", texto: "Listo, tu cita quedó agendada: miércoles 2:30 p. m. Te voy a escribir un recordatorio antes.", hora: "11:44 p. m.", herramienta: "agenda" },
+      ] as { de: "cliente" | "agente"; texto: string; hora: string; herramienta?: string }[],
     },
     capacidades: [
       {
@@ -244,6 +253,11 @@ export const es = {
       titulo: "Un solo plan. Sin costo de instalación.",
       lead: "El Agente IA completo y andando, con tu panel. Pagás mes a mes.",
       verTodo: "Ver el plan completo",
+      datos: [
+        { valor: "₡0", texto: "de instalación" },
+        { valor: "2 días", texto: "como máximo para tenerlo andando" },
+        { valor: "1 mes", texto: "de aviso para cancelar, después del mínimo" },
+      ],
     },
     tarjeta: {
       recomendado: "Un solo plan",
@@ -255,6 +269,17 @@ export const es = {
       setupEtiqueta: "Instalación",
       minimoEtiqueta: "Permanencia mínima",
       minimoValor: (meses: number) => `${meses} meses`,
+      verTodoIncluye: "Ver todo lo que incluye",
+      fundador: {
+        etiqueta: "Precio de fundador",
+        regular: "Precio regular",
+        cupos: (quedan: number, total: number) =>
+          `${quedan === 1 ? "Queda 1 cupo" : `Quedan ${quedan} cupos`} de ${total}`,
+        condicion:
+          "Lo pagás desde el primer mes y se mantiene mientras no canceles. Si cancelás, el precio de fundador se pierde.",
+        agotados: "Cupos de fundador agotados",
+        descuento: (pct: number) => `−${pct} %`,
+      },
     },
     periodo: {
       etiqueta: "Período de pago",
@@ -268,10 +293,10 @@ export const es = {
       comoEmpezamos: "Cómo empezamos",
       pasos: [
         "Agendás el diagnóstico gratuito (unos 30 minutos).",
-        "Cargamos tus servicios, precios y horarios y conectamos tu número.",
+        "Cargamos tus servicios, precios y horarios y conectamos tu número, en 2 días como máximo desde que nos pasás todo.",
         "El agente empieza a atender y vos ves todo en tu panel.",
       ],
-      nota: "La instalación y puesta en marcha no tienen costo. La permanencia mínima es de 3 meses. Si WhatsApp (Meta) cobra algo por los mensajes, te lo explicamos por escrito en el diagnóstico, antes de contratar. No se cobra impuesto al valor agregado por ahora. El pago anual equivale a diez meses en lugar de doce.",
+      nota: "La instalación y puesta en marcha no tienen costo. La permanencia mínima es de 3 meses; después, cancelás avisando con un mes de anticipación. Si WhatsApp (Meta) cobra algo por los mensajes, te lo explicamos por escrito en el diagnóstico, antes de contratar. No se cobra impuesto al valor agregado por ahora.",
       otro: "¿Necesitás algo distinto?",
       otroLink: "Agenda un diagnóstico",
       otroResto: "y te decimos con honestidad si lo podemos hacer.",

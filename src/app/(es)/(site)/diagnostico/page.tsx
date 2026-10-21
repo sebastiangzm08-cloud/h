@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { paginaMeta } from "@/lib/seo/pagina-meta";
 import { getCopy } from "@/lib/copy";
 import { planes } from "@/lib/content";
+import { site } from "@/config/site";
 import { DiagnosticoView } from "@/components/views/diagnostico-view";
 
 const t = getCopy("es").meta.diagnostico;
@@ -19,7 +20,8 @@ export default async function DiagnosticoPage({
 }) {
   const params = await searchParams;
   const plan = planes.find((p) => p.id === params.plan);
-  const periodoInicial = params.periodo === "anual" ? "anual" : "mensual";
+  const periodoInicial =
+    site.pago.pagoAnual && params.periodo === "anual" ? "anual" : "mensual";
 
   return (
     <DiagnosticoView idioma="es" plan={plan} periodoInicial={periodoInicial} />

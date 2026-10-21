@@ -3,6 +3,8 @@
    Los precios son PLACEHOLDER: ajustalos a tu mercado antes de publicar.
    ========================================================================== */
 
+import { colones, cuposFundador, site } from "@/config/site";
+
 /* -------------------------------------------------------------------------
    Herramientas. Alimentan el selector y la barra de la home.
    ------------------------------------------------------------------------- */
@@ -689,11 +691,11 @@ export const faq: FaqItem[] = [
   },
   {
     q: "¿Cuánto tarda en estar andando?",
-    a: "Hasta una semana, según qué tan lista esté tu información (servicios, precios, horarios) y el acceso a tu número. Lo confirmamos en el diagnóstico.",
+    a: "2 días como máximo, desde que nos pasás todo lo necesario: tus servicios, precios y horarios, y el acceso a tu número de WhatsApp.",
   },
   {
     q: "¿Qué pasa si algo falla?",
-    a: "El estado de la conexión con tu WhatsApp se ve en tu panel, y desde ahí nos escribís. El arreglo está incluido en la mensualidad.",
+    a: "El estado de la conexión con tu WhatsApp se ve en tu panel. Si el agente contesta algo mal, nos avisás y lo corregimos en 24 horas hábiles, sin costo. Si el servicio pasa más de 24 horas caído en el mes por un error nuestro, te descontamos esa parte en el siguiente cobro.",
   },
   {
     q: "¿Qué pasa si dejo de pagar?",
@@ -705,7 +707,20 @@ export const faq: FaqItem[] = [
   },
   {
     q: "¿Cómo se paga?",
-    a: "La mensualidad se paga por SINPE Móvil o transferencia bancaria, según el monto. Los datos de la cuenta te los pasamos al confirmar. Al recibir el pago se emite la factura electrónica. Si preferís pago anual, son diez meses en lugar de doce.",
+    a: "La mensualidad se paga por SINPE Móvil o transferencia bancaria, según el monto. Los datos de la cuenta te los pasamos al confirmar.",
+  },
+  /* Solo mientras queden cupos de fundador (site.fundador). */
+  ...(cuposFundador() > 0
+    ? [
+        {
+          q: "¿Qué es el precio de fundador?",
+          a: `Las primeras ${site.fundador.cupos} clínicas pagan ${colones(site.fundador.precio)} al mes en lugar de ${colones(planes[0].mensual)}, desde el primer mes. Ese precio se mantiene mientras no canceles; si cancelás, se pierde y para volver aplica el precio regular. La permanencia mínima de 3 meses es la misma.`,
+        },
+      ]
+    : []),
+  {
+    q: "¿Puedo cancelar?",
+    a: "Sí. La permanencia mínima es de 3 meses. Después, avisás con un mes de anticipación y el servicio termina en tu fecha de pago, sin cortes a mitad de mes.",
   },
   {
     q: "¿Qué cuesta además de la mensualidad?",

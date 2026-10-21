@@ -20,7 +20,7 @@ export function renderOgImage(idioma: Idioma = "es") {
           flexDirection: "column",
           justifyContent: "center",
           padding: "80px 96px",
-          background: "#0a0a12",
+          background: "#09090b",
           fontFamily: "sans-serif",
         }}
       >
@@ -63,7 +63,7 @@ export function renderOgImage(idioma: Idioma = "es") {
           style={{
             marginTop: 24,
             fontSize: 34,
-            color: "#a6a6b8",
+            color: "#a1a1aa",
             lineHeight: 1.3,
             maxWidth: 900,
           }}

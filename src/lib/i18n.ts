@@ -10,6 +10,8 @@
    del inglés. Lo usan el selector de idioma, el hreflang y el sitemap.
    ========================================================================== */
 
+import { site } from "@/config/site";
+
 export type Idioma = "es" | "en";
 
 /** Páginas que existen en los dos idiomas (mismo contenido, otra lengua). */
@@ -51,8 +53,10 @@ export function rutaEquivalente(pathname: string, destino: Idioma): string {
   return "/";
 }
 
-/** Los dos hreflang de una página que existe en ambos idiomas, o null. */
+/** Los dos hreflang de una página que existe en ambos idiomas, o null.
+    Con el sitio en inglés apagado (site.sitioIngles) no se anuncia ninguno. */
 export function alternosDe(ruta: string): { es: string; en: string } | null {
+  if (!site.sitioIngles) return null;
   const p = limpiar(ruta);
   const par = paresDeRutas.find((r) => r.es === p || r.en === p);
   return par ? { es: par.es, en: par.en } : null;

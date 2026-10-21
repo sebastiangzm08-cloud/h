@@ -8,24 +8,30 @@ type Variant =
   | "ghost"
   /* Para usar sobre fondos oscuros */
   | "inverse"
-  | "secondaryDark";
+  | "secondaryDark"
+  /* Para usar sobre una superficie `bg-ink` (tarjeta destacada) */
+  | "onInk";
 type Size = "md" | "lg";
 
 const base =
   "inline-flex items-center justify-center gap-2 rounded-full font-medium tracking-tight transition-all duration-200 ease-out active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none whitespace-nowrap";
 
+/* Solo blanco y negro (2026-10-20): el hover no aclara ni oscurece, INVIERTE.
+   Cada botón lleva un borde de su propio color para que, al invertirse, el
+   contorno siga marcando dónde está. */
 const variants: Record<Variant, string> = {
-  primary:
-    "bg-ink text-paper hover:bg-ink-soft shadow-[0_1px_0_rgba(255,255,255,0.08)_inset]",
+  primary: "border border-ink bg-ink text-paper hover:bg-paper hover:text-ink",
   secondary:
-    "bg-transparent text-ink border border-line-strong hover:border-ink hover:bg-surface-2",
-  ghost: "bg-transparent text-ink-mute hover:text-ink",
-  /* Van sobre secciones `noche`, que no se invierten con el tema.
-     El CTA principal lleva el acento: es el único botón morado del sitio. */
+    "border border-ink bg-transparent text-ink hover:bg-ink hover:text-paper",
+  ghost: "bg-transparent text-ink underline-offset-4 hover:underline",
+  /* Van sobre secciones `noche`, que no se invierten con el tema. */
   inverse:
-    "bg-gradient-to-b from-acento-claro to-acento text-noche-texto shadow-[0_6px_24px_-8px_var(--color-acento)] hover:from-acento hover:to-acento-oscuro",
+    "border border-noche-texto bg-noche-texto text-noche hover:bg-noche hover:text-noche-texto",
   secondaryDark:
-    "bg-transparent text-noche-texto border border-noche-texto/25 hover:border-noche-texto/50 hover:bg-noche-texto/10",
+    "border border-noche-texto bg-transparent text-noche-texto hover:bg-noche-texto hover:text-noche",
+  /* El color contrario al de la tarjeta, en cualquier tema: así el CTA
+     nunca queda del mismo tono que su fondo. */
+  onInk: "border border-paper bg-paper text-ink hover:bg-ink hover:text-paper",
 };
 
 const sizes: Record<Size, string> = {
