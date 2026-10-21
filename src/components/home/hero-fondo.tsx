@@ -89,18 +89,27 @@ function enPista(p: Pista, d: number): Punto {
 }
 
 export function HeroFondo() {
-  const ref = useRef<HTMLCanvasElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const fijoRef = useRef<HTMLCanvasElement>(null);
+  const vivoRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
+    const raiz = ref.current;
+    const canvasFijo = fijoRef.current;
+    const canvas = vivoRef.current;
+    if (!raiz || !canvasFijo || !canvas) return;
+    const ctxFijo = canvasFijo.getContext("2d");
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!ctxFijo || !ctx) return;
 
     const quieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let w = 0;
     let h = 0;
     let caja = { x: 0, y: 0, w: 0, h: 0 };
+    /* Zona que de verdad ocupa el circuito (en coordenadas del hero). Los dos
+       lienzos miden solo esto, no todo el hero: menos de la mitad de píxeles
+       que repintar en cada cuadro (2026-10-21, la web se sentía pesada). */
+    let zona = { x: 0, y: 0, w: 0, h: 0 };
     let pistas: Pista[] = [];
     let pulsos: Pulso[] = [];
     let ondas: Onda[] = [];
@@ -112,13 +121,9 @@ export function HeroFondo() {
     let visible = true;
 
     function armar() {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const r = canvas!.getBoundingClientRect();
+      const r = raiz!.getBoundingClientRect();
       w = r.width;
       h = r.height;
-      canvas!.width = Math.round(w * dpr);
-      canvas!.height = Math.round(h * dpr);
-      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       const rand = semilla(11);
       const ancho = w >= 1024;
@@ -128,7 +133,7 @@ export function HeroFondo() {
 
       // El "chip" es el analizador del hero (marcado con data-hero-chip):
       // las pistas se enchufan a sus bordes y él tapa lo que queda adentro.
-      const destino = canvas!.parentElement?.querySelector<HTMLElement>("[data-hero-chip]");
+      const destino = raiz!.parentElement?.querySelector<HTMLElement>("[data-hero-chip]");
       const d = destino?.getBoundingClientRect();
       caja = d
         ? { x: d.left - r.left, y: d.top - r.top, w: d.width, h: d.height }
@@ -176,13 +181,57 @@ export function HeroFondo() {
           conectar({ x: enGrilla(xBorde + (i - 1) * GRID * 2), y: h + GRID }, { x: xBorde, y: caja.y + caja.h }, false);
         }
       }
+
+      // Zona del circuito: todas las pistas + el alcance de las ondas
+      // alrededor del analizador, recortada al hero.
+      const ALCANCE_ONDA = 140;
+      let x0 = caja.x - ALCANCE_ONDA;
+      let y0 = caja.y - ALCANCE_ONDA;
+      let x1 = caja.x + caja.w + ALCANCE_ONDA;
+      let y1 = caja.y + caja.h + ALCANCE_ONDA;
+      for (const p of pistas) {
+        for (const q of p.puntos) {
+          x0 = Math.min(x0, q.x);
+          y0 = Math.min(y0, q.y);
+          x1 = Math.max(x1, q.x);
+          y1 = Math.max(y1, q.y);
+        }
+      }
+      x0 = Math.max(0, Math.floor(x0 - 4));
+      y0 = Math.max(0, Math.floor(y0 - 4));
+      x1 = Math.min(w, Math.ceil(x1 + 4));
+      y1 = Math.min(h, Math.ceil(y1 + 4));
+      zona = { x: x0, y: y0, w: Math.max(0, x1 - x0), h: Math.max(0, y1 - y0) };
+
+      // Escala tope 1,25: en líneas finas no se nota y es mucho menos trabajo
+      // para la tarjeta gráfica que 1,5 o 2.
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
+      for (const [lienzo, c] of [
+        [canvasFijo!, ctxFijo!],
+        [canvas!, ctx!],
+      ] as const) {
+        lienzo.style.left = `${zona.x}px`;
+        lienzo.style.top = `${zona.y}px`;
+        lienzo.style.width = `${zona.w}px`;
+        lienzo.style.height = `${zona.h}px`;
+        lienzo.width = Math.round(zona.w * dpr);
+        lienzo.height = Math.round(zona.h * dpr);
+        // Se dibuja en coordenadas del hero; la transformación lo corre a la zona.
+        c.setTransform(dpr, 0, 0, dpr, -zona.x * dpr, -zona.y * dpr);
+        c.fillStyle = "#ffffff";
+        c.strokeStyle = "#ffffff";
+        c.lineCap = "round";
+        c.lineJoin = "round";
+      }
+
+      dibujarFijo();
     }
 
-    function linea(p: Pista) {
-      ctx!.beginPath();
-      ctx!.moveTo(p.puntos[0].x, p.puntos[0].y);
-      for (let i = 1; i < p.puntos.length; i++) ctx!.lineTo(p.puntos[i].x, p.puntos[i].y);
-      ctx!.stroke();
+    function linea(c: CanvasRenderingContext2D, p: Pista) {
+      c.beginPath();
+      c.moveTo(p.puntos[0].x, p.puntos[0].y);
+      for (let i = 1; i < p.puntos.length; i++) c.lineTo(p.puntos[i].x, p.puntos[i].y);
+      c.stroke();
     }
 
     function punto(x: number, y: number, r: number) {
@@ -191,22 +240,30 @@ export function HeroFondo() {
       ctx!.fill();
     }
 
+    /** Capa fija: las pistas en reposo y sus pads. Se dibuja UNA vez (y al
+        cambiar el tamaño), nunca en cada cuadro. */
+    function dibujarFijo() {
+      ctxFijo!.clearRect(zona.x, zona.y, zona.w, zona.h);
+      ctxFijo!.lineWidth = 1;
+      for (const p of pistas) {
+        linea(ctxFijo!, p);
+        const fin = p.puntos[p.puntos.length - 1];
+        ctxFijo!.fillRect(fin.x - 2, fin.y - 2, 4, 4); // pad de soldadura
+      }
+    }
+
+    /** Capa viva: solo lo que se mueve (pulsos, descarga y ondas). */
     function dibujar(dt: number) {
-      ctx!.clearRect(0, 0, w, h);
-      ctx!.fillStyle = "#ffffff";
-      ctx!.strokeStyle = "#ffffff";
-      ctx!.lineCap = "round";
-      ctx!.lineJoin = "round";
+      ctx!.clearRect(zona.x, zona.y, zona.w, zona.h);
 
       // Descarga: 0..1, se apaga en 0,6 s.
       const descarga = Math.max(0, 1 - (reloj - ultimaDescarga) / 0.6);
 
-      // Pistas: finas en reposo, gruesas durante la descarga.
-      ctx!.lineWidth = 1 + descarga * GROSOR * 1.4;
-      for (const p of pistas) {
-        linea(p);
-        const fin = p.puntos[p.puntos.length - 1];
-        ctx!.fillRect(fin.x - 2, fin.y - 2, 4, 4); // pad de soldadura
+      // Durante la descarga las pistas se engrosan: se pintan gruesas encima
+      // de la capa fija solo esos 0,6 s.
+      if (descarga > 0) {
+        ctx!.lineWidth = 1 + descarga * GROSOR * 1.4;
+        for (const p of pistas) linea(ctx!, p);
       }
 
       // Descarga del chip (el analizador): un marco grueso pegado a su borde.
@@ -234,13 +291,14 @@ export function HeroFondo() {
       ctx!.globalAlpha = 1;
 
       // Pulsos: cabeza gruesa con estela de puntos que se achica.
+      const ESTELA = 7;
       for (const pu of pulsos) {
         pu.d += (pu.vel * dt) / 1000;
-        for (let s = 0; s < 12; s++) {
-          const d = pu.d - s * 5;
+        for (let s = 0; s < ESTELA; s++) {
+          const d = pu.d - s * 8;
           if (d < 0 || d > pu.pista.total) continue;
           const pt = enPista(pu.pista, d);
-          ctx!.globalAlpha = 1 - s / 12;
+          ctx!.globalAlpha = 1 - s / ESTELA;
           punto(pt.x, pt.y, GROSOR * (s === 0 ? 1.6 : 0.9));
         }
       }
@@ -252,7 +310,8 @@ export function HeroFondo() {
       reloj += dt / 1000;
       const fase = reloj % CICLO;
       // Cada vez más seguido a medida que avanza el ciclo: de ~620 ms a 55 ms.
-      if (reloj >= proximo && pistas.length) {
+      // Tope de pulsos a la vez: en el pico de la "sobrecarga" no se dispara.
+      if (reloj >= proximo && pistas.length && pulsos.length < 22) {
         const pista = pistas[Math.floor(Math.random() * pistas.length)];
         pulsos.push({ pista, d: 0, vel: 170 + Math.random() * 70 + fase * 40 });
         proximo = reloj + Math.max(0.055, 0.62 - fase * 0.12);
@@ -295,14 +354,14 @@ export function HeroFondo() {
       armar();
       if (quieto) cuadroQuieto();
     });
-    ro.observe(canvas);
+    ro.observe(raiz);
 
     const io = new IntersectionObserver(([e]) => {
       visible = e.isIntersecting;
       if (visible) arrancar();
       else parar();
     });
-    io.observe(canvas);
+    io.observe(raiz);
 
     const alCambiarPestana = () => (document.hidden ? parar() : arrancar());
     document.addEventListener("visibilitychange", alCambiarPestana);
@@ -316,10 +375,10 @@ export function HeroFondo() {
   }, []);
 
   return (
-    <canvas
-      ref={ref}
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 h-full w-full"
-    />
+    <div ref={ref} aria-hidden="true" className="pointer-events-none absolute inset-0">
+      {/* Fija: pistas en reposo (se dibuja una vez). Viva: pulsos y descarga. */}
+      <canvas ref={fijoRef} className="absolute" />
+      <canvas ref={vivoRef} className="absolute" />
+    </div>
   );
 }
