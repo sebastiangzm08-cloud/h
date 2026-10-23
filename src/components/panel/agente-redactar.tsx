@@ -167,6 +167,25 @@ export function Redactar({
 
   const atiendeAgente = conversacion.estado === "agente";
 
+  /* "Dejar la IA activa": se recuerda en este navegador. Se lee en un efecto
+     (no en el estado inicial) para no desajustar el HTML del servidor. */
+  const [dejarIA, setDejarIA] = useState(false);
+  useEffect(() => {
+    try {
+      setDejarIA(window.localStorage.getItem("hz-dejar-ia") === "1");
+    } catch {
+      /* sin almacenamiento: queda apagado */
+    }
+  }, []);
+  function alCambiarDejarIA(e: ChangeEvent<HTMLInputElement>) {
+    setDejarIA(e.target.checked);
+    try {
+      window.localStorage.setItem("hz-dejar-ia", e.target.checked ? "1" : "0");
+    } catch {
+      /* sin almacenamiento: vale solo para esta sesión */
+    }
+  }
+
   return (
     <div className="flex-none border-t border-line bg-surface pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       <BarraAcciones conversacion={conversacion} datos={datos} ponerEnCaja={ponerEnCaja} />
@@ -219,6 +238,7 @@ export function Redactar({
 
       <form onSubmit={alEnviar} className="flex items-end gap-2 px-3 pt-2 sm:px-5">
         <input type="hidden" name="conversacionId" value={conversacion.id} />
+        <input type="hidden" name="mantenerIA" value={atiendeAgente && dejarIA ? "on" : ""} />
         <CampoToken />
         <input
           key={claveEntrada}
@@ -250,7 +270,13 @@ export function Redactar({
           onKeyDown={alTeclear}
           autoComplete="off"
           placeholder={
-            archivo ? "Agregá un mensaje (opcional)" : atiendeAgente ? "Respondé vos (pausa a la IA)" : "Escribí un mensaje…"
+            archivo
+              ? "Agregá un mensaje (opcional)"
+              : atiendeAgente
+                ? dejarIA
+                  ? "Respondé vos (la IA sigue activa)"
+                  : "Respondé vos (pausa a la IA)"
+                : "Escribí un mensaje…"
           }
           aria-label="Escribir mensaje"
           className="min-h-11 min-w-0 flex-1 resize-none rounded-[22px] border border-line-strong bg-surface-2 px-4 py-[10px] text-[16px] leading-snug text-ink outline-none transition-colors placeholder:text-ink-mute focus:border-[var(--panel-acento)]"
@@ -270,9 +296,24 @@ export function Redactar({
       </form>
 
       {atiendeAgente ? (
-        <p className="hidden px-5 pt-2 text-[11.5px] text-ink-mute sm:block">
-          Si respondés vos, la IA deja de contestar en este chat hasta que se la devolvás.
-        </p>
+        <div className="px-4 pt-2 sm:px-5">
+          <label className="flex min-h-9 cursor-pointer items-center gap-2.5 text-[12.5px] text-ink-soft">
+            <input
+              type="checkbox"
+              checked={dejarIA}
+              onChange={alCambiarDejarIA}
+              className="h-4 w-4 flex-none cursor-pointer accent-[var(--panel-acento)]"
+            />
+            <span>
+              Dejar la IA activa
+              <span className="hidden text-ink-mute sm:inline">
+                {dejarIA
+                  ? " — tu mensaje sale y la IA sigue contestando si la persona escribe."
+                  : " — si no, al responder vos la IA se pausa hasta que se la devolvás."}
+              </span>
+            </span>
+          </label>
+        </div>
       ) : null}
     </div>
   );

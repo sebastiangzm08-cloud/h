@@ -164,7 +164,7 @@ export async function enviarMensajeManual(
   const sb = await supabaseServidor();
   const { data: conv, error: eConv } = await sb
     .from("wa_conversaciones")
-    .select("id, contacto_id, wa_contactos(telefono)")
+    .select("id, contacto_id, estado, wa_contactos(telefono)")
     .eq("id", conversacionId)
     .eq("cliente_id", auth.clienteId)
     .maybeSingle();
@@ -184,20 +184,22 @@ export async function enviarMensajeManual(
     texto,
   });
 
+  /* "Dejar la IA activa": el mensaje sale igual, pero el chat sigue con la IA.
+     Sirve para no perder a un prospecto si no alcanzás a ver su respuesta. */
+  const dejarIA = form.get("mantenerIA") === "on" && conv.estado === "agente";
   await sb
     .from("wa_conversaciones")
     .update({
-      estado: "humano",
-      motivo_espera: "",
-      tomada_por: auth.perfilId,
-      tomada_en: new Date().toISOString(),
+      ...(dejarIA
+        ? {}
+        : { estado: "humano", motivo_espera: "", tomada_por: auth.perfilId, tomada_en: new Date().toISOString() }),
       ultimo_mensaje: texto,
       ultimo_en: new Date().toISOString(),
     })
     .eq("id", conversacionId);
 
   revalidarAgente();
-  return { ok: true, mensaje: "Mensaje enviado." };
+  return { ok: true, mensaje: dejarIA ? "Mensaje enviado. La IA sigue atendiendo este chat." : "Mensaje enviado." };
 }
 
 /** Lo mismo que `enviarMensajeManual`, con una foto, video o documento y el texto como pie. */
@@ -223,7 +225,7 @@ export async function enviarArchivoManual(
   const sb = await supabaseServidor();
   const { data: conv, error: eConv } = await sb
     .from("wa_conversaciones")
-    .select("id, contacto_id, wa_contactos(telefono)")
+    .select("id, contacto_id, estado, wa_contactos(telefono)")
     .eq("id", conversacionId)
     .eq("cliente_id", auth.clienteId)
     .maybeSingle();
@@ -257,20 +259,18 @@ export async function enviarArchivoManual(
     creado_en: ahora,
   });
 
+  const dejarIA = form.get("mantenerIA") === "on" && conv.estado === "agente";
   await sb
     .from("wa_conversaciones")
     .update({
-      estado: "humano",
-      motivo_espera: "",
-      tomada_por: auth.perfilId,
-      tomada_en: ahora,
+      ...(dejarIA ? {} : { estado: "humano", motivo_espera: "", tomada_por: auth.perfilId, tomada_en: ahora }),
       ultimo_mensaje: texto || etiquetaArchivo(valido.tipo),
       ultimo_en: ahora,
     })
     .eq("id", conversacionId);
 
   revalidarAgente();
-  return { ok: true, mensaje: "Archivo enviado." };
+  return { ok: true, mensaje: dejarIA ? "Archivo enviado. La IA sigue atendiendo este chat." : "Archivo enviado." };
 }
 
 export async function tomarControl(
