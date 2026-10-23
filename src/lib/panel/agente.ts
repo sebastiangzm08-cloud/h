@@ -58,6 +58,8 @@ export type ConversacionAgente = {
   ultimoMensaje: string;
   ultimoEn: string;
   etiquetas: string[];
+  /** Marcado como spam por el filtro del agente (`wa_contactos.datos.spam`). */
+  spam?: boolean;
 };
 
 export type MensajeAgente = {
@@ -520,7 +522,12 @@ type FilaConversacion = {
   motivo_espera: string | null;
   ultimo_mensaje: string | null;
   ultimo_en: string;
-  wa_contactos: { nombre: string | null; telefono: string; etiquetas: string[] | null } | null;
+  wa_contactos: {
+    nombre: string | null;
+    telefono: string;
+    etiquetas: string[] | null;
+    datos: { spam?: boolean } | null;
+  } | null;
 };
 
 function comoEstado(v: string): EstadoConversacion {
@@ -566,7 +573,7 @@ export async function getConversaciones(): Promise<ConversacionAgente[]> {
   const { data, error } = await sb
     .from("wa_conversaciones")
     .select(
-      "id, contacto_id, estado, motivo_espera, ultimo_mensaje, ultimo_en, wa_contactos(nombre, telefono, etiquetas)"
+      "id, contacto_id, estado, motivo_espera, ultimo_mensaje, ultimo_en, wa_contactos(nombre, telefono, etiquetas, datos)"
     )
     .eq("cliente_id", id)
     .neq("estado", "cerrada")
@@ -585,6 +592,7 @@ export async function getConversaciones(): Promise<ConversacionAgente[]> {
     ultimoMensaje: f.ultimo_mensaje ?? "",
     ultimoEn: f.ultimo_en,
     etiquetas: f.wa_contactos?.etiquetas ?? [],
+    spam: f.wa_contactos?.datos?.spam === true,
   }));
 }
 

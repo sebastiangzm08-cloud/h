@@ -68,7 +68,14 @@ export default async function ConversacionesPage({
   ]);
   const agentePausado = asignacionAgente?.estado === "pausada";
 
-  const lista = filtro === "todas" ? todas : todas.filter((x) => x.estado === filtro);
+  /* El spam vive aparte: no cuenta en Todas, IA, Humanos ni Pendientes. */
+  const sinSpam = todas.filter((x) => !x.spam);
+  const lista =
+    filtro === "spam"
+      ? todas.filter((x) => x.spam)
+      : filtro === "todas"
+        ? sinSpam
+        : sinSpam.filter((x) => x.estado === filtro);
 
   /* Con `?c=` se abre ESA conversación, aunque el filtro no la incluya (por
      ejemplo, recién la tomaste y ya no está en "IA"). Sin `?c=` el
@@ -80,10 +87,11 @@ export default async function ConversacionesPage({
     : (lista[0] ?? null);
 
   const cuentas: Record<Filtro, number> = {
-    todas: todas.length,
-    agente: todas.filter((x) => x.estado === "agente").length,
-    humano: todas.filter((x) => x.estado === "humano").length,
-    espera: todas.filter((x) => x.estado === "espera").length,
+    todas: sinSpam.length,
+    agente: sinSpam.filter((x) => x.estado === "agente").length,
+    humano: sinSpam.filter((x) => x.estado === "humano").length,
+    espera: sinSpam.filter((x) => x.estado === "espera").length,
+    spam: todas.length - sinSpam.length,
   };
 
   /* Lo que necesita el chat abierto. */

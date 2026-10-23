@@ -160,7 +160,12 @@ type FilaConversacionId = {
   motivo_espera: string | null;
   ultimo_mensaje: string | null;
   ultimo_en: string;
-  wa_contactos: { nombre: string | null; telefono: string; etiquetas: string[] | null } | null;
+  wa_contactos: {
+    nombre: string | null;
+    telefono: string;
+    etiquetas: string[] | null;
+    datos: { spam?: boolean } | null;
+  } | null;
 };
 
 /** Mismo select y mapeo que getConversaciones, pero de UNA conversación abierta (no cerrada). */
@@ -173,7 +178,7 @@ export async function getConversacionPorId(id: string): Promise<ConversacionAgen
   const { data, error } = await sb
     .from("wa_conversaciones")
     .select(
-      "id, contacto_id, estado, motivo_espera, ultimo_mensaje, ultimo_en, wa_contactos(nombre, telefono, etiquetas)"
+      "id, contacto_id, estado, motivo_espera, ultimo_mensaje, ultimo_en, wa_contactos(nombre, telefono, etiquetas, datos)"
     )
     .eq("id", id)
     .eq("cliente_id", perfil.clienteId)
@@ -192,6 +197,7 @@ export async function getConversacionPorId(id: string): Promise<ConversacionAgen
     ultimoMensaje: f.ultimo_mensaje ?? "",
     ultimoEn: f.ultimo_en,
     etiquetas: f.wa_contactos?.etiquetas ?? [],
+    spam: f.wa_contactos?.datos?.spam === true,
   };
 }
 

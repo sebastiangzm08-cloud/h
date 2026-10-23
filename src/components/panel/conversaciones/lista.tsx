@@ -18,6 +18,7 @@ export const FILTROS = [
   { clave: "agente", texto: "IA" },
   { clave: "humano", texto: "Humanos" },
   { clave: "espera", texto: "Pendientes" },
+  { clave: "spam", texto: "Spam" },
 ] as const;
 
 export type Filtro = (typeof FILTROS)[number]["clave"];
@@ -84,7 +85,13 @@ export function Filtros({
   );
 }
 
-function EtiquetaEstado({ estado }: { estado: ConversacionAgente["estado"] }) {
+function EtiquetaEstado({ estado, spam }: { estado: ConversacionAgente["estado"]; spam?: boolean }) {
+  if (spam)
+    return (
+      <span className="rounded border border-bad/40 bg-bad/10 px-1.5 py-0.5 font-mono text-[9.5px] tracking-[0.04em] text-bad uppercase">
+        Spam
+      </span>
+    );
   if (estado === "espera")
     return (
       <span className="rounded border border-warn/45 bg-warn/10 px-1.5 py-0.5 font-mono text-[9.5px] tracking-[0.04em] text-warn uppercase">
@@ -179,7 +186,7 @@ export function ListaConversaciones({
                       {x.ultimoMensaje || "Sin mensajes"}
                     </span>
                     <span className="mt-2 flex flex-wrap items-center gap-1.5">
-                      <EtiquetaEstado estado={x.estado} />
+                      <EtiquetaEstado estado={x.estado} spam={x.spam} />
                       {x.etiquetas.slice(0, 1).map((e) => (
                         <Tag key={e}>{e}</Tag>
                       ))}
