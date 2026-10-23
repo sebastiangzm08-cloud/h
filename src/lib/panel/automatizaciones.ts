@@ -25,6 +25,7 @@
    ========================================================================== */
 import { GoogleGenAI, Type } from "@google/genai";
 import { supabaseAdmin } from "@/lib/supabase/servidor";
+import { avisarPorCorreo } from "./alertas";
 import { detalleWhatsapp, enviarTextoWhatsapp, type ConexionWhatsapp } from "./whatsapp-conexion";
 
 const MODELO = "gemini-3.6-flash";
@@ -213,6 +214,177 @@ export async function correrSeguimientos(opciones: { simular?: boolean } = {}): 
         }
         if (decision.enviar) resultado.enviados.push({ cliente: clienteId, telefono, mensaje: decision.mensaje });
         else resultado.descartadas.push({ telefono, motivo: decision.motivo || "Gemini decidió no escribir" });
+      } catch (e) {
+        resultado.errores.push(`${telefono}: ${(e as Error).message}`);
+      }
+    }
+  }
+  return resultado;
+}
+
+/* =========================================================================
+   4. Aviso de enfriamiento (2026-10-23)
+   Un prospecto que mostró interés y lleva horas sin escribir se está
+   enfriando. Antes de que se cierre la ventana gratis de 24 h se le avisa a
+   Sebastián por correo, con un resumen y un mensaje sugerido, para que
+   escriba él (no importa quién tenga el chat: IA o persona). Una sola vez por
+   silencio. Se enciende por cliente con config.alerta_enfriamiento.activo.
+   ========================================================================= */
+
+/** Se avisa entre las 14 y las 21 h desde el último mensaje de la persona: quedan al menos 3 h de ventana gratis. */
+const AVISO_DESDE_H = 14;
+const AVISO_HASTA_H = 21;
+const URL_PANEL = "https://hoshizora.agency/panel/agente/conversaciones";
+
+export type ResultadoEnfriamiento = {
+  revisadas: number;
+  avisados: { cliente: string; telefono: string; resumen: string }[];
+  descartadas: { telefono: string; motivo: string }[];
+  errores: string[];
+};
+
+async function evaluarInteres(
+  ai: GoogleGenAI,
+  cfg: Fila,
+  historial: Fila[]
+): Promise<{ interesado: boolean; nombre: string; resumen: string; sugerencia: string }> {
+  const marca = typeof cfg.marca === "string" && cfg.marca ? cfg.marca : "el negocio";
+  const charla = historial
+    .map((m) => `${m.autor === "contacto" ? "Persona" : m.autor === "agente" ? "Agente" : "Dueño"}: ${contenido(m)}`)
+    .join("\n");
+  const prompt = [
+    `Sos el asistente de ventas de ${marca}. Leé esta conversación de WhatsApp y decidí si la persona mostró un interés real en contratar (preguntó precio, cómo funciona, condiciones, riesgos, o dijo que lo va a pensar o investigar).`,
+    "NO es interés real: texto sin sentido, spam, mensajes sueltos de plantilla sin seguir, insultos, o alguien que dijo que no le interesa.",
+    "Devolvé: interesado (true/false); nombre (el que la persona dijo, o vacío); resumen (UNA línea: qué quiere o qué lo frena, para que el dueño sepa qué decirle); sugerencia (un mensaje corto de WhatsApp de 2 a 3 líneas que el dueño podría mandarle ahora, en español de Costa Rica con voseo, sin mexicanismos, cálido y sin presión, con UNA pregunta fácil al final).",
+    "",
+    "# LA CONVERSACIÓN",
+    charla,
+  ].join("\n");
+
+  const r = await ai.models.generateContent({
+    model: MODELO,
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          interesado: { type: Type.BOOLEAN },
+          nombre: { type: Type.STRING },
+          resumen: { type: Type.STRING },
+          sugerencia: { type: Type.STRING },
+        },
+        required: ["interesado", "nombre", "resumen", "sugerencia"],
+      },
+      temperature: 0.4,
+    },
+  });
+  const d = JSON.parse(r.text ?? "{}") as { interesado?: boolean; nombre?: string; resumen?: string; sugerencia?: string };
+  return {
+    interesado: d.interesado === true,
+    nombre: (d.nombre ?? "").trim(),
+    resumen: (d.resumen ?? "").trim(),
+    sugerencia: (d.sugerencia ?? "").trim(),
+  };
+}
+
+export async function correrAvisosEnfriamiento(opciones: { simular?: boolean } = {}): Promise<ResultadoEnfriamiento> {
+  const resultado: ResultadoEnfriamiento = { revisadas: 0, avisados: [], descartadas: [], errores: [] };
+  const admin = supabaseAdmin();
+  const ahora = Date.now();
+  const claveGemini = process.env.GEMINI_API_KEY;
+  if (!claveGemini) {
+    resultado.errores.push("Falta GEMINI_API_KEY en el servidor.");
+    return resultado;
+  }
+  const ai = new GoogleGenAI({ apiKey: claveGemini });
+
+  const { data: asignaciones } = await admin
+    .from("asignaciones")
+    .select("cliente_id, estado, config, catalogo_automatizaciones!inner(slug)")
+    .eq("catalogo_automatizaciones.slug", "agente-whatsapp")
+    .eq("estado", "activa");
+
+  for (const asig of asignaciones ?? []) {
+    const cfg = (asig.config ?? {}) as Fila;
+    if ((cfg.alerta_enfriamiento as Fila | undefined)?.activo !== true) continue;
+    const clienteId = asig.cliente_id as string;
+
+    /* Filtro barato: conversaciones con movimiento en las últimas 21 h (más viejas ya cerraron la ventana). */
+    const { data: convs } = await admin
+      .from("wa_conversaciones")
+      .select("id, contacto_id, wa_contactos(nombre, telefono, datos)")
+      .eq("cliente_id", clienteId)
+      .neq("estado", "cerrada")
+      .gte("ultimo_en", new Date(ahora - AVISO_HASTA_H * HORA).toISOString());
+    if (!convs?.length) continue;
+
+    for (const conv of convs) {
+      const contacto = conv.wa_contactos as unknown as { nombre: string | null; telefono: string; datos: Fila | null } | null;
+      const telefono = contacto?.telefono ?? "";
+      const datos = (contacto?.datos ?? {}) as Fila;
+      if (datos.spam === true) continue;
+
+      const { data: ultimos } = await admin
+        .from("wa_mensajes")
+        .select("autor, tipo, texto, transcripcion, creado_en")
+        .eq("conversacion_id", conv.id)
+        .in("autor", ["contacto", "agente", "humano"])
+        .order("creado_en", { ascending: false })
+        .limit(20);
+      const historial = (ultimos ?? []).reverse();
+      const ultimo = historial[historial.length - 1];
+      const ultimoContacto = [...historial].reverse().find((m) => m.autor === "contacto");
+      if (!ultimo || !ultimoContacto) continue;
+
+      const paraEste = ultimoContacto.creado_en as string;
+      const horas = (ahora - new Date(paraEste).getTime()) / HORA;
+      const previo = datos.alerta_fria as Fila | undefined;
+
+      if (ultimo.autor === "contacto") continue; // la persona escribió último: le toca a quien atiende, no a este aviso
+      if (horas < AVISO_DESDE_H || horas > AVISO_HASTA_H) continue;
+      if (previo?.para === paraEste) continue; // ya se avisó por este silencio
+
+      resultado.revisadas++;
+      const { count: citasFuturas } = await admin
+        .from("wa_citas")
+        .select("id", { count: "exact", head: true })
+        .eq("contacto_id", conv.contacto_id)
+        .neq("estado", "cancelada")
+        .gte("cuando", new Date(ahora).toISOString());
+      if (citasFuturas) {
+        resultado.descartadas.push({ telefono, motivo: "ya tiene cita" });
+        continue;
+      }
+
+      try {
+        const juicio = await evaluarInteres(ai, cfg, historial);
+        let avisado = false;
+        if (juicio.interesado && !opciones.simular) {
+          const nombre = juicio.nombre || contacto?.nombre || telefono;
+          const quedan = Math.max(0, Math.round(24 - horas));
+          const detalle = [
+            `${nombre} (${telefono}) mostró interés y lleva ${Math.round(horas)} h sin escribir. Todavía podés escribirle libremente por unas ${quedan} h más (después WhatsApp solo deja usar plantillas).`,
+            "",
+            `Qué quiere o qué lo frena: ${juicio.resumen || "(sin resumen)"}`,
+            "",
+            "Mensaje que podrías mandarle:",
+            juicio.sugerencia || "(sin sugerencia)",
+            "",
+            `Abrir el chat: ${URL_PANEL}?c=${conv.id}`,
+          ].join("\n");
+          const envio = await avisarPorCorreo(`Prospecto interesado se está enfriando: ${nombre}`, detalle);
+          if (!envio.ok) throw new Error(envio.error);
+          avisado = true;
+        }
+        if (!opciones.simular) {
+          await admin
+            .from("wa_contactos")
+            .update({ datos: { ...datos, alerta_fria: { para: paraEste, avisado, interesado: juicio.interesado, en: new Date().toISOString() } } })
+            .eq("id", conv.contacto_id);
+        }
+        if (juicio.interesado) resultado.avisados.push({ cliente: clienteId, telefono, resumen: juicio.resumen });
+        else resultado.descartadas.push({ telefono, motivo: "sin interés real" });
       } catch (e) {
         resultado.errores.push(`${telefono}: ${(e as Error).message}`);
       }

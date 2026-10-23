@@ -7,7 +7,12 @@
    Cuerpo opcional: { "simular": true } → decide pero no manda nada.
    ========================================================================== */
 import { NextResponse } from "next/server";
-import { correrReactivaciones, correrResenas, correrSeguimientos } from "@/lib/panel/automatizaciones";
+import {
+  correrAvisosEnfriamiento,
+  correrReactivaciones,
+  correrResenas,
+  correrSeguimientos,
+} from "@/lib/panel/automatizaciones";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -16,6 +21,7 @@ const TAREAS: Record<string, (o: { simular?: boolean; forzar?: boolean }) => Pro
   seguimiento: correrSeguimientos,
   resenas: correrResenas,
   reactivar: correrReactivaciones,
+  enfriamiento: correrAvisosEnfriamiento,
 };
 
 export async function POST(req: Request, { params }: { params: Promise<{ nombre: string }> }) {
