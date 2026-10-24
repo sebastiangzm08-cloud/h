@@ -530,9 +530,9 @@ async function enviarPlantilla(
 /* Plantilla para retomar a un prospecto cuando ya cerró la ventana de 24 h (2026-10-24).
    Sin variables. Se crea una vez en la WABA (`n8n-backups/herramientas/plantilla-seguimiento.mjs`). */
 export const PLANTILLA_SEGUIMIENTO = {
-  nombre: "hz_seguimiento_prospecto_v2",
+  nombre: "hz_seguimiento_prospecto_v3",
   texto:
-    "¡Hola! Te escribimos de Hoshizora: hace unos días preguntaste por el asistente de IA para el WhatsApp de tu negocio y quedamos pendientes de responderte. ¿Querés ver cómo funciona en una demo de 10 minutos, compartiendo pantalla? Respondé este mensaje y coordinamos.",
+    "¡Hola! Te escribimos de Hoshizora: hace unos días preguntaste por el asistente de IA para el WhatsApp de tu negocio. Para que lo veás funcionando de verdad, te ofrecemos una demo de 10 minutos compartiendo pantalla. ¿Te interesa? Respondé este mensaje y coordinamos.",
 };
 
 /** Manda la plantilla de seguimiento. Solo funciona si Meta ya la aprobó. */
