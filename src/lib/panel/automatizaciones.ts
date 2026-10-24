@@ -25,7 +25,6 @@
    ========================================================================== */
 import { GoogleGenAI, Type } from "@google/genai";
 import { supabaseAdmin } from "@/lib/supabase/servidor";
-import { avisarPorCorreo } from "./alertas";
 import { detalleWhatsapp, enviarTextoWhatsapp, type ConexionWhatsapp } from "./whatsapp-conexion";
 
 const MODELO = "gemini-3.6-flash";
@@ -226,7 +225,7 @@ export async function correrSeguimientos(opciones: { simular?: boolean } = {}): 
    4. Aviso de enfriamiento (2026-10-23)
    Un prospecto que mostró interés y lleva horas sin escribir se está
    enfriando. Antes de que se cierre la ventana gratis de 24 h se le avisa a
-   Sebastián por correo, con un resumen y un mensaje sugerido, para que
+   Sebastián (por Telegram, vía n8n), con un resumen y un mensaje sugerido, para que
    escriba él (no importa quién tenga el chat: IA o persona). Una sola vez por
    silencio. Se enciende por cliente con config.alerta_enfriamiento.activo.
    ========================================================================= */
@@ -239,6 +238,8 @@ const URL_PANEL = "https://hoshizora.agency/panel/agente/conversaciones";
 export type ResultadoEnfriamiento = {
   revisadas: number;
   avisados: { cliente: string; telefono: string; resumen: string }[];
+  /** Lo que n8n manda por Telegram (uno por prospecto). */
+  mensajes: { asunto: string; detalle: string }[];
   descartadas: { telefono: string; motivo: string }[];
   errores: string[];
 };
@@ -289,7 +290,7 @@ async function evaluarInteres(
 }
 
 export async function correrAvisosEnfriamiento(opciones: { simular?: boolean } = {}): Promise<ResultadoEnfriamiento> {
-  const resultado: ResultadoEnfriamiento = { revisadas: 0, avisados: [], descartadas: [], errores: [] };
+  const resultado: ResultadoEnfriamiento = { revisadas: 0, avisados: [], mensajes: [], descartadas: [], errores: [] };
   const admin = supabaseAdmin();
   const ahora = Date.now();
   const claveGemini = process.env.GEMINI_API_KEY;
@@ -373,8 +374,9 @@ export async function correrAvisosEnfriamiento(opciones: { simular?: boolean } =
             "",
             `Abrir el chat: ${URL_PANEL}?c=${conv.id}`,
           ].join("\n");
-          const envio = await avisarPorCorreo(`Prospecto interesado se está enfriando: ${nombre}`, detalle);
-          if (!envio.ok) throw new Error(envio.error);
+          /* El mensaje NO se manda desde acá: n8n lo recibe en `mensajes` y lo manda por
+             Telegram (el mismo canal de los avisos de error, que ya funciona). */
+          resultado.mensajes.push({ asunto: `Prospecto interesado se está enfriando: ${nombre}`, detalle });
           avisado = true;
         }
         if (!opciones.simular) {
