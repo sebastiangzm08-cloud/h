@@ -20,7 +20,7 @@ import { PLANTILLAS_RECORDATORIO_MANUAL } from "./agente-plantillas";
 import { detalleWhatsapp } from "./whatsapp-conexion";
 import { enviarArchivoPorWhatsapp, guardarCopiaDeArchivo } from "./medios";
 import { MAX_PIE_DE_ARCHIVO, etiquetaArchivo, validarArchivo } from "./medios-reglas";
-import { asegurarPlantillasAutomaticas } from "./automatizaciones";
+import { asegurarPlantillasAutomaticas, mandarPlantillaDeSeguimiento, PLANTILLA_SEGUIMIENTO } from "./automatizaciones";
 
 export type ResultadoAccion =
   /** `avisoFallido`: la acción se hizo, pero el aviso por WhatsApp no salió. */
@@ -200,6 +200,53 @@ export async function enviarMensajeManual(
 
   revalidarAgente();
   return { ok: true, mensaje: dejarIA ? "Mensaje enviado. La IA sigue atendiendo este chat." : "Mensaje enviado." };
+}
+
+/**
+ * Manda la plantilla de seguimiento (aprobada por Meta) a quien ya no está dentro de la
+ * ventana de 24 h. Cuesta (marketing, ~₡38). El chat conserva su estado: si la IA lo atendía, sigue.
+ */
+export async function enviarPlantillaSeguimiento(
+  _prev: ResultadoAccion | null,
+  form: FormData
+): Promise<ResultadoAccion> {
+  const auth = await exigirCliente(form);
+  if (!auth.ok) return auth;
+
+  const conversacionId = String(form.get("conversacionId") ?? "");
+  if (!conversacionId) return { ok: false, error: "Falta la conversación." };
+
+  const sb = await supabaseServidor();
+  const { data: conv, error: eConv } = await sb
+    .from("wa_conversaciones")
+    .select("id, wa_contactos(telefono)")
+    .eq("id", conversacionId)
+    .eq("cliente_id", auth.clienteId)
+    .maybeSingle();
+  if (eConv || !conv) return { ok: false, error: "No encontré esa conversación." };
+
+  const telefono = (conv.wa_contactos as unknown as { telefono: string } | null)?.telefono;
+  if (!telefono) return { ok: false, error: "Ese contacto no tiene teléfono guardado." };
+
+  const envio = await mandarPlantillaDeSeguimiento(auth.clienteId, telefono);
+  if (!envio.ok) return { ok: false, error: envio.error };
+
+  const ahora = new Date().toISOString();
+  await sb.from("wa_mensajes").insert({
+    cliente_id: auth.clienteId,
+    conversacion_id: conversacionId,
+    autor: "humano",
+    tipo: "texto",
+    texto: PLANTILLA_SEGUIMIENTO.texto,
+    herramientas: ["plantilla_seguimiento"],
+  });
+  await sb
+    .from("wa_conversaciones")
+    .update({ ultimo_mensaje: PLANTILLA_SEGUIMIENTO.texto, ultimo_en: ahora })
+    .eq("id", conversacionId);
+
+  revalidarAgente();
+  return { ok: true, mensaje: "Plantilla enviada." };
 }
 
 /** Lo mismo que `enviarMensajeManual`, con una foto, video o documento y el texto como pie. */

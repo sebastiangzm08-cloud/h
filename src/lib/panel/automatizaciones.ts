@@ -130,13 +130,18 @@ export async function correrSeguimientos(opciones: { simular?: boolean } = {}): 
     const cfg = (asig.config ?? {}) as Fila;
     if ((cfg.seguimiento as Fila | undefined)?.activo !== true) continue;
     const clienteId = asig.cliente_id as string;
+    /* "incluir_humano" (2026-10-24): también cubre chats donde escribió una persona del
+       negocio y la otra no contestó. Sin esto, tomar un chat a mano lo dejaba sin
+       seguimiento. Se enciende por cliente: no a todos les sirve que el agente hable
+       después de una persona. */
+    const incluirHumano = (cfg.seguimiento as Fila | undefined)?.incluir_humano === true;
 
-    /* Filtro barato primero: conversaciones del agente con movimiento hace 19–24 h. */
+    /* Filtro barato primero: conversaciones con movimiento hace 19–24 h. */
     const { data: convs } = await admin
       .from("wa_conversaciones")
       .select("id, contacto_id, wa_contactos(telefono, datos)")
       .eq("cliente_id", clienteId)
-      .eq("estado", "agente")
+      .in("estado", incluirHumano ? ["agente", "humano"] : ["agente"])
       .gte("ultimo_en", new Date(ahora - 24 * HORA).toISOString())
       .lte("ultimo_en", new Date(ahora - 19 * HORA).toISOString());
     if (!convs?.length) continue;
@@ -169,7 +174,9 @@ export async function correrSeguimientos(opciones: { simular?: boolean } = {}): 
       const horas = (ahora - new Date(paraEste).getTime()) / HORA;
       const previo = datos.seguimiento as Fila | undefined;
 
-      if (ultimo.autor !== "agente") continue; // la persona escribió último: le toca al agente, no a esto
+      if (ultimo.autor === "contacto") continue; // la persona escribió último: le toca al agente, no a esto
+      if (ultimo.autor === "humano" && !incluirHumano) continue;
+      if (datos.spam === true) continue;
       if (horas < DESDE_H || horas > HASTA_H) continue; // fuera de la franja (o ya cerró la ventana gratis)
       if (previo?.para === paraEste) continue; // ya se decidió para este mismo silencio
 
@@ -511,12 +518,35 @@ async function enviarPlantilla(
       template: {
         name: nombre,
         language: { code: IDIOMA_PLANTILLAS },
-        components: [{ type: "body", parameters: variables.map((text) => ({ type: "text", text })) }],
+        /* Una plantilla sin variables no lleva `components`: Meta rechaza un cuerpo vacío. */
+        ...(variables.length ? { components: [{ type: "body", parameters: variables.map((text) => ({ type: "text", text })) }] } : {}),
       },
     }),
   });
   if (!r.ok) return { ok: false, error: `Meta respondió ${r.status}: ${(await r.text()).slice(0, 200)}` };
   return { ok: true };
+}
+
+/* Plantilla para retomar a un prospecto cuando ya cerró la ventana de 24 h (2026-10-24).
+   Sin variables. Se crea una vez en la WABA (`n8n-backups/herramientas/plantilla-seguimiento.mjs`). */
+export const PLANTILLA_SEGUIMIENTO = {
+  nombre: "hz_seguimiento_prospecto",
+  texto:
+    "¡Hola! Te escribimos de Hoshizora: hace unos días preguntaste por el asistente de IA para el WhatsApp de tu negocio y quedamos pendientes de responderte. ¿Querés que te mostremos cómo funciona en una demo de 10 minutos, compartiendo pantalla? Respondé este mensaje y coordinamos. Si no querés recibir más mensajes, respondé NO.",
+};
+
+/** Manda la plantilla de seguimiento. Solo funciona si Meta ya la aprobó. */
+export async function mandarPlantillaDeSeguimiento(
+  clienteId: string,
+  telefono: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const conexion = await conexionConWaba(clienteId);
+  if (!conexion) return { ok: false, error: "Falta el WABA ID en la conexión de WhatsApp." };
+  const estado = await estadoPlantilla(conexion, PLANTILLA_SEGUIMIENTO.nombre);
+  if (estado !== "APPROVED") {
+    return { ok: false, error: `La plantilla de seguimiento todavía no está aprobada por Meta (${estado ?? "no existe"}).` };
+  }
+  return enviarPlantilla(conexion, telefono, PLANTILLA_SEGUIMIENTO.nombre, []);
 }
 
 /** La conversación más reciente del contacto y si la ventana gratis de 24 h sigue abierta. */

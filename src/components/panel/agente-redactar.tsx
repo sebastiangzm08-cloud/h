@@ -56,6 +56,14 @@ export function Redactar({
   const campo = useRef<HTMLTextAreaElement>(null);
   const [texto, setTexto] = useState("");
   const [estadoEnvio, enviar, enviando] = useAccionAgente("enviarMensajeManual");
+  const [estadoPlantilla, enviarPlantilla, enviandoPlantilla] = useAccionAgente("enviarPlantillaSeguimiento");
+
+  function alEnviarPlantilla(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (enviandoPlantilla) return;
+    if (!window.confirm("Se manda la plantilla de seguimiento aprobada por Meta (cuesta unos ₡38). ¿Enviarla?")) return;
+    enviarPlantilla(new FormData(e.currentTarget));
+  }
   const [exitoVisto, setExitoVisto] = useState<unknown>(null);
   /* El texto que se mandó: si mientras se enviaba la persona siguió
      escribiendo, no se le borra lo nuevo. */
@@ -191,14 +199,29 @@ export function Redactar({
       <BarraAcciones conversacion={conversacion} datos={datos} ponerEnCaja={ponerEnCaja} />
 
       {fueraDeVentana ? (
-        <p className="mx-3 mt-2 rounded-xl bg-warn/10 px-3.5 py-2.5 text-[12.5px] leading-snug text-warn sm:mx-5">
-          Pasaron más de 24 horas desde su último mensaje. WhatsApp puede rechazar lo que escribas hasta que la persona vuelva a escribir.
-        </p>
+        <div className="mx-3 mt-2 rounded-xl bg-warn/10 px-3.5 py-2.5 text-[12.5px] leading-snug text-warn sm:mx-5">
+          <p>
+            Pasaron más de 24 horas desde su último mensaje. WhatsApp puede rechazar lo que escribas hasta que la persona vuelva a escribir.
+          </p>
+          <form onSubmit={alEnviarPlantilla} className="mt-2 flex flex-wrap items-center gap-2">
+            <input type="hidden" name="conversacionId" value={conversacion.id} />
+            <CampoToken />
+            <button
+              type="submit"
+              disabled={enviandoPlantilla}
+              className="min-h-9 rounded-full border border-warn/50 px-3.5 text-[12.5px] font-medium text-warn transition-colors hover:bg-warn/10 active:scale-[0.98] disabled:opacity-50"
+            >
+              {enviandoPlantilla ? "Enviando…" : "Enviar plantilla de seguimiento"}
+            </button>
+            {estadoPlantilla?.ok ? <span className="text-ok">Plantilla enviada.</span> : null}
+          </form>
+        </div>
       ) : null}
 
       {[
         estadoEnvio && !estadoEnvio.ok ? estadoEnvio.error : null,
         estadoArchivo && !estadoArchivo.ok ? estadoArchivo.error : null,
+        estadoPlantilla && !estadoPlantilla.ok ? estadoPlantilla.error : null,
         errorArchivo,
       ]
         .filter(Boolean)
